@@ -28,7 +28,7 @@
   "dependencies": {
     "@vocdoni/api-client": "1.0.0",
     "@vocdoni/api-voting": "0.1.0",
-    "@vocdoni/ballot": "0.1.0"
+    "@vocdoni/ballot": "0.1.2"
   },
   "overrides": {
     "@noble/curves": "1.8.1"
