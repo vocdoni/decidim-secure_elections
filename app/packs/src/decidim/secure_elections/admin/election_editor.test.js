@@ -51,7 +51,6 @@ const render = ({ questionCount = 1, autosaveUrl = "" } = {}) => {
            data-next-question-index="${questionCount}"
            data-autosave-url="${autosaveUrl}"
            data-autosave-interval="0"
-           data-templates='[{"key":"election","question_type":"multichoice","questions":1,"options":3,"min_choices":1,"max_choices":3}]'
            data-question-number-template="Question __N__ of __T__"
            data-question-legend-template="Question __N__"
            data-option-placeholder-template="Option __N__"
@@ -241,34 +240,6 @@ describe("ElectionEditor", () => {
 
       expect(limits.hidden).toBe(false);
       expect(limits.querySelector("input").disabled).toBe(false);
-    });
-  });
-
-  describe("templates", () => {
-    it("reshapes the ballot rather than adding to it", () => {
-      const { root, editor } = render();
-
-      editor.applyTemplate("election");
-
-      // One question with three options, not the original one plus a new one.
-      expect(document.querySelectorAll("[data-vocdoni-question]")).toHaveLength(1);
-      expect(document.querySelectorAll("[data-vocdoni-option]")).toHaveLength(3);
-      expect(root.querySelector("[data-vocdoni-question-type]").value).toEqual("multichoice");
-    });
-
-    it("carries the selection limits the template asks for", () => {
-      const { editor } = render();
-
-      editor.applyTemplate("election");
-
-      expect(document.querySelector("input[name$='[min_choices]']").value).toEqual("1");
-      expect(document.querySelector("input[name$='[max_choices]']").value).toEqual("3");
-    });
-
-    it("does nothing for a template it does not know", () => {
-      render();
-
-      expect(document.querySelectorAll("[data-vocdoni-question]")).toHaveLength(1);
     });
   });
 

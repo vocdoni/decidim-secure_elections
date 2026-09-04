@@ -283,7 +283,6 @@ en:
             stream_help: A public video the voters will see next to the ballot.
             stream_label: Live streaming video
             stream_summary: Attach video (optional)
-            templates_title: Get started with a template…
             timezone_notice: Times are interpreted in the organization time zone. The current configuration is %{timezone}.
             title_label: Election title
             title_placeholder: Voting process title
@@ -318,10 +317,6 @@ en:
           save_and_continue: Save and continue
           show_on_public_site: Show on public site
           show_on_public_site_disabled: Add at least one question before showing this election on the public site.
-          templates:
-            annual_general_meeting: Annual General Meeting
-            election: Election
-            participatory_budgeting: Participatory Budgeting
           unpublish:
             invalid: There was a problem hiding the election from the public site.
             success: This election is no longer shown on the public site.

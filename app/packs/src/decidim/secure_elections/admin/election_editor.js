@@ -15,8 +15,7 @@
  *
  * - **details** — autosave and the leave confirmation;
  * - **questions** — the whole of it: add, remove and reorder questions and
- *   options without a page load, the process-wide question type, the starting
- *   templates, autosave;
+ *   options without a page load, the process-wide question type, autosave;
  * - **calendar** — the "start immediately" toggle.
  *
  * Every part is therefore optional. A step that does not render the question
@@ -75,16 +74,6 @@ class ElectionEditor {
     // Set once the server refuses an autosave outright. Unlike a validation
     // failure, that verdict never changes, so there is nothing to retry.
     this.autosaveRefused = false;
-
-    this.templates = this.readTemplates();
-  }
-
-  readTemplates() {
-    try {
-      return JSON.parse(this.root.dataset.templates || "[]");
-    } catch {
-      return [];
-    }
   }
 
   connect() {
@@ -134,9 +123,6 @@ class ElectionEditor {
     } else if (action("[data-vocdoni-move-option]")) {
       event.preventDefault();
       this.move(action("[data-vocdoni-option]"), action("[data-vocdoni-move-option]").dataset.vocdoniMoveOption);
-    } else if (action("[data-vocdoni-template]")) {
-      event.preventDefault();
-      this.applyTemplate(action("[data-vocdoni-template]").dataset.vocdoniTemplate);
     }
   }
 
@@ -409,48 +395,6 @@ class ElectionEditor {
     wrapper.querySelectorAll("input").forEach((input) => {
       input.disabled = toggle.checked;
     });
-  }
-
-  /* -------------------------------------------------------------- templates */
-
-  applyTemplate(key) {
-    const template = this.templates.find((candidate) => candidate.key === key);
-    if (!template || !this.questionList) {
-      return;
-    }
-
-    if (this.typeSelect) {
-      this.typeSelect.value = template.question_type;
-    }
-
-    // Start from a clean slate: the chips are only offered while there is
-    // nothing to lose (see the editor partial).
-    this.questions().forEach((question) => question.remove());
-
-    for (let questionIndex = 0; questionIndex < template.questions; questionIndex += 1) {
-      this.addQuestion();
-      const question = this.questions()[questionIndex];
-
-      while (question.querySelectorAll("[data-vocdoni-option]").length < template.options) {
-        this.addOption(question);
-      }
-
-      this.setChoiceLimit(question, "min_choices", template.min_choices);
-      this.setChoiceLimit(question, "max_choices", template.max_choices);
-    }
-
-    this.applyQuestionType();
-    this.renumber();
-    this.markDirty();
-  }
-
-  setChoiceLimit(question, name, value) {
-    const input = question.querySelector(`input[name$='[${name}]']`);
-    if (input) {
-      input.value = value === null || typeof value === "undefined"
-        ? ""
-        : value;
-    }
   }
 
   /* --------------------------------------------------------------- autosave */

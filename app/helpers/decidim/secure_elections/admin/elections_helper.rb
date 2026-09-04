@@ -52,15 +52,6 @@ module Decidim
           canceled: "alert"
         }.freeze
 
-        # The starting points offered above the ballot, mirroring the Vocdoni
-        # app. They are a client-side convenience only: picking one shapes the
-        # empty form, it does not save anything.
-        EDITOR_TEMPLATES = {
-          annual_general_meeting: { question_type: "singlechoice", questions: 3, options: 2, min_choices: nil, max_choices: nil },
-          election: { question_type: "multichoice", questions: 1, options: 3, min_choices: 1, max_choices: 3 },
-          participatory_budgeting: { question_type: "multichoice", questions: 1, options: 3, min_choices: 1, max_choices: 3 }
-        }.freeze
-
         # The step navigation, in order.
         #
         # Every entry is rendered, always. A step whose prerequisites do not
@@ -169,19 +160,6 @@ module Decidim
           Decidim::SecureElections::Admin::ElectionQuestionsForm::RESULT_VISIBILITIES.map do |value|
             [t(value, scope: "decidim.secure_elections.admin.elections.result_visibility"), value]
           end
-        end
-
-        # Serialized for the editor pack, which builds the cards client-side.
-        def secure_elections_editor_templates_json
-          # i18n-tasks-use t("decidim.secure_elections.admin.elections.templates.annual_general_meeting")
-          # i18n-tasks-use t("decidim.secure_elections.admin.elections.templates.election")
-          # i18n-tasks-use t("decidim.secure_elections.admin.elections.templates.participatory_budgeting")
-          EDITOR_TEMPLATES.map do |key, config|
-            config.merge(
-              key:,
-              label: t(key, scope: "decidim.secure_elections.admin.elections.templates")
-            )
-          end.to_json
         end
 
         # Above this many locales `Decidim::FormBuilder` swaps the language tabs

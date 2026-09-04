@@ -11,10 +11,6 @@
   disabled = !form.object.editable?
   form_name = form.object_name
   questions = form.object.questions
-  # Template chips reshape an empty ballot. Offering them on an election that
-  # already has questions would quietly throw that work away, so they only
-  # appear while there is nothing to lose.
-  show_templates = !disabled && election.questions.none?
 %>
 
 <% append_javascript_pack_tag "decidim_secure_elections_admin" %>
@@ -25,7 +21,6 @@
      data-next-question-index="<%= questions.size %>"
      data-autosave-url="<%= election.editable? ? autosave_election_questions_path(election) : "" %>"
      data-autosave-interval="30000"
-     data-templates="<%= secure_elections_editor_templates_json %>"
      data-unsaved-warning="<%= t("decidim.secure_elections.admin.elections.editor.unsaved_warning") %>"
      <%#
        Numbering that has to be rebuilt in the browser after every add, remove
@@ -65,23 +60,6 @@
      data-vocdoni-status
      role="status"
      aria-live="polite"></p>
-
-  <% if show_templates %>
-    <section class="mb-6" data-vocdoni-templates aria-labelledby="js-vocdoni-templates-title">
-      <h2 class="text-sm text-gray-2 font-normal mb-2" id="js-vocdoni-templates-title">
-        <%= t("decidim.secure_elections.admin.elections.editor.templates_title") %>
-      </h2>
-      <div class="flex flex-wrap gap-2">
-        <% Decidim::SecureElections::Admin::ElectionsHelper::EDITOR_TEMPLATES.each_key do |key| %>
-          <button type="button"
-                  class="button button__sm button__transparent-secondary border border-gray-3"
-                  data-vocdoni-template="<%= key %>">
-            <%= t(key, scope: "decidim.secure_elections.admin.elections.templates") %>
-          </button>
-        <% end %>
-      </div>
-    </section>
-  <% end %>
 
   <%#
     Question type and result visibility both apply to the whole ballot, so they
