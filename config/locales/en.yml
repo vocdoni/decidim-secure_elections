@@ -363,8 +363,8 @@ en:
                 title: Resume voting?
             controls_help: These controls change the state of every question of the election on the blockchain. The change is applied in the background and can take a moment to appear.
             controls_title: Election controls
-            incomplete_body: The election exists on the blockchain but its publication did not finish, so voting cannot start yet. Resuming picks up exactly where it stopped and never creates a second election.
-            incomplete_title: This publication did not finish
+            incomplete_body: The publication job stopped before it could finish, so voting cannot start yet. No votes have been recorded. Click Resume publication to continue where it stopped.
+            incomplete_title: Publication was interrupted
             last_synced: Last refreshed %{time}.
             never_synced: Results have never been refreshed.
             no_results_yet: No results have been read from the blockchain yet.
