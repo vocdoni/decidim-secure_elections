@@ -56,6 +56,33 @@
     width: 100%;
   }
 
+  // A translated field is a label plus a language switcher: with the four or
+  // fewer locales Decidim expects, the switcher is a row of tabs and the pair
+  // reads as one header. With the nine locales configured on this deploy the
+  // switcher becomes a `<select>`, and `Decidim::FormBuilder#translated`
+  // silently drops the `label_options: { class: "sr-only" }` we pass for
+  // fields whose label the design hides — so on every question and option the
+  // label reappears, and the flex row it sits in (`justify-content:
+  // space-between`) throws the dropdown to the far right of a card that is a
+  // full-width column on a laptop. The pair is put back together here: label
+  // and select sit next to each other and read as one row again.
+  .label--tabs {
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+
+    > label {
+      margin-bottom: 0;
+    }
+
+    select.language-change {
+      font-size: 0.8rem;
+      padding-block: 0.15rem;
+      min-width: auto;
+    }
+  }
+
   // Borderless inputs, the way the Vocdoni app writes a voting process: the
   // title reads as a heading and only shows its edges once it has focus.
   //
