@@ -56,19 +56,27 @@
     width: 100%;
   }
 
+  // The cards on these screens sit directly inside the editor, not inside the
+  // Foundation `.grid-x.grid-margin-x` wrapper Decidim uses on every other
+  // admin form. Without that ancestor `.card-section` has no horizontal
+  // padding at all, so labels and inputs hug the left and right edges of the
+  // card. Restore the space here.
+  .card-section {
+    padding: 1rem;
+  }
+
   // The Schedule step: give the fieldset back the vertical rhythm the form
   // builder assumes.
   //
   // Decidim's meeting form wraps each `f.datetime_field` in `<div
   // class="row"><div class="columns">` — Foundation's grid gives the wrapper
   // `margin-bottom: 16px` and that is what separates one field from the next.
-  // Our Schedule step is a plain fieldset with the fields as direct children,
-  // so nothing gives them any margin at all and the timezone note, the
-  // "Start immediately" checkbox, its help text, the "End date and time"
-  // label, its help text, the format hints and the two date pickers all
-  // collide into one paragraph. The rule below restores the space between
-  // them and lifts the field labels to the weight they read as on every
-  // other Decidim form.
+  // Our Schedule step is a plain fieldset with the fields as direct children:
+  // the `.form__wrapper` on the editor now stretches the inputs to full width
+  // and gives them their top margin, but the labels, help text and the
+  // checkbox row still have no spacing of their own. The rule below restores
+  // the space between them and lifts the field labels to the weight they read
+  // as on every other Decidim form.
   fieldset {
     > p.help-text,
     > span.help-text,
@@ -91,33 +99,6 @@
 
   .datepicker__datepicker-row {
     margin-bottom: 1rem;
-  }
-
-  // A translated field is a label plus a language switcher: with the four or
-  // fewer locales Decidim expects, the switcher is a row of tabs and the pair
-  // reads as one header. With the nine locales configured on this deploy the
-  // switcher becomes a `<select>`, and `Decidim::FormBuilder#translated`
-  // silently drops the `label_options: { class: "sr-only" }` we pass for
-  // fields whose label the design hides — so on every question and option the
-  // label reappears, and the flex row it sits in (`justify-content:
-  // space-between`) throws the dropdown to the far right of a card that is a
-  // full-width column on a laptop. The pair is put back together here: label
-  // and select sit next to each other and read as one row again.
-  .label--tabs {
-    justify-content: flex-start;
-    align-items: baseline;
-    gap: 0.75rem;
-    margin-bottom: 0.25rem;
-
-    > label {
-      margin-bottom: 0;
-    }
-
-    select.language-change {
-      font-size: 0.8rem;
-      padding-block: 0.15rem;
-      min-width: auto;
-    }
   }
 
   // Borderless inputs, the way the Vocdoni app writes a voting process: the

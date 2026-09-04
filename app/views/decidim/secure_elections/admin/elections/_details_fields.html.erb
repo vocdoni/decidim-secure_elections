@@ -19,7 +19,7 @@
 <% append_javascript_pack_tag "decidim_secure_elections_admin" %>
 
 <div id="js-vocdoni-election-details"
-     class="vocdoni-editor"
+     class="vocdoni-editor form__wrapper"
      data-vocdoni-editor
      data-autosave-url="<%= election && election.editable? ? autosave_election_path(election) : "" %>"
      data-autosave-interval="30000"

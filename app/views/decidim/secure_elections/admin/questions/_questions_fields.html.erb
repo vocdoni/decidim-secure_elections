@@ -16,7 +16,7 @@
 <% append_javascript_pack_tag "decidim_secure_elections_admin" %>
 
 <div id="js-vocdoni-election-editor"
-     class="vocdoni-editor"
+     class="vocdoni-editor form__wrapper"
      data-vocdoni-editor
      data-next-question-index="<%= questions.size %>"
      data-autosave-url="<%= election.editable? ? autosave_election_questions_path(election) : "" %>"
