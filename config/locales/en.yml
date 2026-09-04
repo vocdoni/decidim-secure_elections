@@ -322,7 +322,7 @@ en:
           update:
             invalid: There was a problem updating the election.
             success: Election updated successfully.
-          view: See election
+          view: View secure election
           view_deleted: View deleted elections
         errors:
           last_job_failure: 'The last background operation failed:'

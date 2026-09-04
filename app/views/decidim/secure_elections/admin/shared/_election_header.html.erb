@@ -9,8 +9,11 @@
 
   <div class="flex items-center gap-2">
     <% if election.published? %>
+      <%# The button an admin reaches for after publishing: it opens the
+          participant-facing page in a new tab, so they can see the election
+          exactly as a voter would without navigating away from the admin. %>
       <%= link_to resource_locator(election).path,
-                  class: "button button__xs button__transparent-secondary flex flex-row items-center gap-2",
+                  class: "button button__sm button__secondary flex flex-row items-center gap-2",
                   target: :blank,
                   data: { "external-link": false } do %>
         <%= icon "eye-line", class: "inline-block" %>
