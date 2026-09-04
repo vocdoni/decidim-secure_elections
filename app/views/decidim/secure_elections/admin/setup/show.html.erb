@@ -5,7 +5,7 @@
   button writes the election to a public blockchain, and nothing after that can
   be edited, deleted or taken back.
 
-  Hence the checklist and the typed confirmation: the two things standing
+  Hence the checklist and the explicit acknowledgement: the two things standing
   between an administrator and an irreversible write.
 %>
 <% add_decidim_page_title(t(".title")) %>
@@ -119,31 +119,19 @@
     <% end %>
 
     <%#
-      Both confirmations are enforced by `SetupForm` — that check is the lock
+      The acknowledgement is enforced by `SetupForm` — that check is the lock
       and it stays. The pack adds a second one, disabling the button until the
-      acknowledgement is ticked *and* the phrase is typed, so that the button
-      for an unrecoverable action is never simply sitting there waiting to be
-      pressed. Without the pack the button is enabled and the server refuses.
+      acknowledgement is ticked, so that the button for an unrecoverable action
+      is never simply sitting there waiting to be pressed. Without the pack the
+      button is enabled and the server refuses.
     %>
-    <div id="js-vocdoni-setup" data-expected-phrase="<%= @form.expected_phrase %>">
+    <div id="js-vocdoni-setup">
       <%= decidim_form_for(@form, url: election_setup_path(election), method: :post, html: { id: "setup-form", class: "form-defaults form" }) do |f| %>
         <div class="row column">
           <%= f.check_box :confirm_irreversible,
                           label: t(".confirm_irreversible_label"),
                           disabled: !ready || publishing,
                           data: { "vocdoni-confirm-irreversible": true } %>
-        </div>
-
-        <div class="row column">
-          <%= f.text_field :confirmation_phrase,
-                           label: t(".confirmation_phrase_label", phrase: @form.expected_phrase),
-                           autocomplete: "off",
-                           disabled: !ready || publishing,
-                           data: { "vocdoni-confirm-phrase": true },
-                           aria: { describedby: "confirmation-phrase-help" } %>
-          <p class="help-text" id="confirmation-phrase-help">
-            <%= t(".confirmation_phrase_help", phrase: @form.expected_phrase) %>
-          </p>
         </div>
 
         <div class="row column mt-4">

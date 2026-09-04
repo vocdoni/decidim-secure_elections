@@ -15,8 +15,7 @@ module Decidim
         let(:attributes) do
           {
             setup: {
-              confirm_irreversible: true,
-              confirmation_phrase: described_class.expected_phrase
+              confirm_irreversible: true
             }
           }
         end
@@ -25,22 +24,6 @@ module Decidim
 
         context "when the acknowledgement is not ticked" do
           before { attributes[:setup][:confirm_irreversible] = false }
-
-          it { is_expected.to be_invalid }
-        end
-
-        context "when the confirmation phrase does not match" do
-          before { attributes[:setup][:confirmation_phrase] = "publish" }
-
-          it "still accepts a different case and stray whitespace" do
-            attributes[:setup][:confirmation_phrase] = "  #{described_class.expected_phrase.downcase}  "
-
-            expect(form).to be_valid
-          end
-        end
-
-        context "when the confirmation phrase is something else entirely" do
-          before { attributes[:setup][:confirmation_phrase] = "yes please" }
 
           it { is_expected.to be_invalid }
         end

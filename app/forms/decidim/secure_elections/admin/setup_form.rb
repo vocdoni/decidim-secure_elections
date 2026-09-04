@@ -7,16 +7,14 @@ module Decidim
       #
       # Submitting this form enqueues the job that writes the election to the
       # blockchain. There is no undo, no edit and no delete afterwards, so the
-      # form demands an explicit acknowledgement *and* a typed confirmation
-      # phrase, and re-checks every precondition server-side.
+      # form demands an explicit acknowledgement and re-checks every
+      # precondition server-side.
       class SetupForm < Decidim::Form
         mimic :setup
 
         attribute :confirm_irreversible, Boolean, default: false
-        attribute :confirmation_phrase, String
 
         validates :confirm_irreversible, acceptance: true
-        validate :confirmation_phrase_matches
         validate :election_is_off_chain
         validate :details_are_complete
         validate :questions_are_complete
@@ -28,28 +26,7 @@ module Decidim
           @election ||= context[:election]
         end
 
-        # The phrase the admin has to type. Translated, compared loosely
-        # (case- and whitespace-insensitive) so that it is a deliberate act
-        # rather than a typing exercise.
-        def self.expected_phrase
-          I18n.t("decidim.secure_elections.admin.setup.confirmation_phrase")
-        end
-
-        def expected_phrase
-          self.class.expected_phrase
-        end
-
         private
-
-        def normalize(value)
-          value.to_s.strip.squeeze(" ").downcase
-        end
-
-        def confirmation_phrase_matches
-          return if normalize(confirmation_phrase) == normalize(expected_phrase)
-
-          errors.add(:confirmation_phrase, :invalid)
-        end
 
         def election_is_off_chain
           return if election&.editable?

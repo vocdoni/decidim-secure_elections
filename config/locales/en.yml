@@ -31,7 +31,6 @@ en:
         status: Status
       setup:
         confirm_irreversible: I understand this cannot be undone
-        confirmation_phrase: Confirmation phrase
     errors:
       models:
         census_verifications:
@@ -455,7 +454,6 @@ en:
             configuration: This installation is connected to Vocdoni.
             details: The election has a title.
             questions: Every question has at least two answers.
-          confirmation_phrase: PUBLISH ON CHAIN
           create:
             invalid: The election was not published. Check the errors below.
             success: The election is being published on the blockchain. This can take a moment.
@@ -472,15 +470,13 @@ en:
             checklist_title: Before you publish
             confirm_irreversible_label: I understand that publishing writes this election to a public blockchain and that it cannot be edited, deleted or undone afterwards.
             confirm_title: Confirm publication
-            confirmation_phrase_help: Type %{phrase} to confirm. Upper or lower case both work.
-            confirmation_phrase_label: 'Type %{phrase} to confirm'
             fix_it: Fix it
             in_progress: This election is being published on the blockchain. Refresh in a moment to see the result.
             irreversible_body: Publishing writes the questions, the answers and the census to a public blockchain. From that moment on nothing can be changed, deleted or taken back — not the wording of a question, not an answer, not who is allowed to vote. Review everything below before you continue.
             irreversible_title: This step cannot be undone
             publish_button: Publish on the blockchain
             publish_disabled: Complete every item in the checklist above before publishing.
-            publish_needs_confirmation: Tick the acknowledgement above and type the confirmation phrase to enable this button.
+            publish_needs_confirmation: Tick the acknowledgement above to enable this button.
             summary_title: What will be published
             title: Publish on the blockchain
       admin_log:
