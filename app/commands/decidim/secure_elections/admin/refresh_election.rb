@@ -21,7 +21,7 @@ module Decidim
         end
 
         def call
-          return broadcast(:invalid) unless election.on_chain?
+          return broadcast(:invalid) unless election.on_chain? || election.publishing?
 
           if publication_incomplete?
             Decidim::SecureElections::PublishElectionJob.perform_later(election.id)
@@ -38,7 +38,11 @@ module Decidim
 
         # A process that exists upstream but never reached a live status, or
         # whose questions have no Vochain election id yet, cannot be voted on.
+        # A `publishing?` election that never even reached the chain — the job
+        # died before persisting the process id — is also incomplete: resuming
+        # picks up wherever the previous run stopped.
         def publication_incomplete?
+          return true if election.publishing? && !election.on_chain?
           return true unless Decidim::SecureElections::Election::LIVE_STATUSES.include?(election.status) ||
                              %w(ended results canceled).include?(election.status)
 
