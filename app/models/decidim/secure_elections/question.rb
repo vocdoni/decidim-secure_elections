@@ -123,9 +123,7 @@ module Decidim
         answers.reload.each_with_index do |answer, index|
           next if answer.position == index && answer.value == index
 
-          # rubocop:disable Rails/SkipsModelValidations
-          answer.update_columns(position: index, value: index)
-          # rubocop:enable Rails/SkipsModelValidations
+          answer.update_columns(position: index, value: index) # rubocop:disable Rails/SkipsModelValidations
         end
       end
 

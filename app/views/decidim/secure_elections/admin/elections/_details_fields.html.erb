@@ -1,87 +1,48 @@
 <%#
-  Step 1: what this election is.
+  Basic info card. Locals: `form`, `election` (nil on create).
 
-  A title, an optional video and a description. Nothing more — an admin must be
-  able to bring an election into existence before they have decided on the
-  questions, the voters or the dates.
-
-  The wrapper carries the editor pack so the draft keeps saving itself while the
-  admin is still typing; on `new` there is nothing to autosave into yet and the
-  URL is empty, which the pack reads as "off".
-
-  Locals: `form` (the Decidim form builder), `election` (nil on create).
+  Title, an optional video and a description. Nothing more — an admin
+  must be able to bring an election into existence before they have
+  decided on the questions, the voters or the dates.
 %>
 <%
   disabled = !form.object.editable?
   election = local_assigns[:election]
 %>
 
-<% append_javascript_pack_tag "decidim_secure_elections_admin" %>
+<%# The language switcher core renders next to a translatable field has no
+    name of its own. See `ElectionsHelper#secure_elections_language_selector_label`;
+    it goes first so it is read before the control it names. %>
+<%= secure_elections_language_selector_label("vocdoni-election-title-tabs",
+                                             t("decidim.secure_elections.admin.elections.editor.title_label")) %>
+<%= form.translated :text_field,
+                    :title,
+                    tabs_id: "vocdoni-election-title-tabs",
+                    label: t("decidim.secure_elections.admin.elections.editor.title_label"),
+                    label_options: { class: "sr-only" },
+                    placeholder: t("decidim.secure_elections.admin.elections.editor.title_placeholder"),
+                    autofocus: true,
+                    disabled: disabled %>
 
-<div id="js-vocdoni-election-details"
-     class="vocdoni-editor form__wrapper"
-     data-vocdoni-editor
-     data-autosave-url="<%= election && election.editable? ? autosave_election_path(election) : "" %>"
-     data-autosave-interval="30000"
-     data-unsaved-warning="<%= t("decidim.secure_elections.admin.elections.editor.unsaved_warning") %>"
-     data-announce-saving="<%= t("decidim.secure_elections.admin.elections.editor.announce.saving") %>"
-     data-announce-saved="<%= t("decidim.secure_elections.admin.elections.editor.announce.saved") %>"
-     data-announce-save-failed="<%= t("decidim.secure_elections.admin.elections.editor.announce.save_failed") %>">
-
-  <%# The autosave state is reported here rather than as a silent visual cue. %>
-  <p class="text-sm text-gray-2 mt-2 mb-0"
-     id="js-vocdoni-details-status"
-     data-vocdoni-status
-     role="status"
-     aria-live="polite"></p>
-
-  <%#
-    The display size of this field is set from the stylesheet, not with utility
-    classes on the field itself.
-
-    `Decidim::FormBuilder` hands the *same* options hash to the input and to
-    `error_for`, so anything passed as `class:` lands on the error message too:
-    with `text-3xl font-bold` on the field, "cannot be blank" rendered as
-    unstyled display type across the first screen a new admin ever sees. Every
-    borderless field on this page is wrapped for that reason — the class goes on
-    the wrapper, where nothing can copy it onto an error.
-  %>
-  <%# The language switcher core renders next to a translatable field has no
-      name of its own. See `ElectionsHelper#secure_elections_language_selector_label`;
-      it goes first so it is read before the control it names. %>
-  <div class="vocdoni-editor__title">
-    <%= secure_elections_language_selector_label("vocdoni-election-title-tabs",
-                                        t("decidim.secure_elections.admin.elections.editor.title_label")) %>
-    <%= form.translated :text_field,
-                        :title,
-                        tabs_id: "vocdoni-election-title-tabs",
-                        label: t("decidim.secure_elections.admin.elections.editor.title_label"),
-                        label_options: { class: "sr-only" },
-                        placeholder: t("decidim.secure_elections.admin.elections.editor.title_placeholder"),
-                        autofocus: true,
-                        disabled: disabled %>
+<%# Shown on the public election page; never sent to Vocdoni. %>
+<details class="my-4" <%= "open" if form.object.stream_uri.present? %>>
+  <summary class="text-sm text-gray-2 cursor-pointer">
+    <%= t("decidim.secure_elections.admin.elections.editor.stream_summary") %>
+  </summary>
+  <div class="mt-2">
+    <%= form.url_field :stream_uri,
+                       label: t("decidim.secure_elections.admin.elections.editor.stream_label"),
+                       placeholder: "https://www.youtube.com/watch?v=…",
+                       help_text: t("decidim.secure_elections.admin.elections.editor.stream_help"),
+                       disabled: disabled %>
   </div>
+</details>
 
-  <%# Shown on the public election page; never sent to Vocdoni. %>
-  <details class="my-4" <%= "open" if form.object.stream_uri.present? %>>
-    <summary class="text-sm text-gray-2 cursor-pointer">
-      <%= t("decidim.secure_elections.admin.elections.editor.stream_summary") %>
-    </summary>
-    <div class="mt-2">
-      <%= form.url_field :stream_uri,
-                         label: t("decidim.secure_elections.admin.elections.editor.stream_label"),
-                         placeholder: "https://www.youtube.com/watch?v=…",
-                         help_text: t("decidim.secure_elections.admin.elections.editor.stream_help"),
-                         disabled: disabled %>
-    </div>
-  </details>
-
-  <%= secure_elections_language_selector_label("vocdoni-election-description-tabs",
-                                      t("decidim.secure_elections.admin.elections.editor.description_label")) %>
-  <%= form.translated :editor,
-                      :description,
-                      tabs_id: "vocdoni-election-description-tabs",
-                      label: t("decidim.secure_elections.admin.elections.editor.description_label"),
-                      lines: 6,
-                      disabled: disabled %>
-</div>
+<%= secure_elections_language_selector_label("vocdoni-election-description-tabs",
+                                             t("decidim.secure_elections.admin.elections.editor.description_label")) %>
+<%= form.translated :editor,
+                    :description,
+                    tabs_id: "vocdoni-election-description-tabs",
+                    label: t("decidim.secure_elections.admin.elections.editor.description_label"),
+                    lines: 6,
+                    disabled: disabled %>

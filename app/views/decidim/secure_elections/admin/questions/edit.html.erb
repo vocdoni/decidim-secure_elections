@@ -1,20 +1,39 @@
-<%# Step 2 of 5: the ballot. Locked until the election has a title; read-only
-    once the process is on chain. %>
+<%# The Questions tab: ballot editor with drag-reorder and soft-delete.
+    Locked until details are complete; read-only once on chain. %>
 <% add_decidim_page_title(t(".title")) %>
+<%# Upstream editor pack: exposes window.Decidim.createEditableForm(),
+    which questions_editor.js bootstraps on turbo:load. %>
+<% append_javascript_pack_tag "decidim_forms_admin" %>
 
 <%= render partial: "decidim/secure_elections/admin/shared/election_header", locals: { election: } %>
-<%= render partial: "decidim/secure_elections/admin/shared/nav", locals: { election: } %>
+<%= render "decidim/secure_elections/admin/elections/tabs_menu" %>
 
 <div class="item__edit item__edit-1col">
   <div class="item__edit-form">
     <%= decidim_form_for(@form,
                          url: election_questions_path(election),
                          method: :patch,
-                         html: { id: "edit-election-questions-form", class: "form-defaults form edit_election_questions" }) do |f| %>
-      <%= render partial: "decidim/secure_elections/admin/questions/questions_fields", locals: { form: f, election: } %>
-
-      <%= render partial: "decidim/secure_elections/admin/shared/step_footer",
-                 locals: { election:, step: :questions, form: f } %>
+                         html: { id: "edit-election-questions-form",
+                                 class: "form-defaults form edit_election_questions" }) do |f| %>
+      <%= render partial: "decidim/secure_elections/admin/questions/form",
+                 locals: { form: f, election: } %>
     <% end %>
+
+    <%# "Add question" is deliberately OUTSIDE the form, matching upstream
+        decidim-elections. DynamicFieldsComponent handles the click via the
+        .add-question class and appends a clone of #question-template to the
+        questionnaire-questions-list inside the form. %>
+    <button type="button"
+            class="button button__sm button__transparent-secondary add-question mt-1">
+      <%= icon "add-line" %>
+      <%= t("decidim.secure_elections.admin.questions.form.add_question") %>
+    </button>
+  </div>
+  <div class="item__edit-sticky">
+    <div class="item__edit-sticky-container">
+      <%= button_tag t("decidim.secure_elections.admin.questions.form.save"),
+                     form: "edit-election-questions-form",
+                     class: "button button__sm button__secondary" %>
+    </div>
   </div>
 </div>

@@ -29,6 +29,7 @@ module Decidim
             "0" => {
               id: question.id,
               uid: "q0",
+              question_type: "singlechoice",
               title_en: "Do you agree?",
               description_en: "",
               answers: {
@@ -42,8 +43,6 @@ module Decidim
         let(:attributes) do
           {
             election: {
-              question_type: "singlechoice",
-              result_visibility: "live",
               questions: question_attributes
             }
           }
@@ -80,6 +79,7 @@ module Decidim
           before do
             question_attributes["1"] = {
               uid: "q1",
+              question_type: "singlechoice",
               title_en: "And this one?",
               description_en: "",
               answers: {
@@ -158,27 +158,36 @@ module Decidim
           end
         end
 
-        context "when the result visibility is hidden until the end" do
-          before { attributes[:election][:result_visibility] = "hidden" }
+        context "when the election hides results until the end" do
+          # secret_until_the_end is now derived from election.results_availability,
+          # not from a form attribute. The Main tab owns results_availability;
+          # the Questions command reads it from the election record.
+          let(:election) do
+            create(:vocdoni_election, :with_questions, component:,
+                                                       questions_count: 1, answers_count: 2,
+                                                       results_availability: "after_end")
+          end
 
-          it "sets it on every question" do
+          it "marks every question secret_until_the_end" do
             command.call
 
             expect(election.questions.reload.map(&:secret_until_the_end)).to all(be(true))
           end
         end
 
-        context "when the question type changes" do
+        context "when the per-question type is multichoice" do
+          # question_type is now per-question; each card's select is submitted
+          # with the question params rather than at the election level.
           before do
-            attributes[:election][:question_type] = "multichoice"
+            question_attributes["0"][:question_type] = "multichoice"
             question_attributes["0"][:min_choices] = 1
             question_attributes["0"][:max_choices] = 2
           end
 
-          it "applies to every question of the process" do
+          it "saves the multichoice type and the choice bounds" do
             command.call
 
-            expect(election.questions.reload.map(&:question_type)).to all(eq("multichoice"))
+            expect(election.questions.first.reload.question_type).to eq("multichoice")
             expect(election.questions.first.max_choices).to eq(2)
           end
         end

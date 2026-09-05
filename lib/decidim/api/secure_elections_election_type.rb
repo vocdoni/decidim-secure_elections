@@ -25,7 +25,7 @@ module Decidim
             method: :vocdoni_chain_id,
             null: true
       field :description, Decidim::Core::TranslatedFieldType, "The description of this election", null: true
-      field :end_time, Decidim::Core::DateTimeType, "When this election stops accepting votes", null: true
+      field :end_at, Decidim::Core::DateTimeType, "When this election stops accepting votes", null: true
       field :id, GraphQL::Types::ID, "The internal ID of this election", null: false
       field :on_chain,
             GraphQL::Types::Boolean,
@@ -46,7 +46,7 @@ module Decidim
             Decidim::Core::DateTimeType,
             "When the tally was last read from the blockchain",
             null: true
-      field :start_time, Decidim::Core::DateTimeType, "When this election starts accepting votes, if scheduled", null: true
+      field :start_at, Decidim::Core::DateTimeType, "When this election starts accepting votes, if scheduled", null: true
       field :status, GraphQL::Types::String, "The lifecycle status of this election", null: false
       field :title, Decidim::Core::TranslatedFieldType, "The title of this election", null: false
       field :turnout,

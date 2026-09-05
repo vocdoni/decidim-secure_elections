@@ -3,29 +3,23 @@
 module Decidim
   module SecureElections
     module Admin
-      # The election list, the trash, and **step 1** of the wizard: the details.
+      # The election list, the trash, and the **Main** tab: everything an
+      # admin decides about the election itself.
       #
-      # `new`/`create` and `edit`/`update` render and save the same, small form
-      # — a title, a description and an optional video. That is all it takes to
-      # bring an election into existence; the ballot, the census and the
-      # schedule are steps of their own.
+      # `new`/`create` and `edit`/`update` render and save the same form —
+      # a title, a description, an optional video, the schedule, and how
+      # results are shown — collapsed into three accordion cards on one
+      # page. The Calendar step of the old wizard is gone; its attributes
+      # live on this form now.
       #
-      # The wizard is strict: `QuestionsController`, `CensusController`,
-      # `CalendarController` and `SetupController` each refuse to open until
-      # every step before them is complete. This one has no prerequisite beyond
-      # the record existing, so it is always reachable — including after the
-      # election is on chain, when it renders read-only.
-      #
-      # `autosave` is the same save answered as JSON, so the browser can keep
-      # the draft up to date while the admin is still typing. Like every other
-      # action here it never contacts the Vocdoni API (ARCHITECTURE §0.5).
+      # `QuestionsController`, `CensusController` and the dashboard each
+      # sit under their own tab in the four-tab strip. The tabs are not a
+      # wizard: an admin can move between them freely, and the
+      # completeness checks live on the dashboard rather than gating the
+      # tabs themselves.
       class ElectionsController < Admin::ApplicationController
         include Decidim::Admin::HasTrashableResources
         include Decidim::Admin::Filterable
-
-        # Only the editing screens are part of the wizard: the index, the trash
-        # and `create` exist before there is a step to be on.
-        wizard_step :details, only: [:edit, :update, :autosave]
 
         helper_method :elections, :election
 
@@ -33,14 +27,13 @@ module Decidim
           enforce_permission_to :read, :election
         end
 
-        # `resources :elections` exposes a canonical show route. There is no
-        # separate "election page" in the admin, so it lands on the furthest
-        # step the admin can actually work on — the monitor once the process is
-        # on chain, the first unfinished step otherwise.
+        # `resources :elections` exposes a canonical show route. The admin
+        # panel has no separate "election page" — the Dashboard tab is where
+        # an admin lands to see the state of a single election.
         def show
           enforce_permission_to :read, :election
 
-          redirect_to secure_elections_step_path(election, election.furthest_reachable_step)
+          redirect_to election_dashboard_path(election)
         end
 
         def new
@@ -57,9 +50,9 @@ module Decidim
           Decidim::SecureElections::Admin::CreateElection.call(@form) do
             on(:ok) do |election|
               flash[:notice] = I18n.t("elections.create.success", scope: "decidim.secure_elections.admin")
-              # Straight on to the ballot: the details step is complete the
-              # moment the record has a title.
-              redirect_to secure_elections_step_path(election, :questions)
+              # Straight on to the ballot editor, where the admin adds
+              # questions before publishing the election.
+              redirect_to edit_election_questions_path(election)
             end
 
             on(:invalid) do
@@ -83,33 +76,12 @@ module Decidim
           Decidim::SecureElections::Admin::UpdateElection.call(@form, election) do
             on(:ok) do
               flash[:notice] = I18n.t("elections.update.success", scope: "decidim.secure_elections.admin")
-              redirect_to next_step_path
+              redirect_to edit_election_path(election)
             end
 
             on(:invalid) do
               flash.now[:alert] = I18n.t("elections.update.invalid", scope: "decidim.secure_elections.admin")
               render action: "edit", status: :unprocessable_content
-            end
-          end
-        end
-
-        # Draft autosave. Same command, same validations, no redirect: the
-        # browser calls it periodically and on blur, so that a closed tab does
-        # not cost an afternoon of work.
-        def autosave
-          # Asked without raising, so that a refusal can be answered in the
-          # format the caller asked for. See `autosave_refused`.
-          return autosave_refused unless allowed_to?(:update, :election, election:)
-
-          @form = form(Decidim::SecureElections::Admin::ElectionForm).from_params(params, current_component:, election:)
-
-          Decidim::SecureElections::Admin::UpdateElection.call(@form, election) do
-            on(:ok) do
-              render json: { saved: true, saved_at: Time.current.iso8601 }, status: :ok
-            end
-
-            on(:invalid) do
-              render json: { saved: false, errors: @form.errors.full_messages }, status: :unprocessable_content
             end
           end
         end
@@ -156,17 +128,6 @@ module Decidim
         end
 
         private
-
-        # After a successful save, move on — but only if the next step has
-        # actually become reachable. Saving a title that is still blank in the
-        # organization's language leaves the admin where they are rather than
-        # bouncing them forward and straight back.
-        def next_step_path
-          election.reload
-          return secure_elections_step_path(election, :questions) if election.step_reachable?(:questions)
-
-          secure_elections_step_path(election, :details)
-        end
 
         def elections
           @elections ||= filtered_collection

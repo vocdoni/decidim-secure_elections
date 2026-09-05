@@ -3,7 +3,7 @@
 module Decidim
   module SecureElections
     module Admin
-      # Step 3 of the wizard: who is allowed to vote.
+      # Census tab: voter-authentication configuration + member management.
       #
       # The census belongs to Decidim. An admin never sees, types or is asked
       # for a Vocdoni identifier: they configure how a voter authenticates,
@@ -15,25 +15,33 @@ module Decidim
       #
       # Actions
       # -------
-      # * `show`     — the census: authentication summary, people, the three
-      #                ways to add them.
+      # * `show`     — unified hub: manifest selector, inline auth-config form,
+      #                5-row preview, members management, import/verification.
       # * `edit`/`update` — voter authentication (credentials, 2FA, summary).
+      #                Still reachable but no longer linked; `show` absorbs it.
       # * `members`/`update_members` — the editable table.
       # * `template` — a CSV with exactly the columns this election needs.
       # * `import`   — read a CSV back, per row.
       # * `import_from_verifications` — pull in verified participants.
       # * `clear`    — empty the census.
       class CensusController < Admin::ApplicationController
-        # Locked until the ballot is complete: there is no point collecting
-        # voters for questions that do not exist yet.
+        # The census tab requires questions to be complete first; the guard
+        # redirects and explains if they are not.
         wizard_step :census
 
+        # Only the "internal_users" manifest ships with vd today.  Future
+        # manifests (token_csv, dataset_csv, …) add a key here and a
+        # corresponding `admin/censuses/_<key>_form.html.erb` partial.
+        CENSUS_MANIFESTS = ["internal_users"].freeze
+
         helper_method :census_members, :incomplete_members, :reported_missing_members,
-                      :available_handlers, :verifications_form, :import_form, :template_fields
+                      :available_handlers, :verifications_form, :import_form, :template_fields,
+                      :preview_users
 
         def show
           enforce_permission_to(:read, :census, election:)
 
+          @census_manifests = CENSUS_MANIFESTS
           @form = census_form
         end
 
@@ -56,7 +64,9 @@ module Decidim
 
             on(:invalid) do
               flash.now[:alert] = I18n.t("census.authentication.invalid", scope: "decidim.secure_elections.admin")
-              render action: "edit", status: :unprocessable_content
+              # The auth-config form is now inline on `show`, so re-render that.
+              @census_manifests = CENSUS_MANIFESTS
+              render action: "show", status: :unprocessable_content
             end
           end
         end
@@ -113,6 +123,7 @@ module Decidim
           # command and never reach the view, and `form(…)` would resolve to
           # the command's own private `attr_reader :form` — a zero-argument
           # method — rather than to `Decidim::FormFactory#form`.
+          @census_manifests = CENSUS_MANIFESTS
           @form = census_form
 
           Decidim::SecureElections::Admin::ImportCensusMembers.call(@import_form, election, current_user) do
@@ -138,6 +149,7 @@ module Decidim
                                 .from_params(params, election:, current_organization:)
           # Same reason as in `import`: the branches below run against the
           # command, not against this controller.
+          @census_manifests = CENSUS_MANIFESTS
           @form = census_form
 
           Decidim::SecureElections::Admin::ImportCensusMembersFromVerifications.call(@verifications_form, election, current_user) do
@@ -175,6 +187,13 @@ module Decidim
         # the import actions fall back to when they have to re-render `show`.
         def census_form
           form(Decidim::SecureElections::Admin::CensusForm).from_model(election, election:)
+        end
+
+        # First five members for the preview partial. Memoised so the same
+        # query is not run twice when the page renders (once for `present?`,
+        # once for the rows).
+        def preview_users(current_election)
+          @preview_users ||= current_election.census_members.first(5)
         end
 
         def census_members

@@ -23,7 +23,7 @@ module Decidim
         @elections ||= Decidim::SecureElections::Election
                        .where(component: current_component)
                        .published
-                       .order(start_time: :asc, id: :asc)
+                       .order(start_at: :asc, id: :asc)
       end
 
       def election

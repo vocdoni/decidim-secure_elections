@@ -1,0 +1,46 @@
+<%#
+  The Questions tab: outer wrapper for the ballot editor.
+
+  Renders the collapse/expand strip, the <script type="text/template">
+  blueprint that DynamicFieldsComponent clones when the admin adds a
+  question, and the sortable question list.
+
+  Note: .form__wrapper lives on each *question card's* inner div
+  (matching upstream decidim-elections), **not** on this outer container.
+
+  Locals: form (the Decidim form builder), election.
+%>
+<%
+  form_name    = form.object_name
+  questions    = form.object.questions
+  blank_q      = Decidim::SecureElections::Admin::QuestionForm.blank_question
+%>
+
+<div class="questionnaire-questions">
+  <div class="text-right my-4">
+    <button type="button" class="collapse-all">
+      <%= t("decidim.secure_elections.admin.questions.form.collapse_all") %>
+    </button>
+    <span aria-hidden="true"> | </span>
+    <button type="button" class="expand-all">
+      <%= t("decidim.secure_elections.admin.questions.form.expand_all") %>
+    </button>
+  </div>
+
+  <%# Blueprint cloned by DynamicFieldsComponent when the admin clicks
+      "Add question". Content is inert until inserted into the DOM. %>
+  <script type="text/template" id="question-template">
+    <%= render partial: "decidim/secure_elections/admin/questions/question",
+               locals: { form_name:, index: "DECIDIM_RECORD_ID", question: blank_q, election: } %>
+  </script>
+
+  <div class="questionnaire-questions-list flex flex-col py-6 gap-6"
+       data-draggable-table
+       data-draggable-handle=".card-divider"
+       id="questionnaire-questions-list">
+    <% questions.each_with_index do |question, index| %>
+      <%= render partial: "decidim/secure_elections/admin/questions/question",
+                 locals: { form_name:, index:, question:, election: } %>
+    <% end %>
+  </div>
+</div>

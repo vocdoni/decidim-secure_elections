@@ -1,0 +1,38 @@
+<%#
+  Read-only summary of the election's Main tab fields.
+  Pencil-edit link in the card header goes back to `edit_election_path`.
+
+  Locals: `election`
+%>
+<div class="card mb-6">
+  <div class="card-divider">
+    <h2 class="card-title justify-between">
+      <span><%= t("decidim.secure_elections.admin.elections.edit.card_title") %></span>
+      <%= link_to edit_election_path(election),
+                  class: "button button__xs button__transparent-secondary",
+                  aria: { label: t("decidim.secure_elections.admin.elections.edit_action") } do %>
+        <%= icon "pencil-line", class: "!w-4 !h-4", aria_hidden: true %>
+      <% end %>
+    </h2>
+  </div>
+
+  <div class="card-section">
+    <dl>
+      <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.title") %></dt>
+      <dd class="mb-4"><%= present(election).title(html_escape: true) %></dd>
+
+      <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.start_at") %></dt>
+      <dd class="mb-4"><%= vocdoni_start_time_text(election) %></dd>
+
+      <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.end_at") %></dt>
+      <dd class="mb-4"><%= l(election.end_at, format: :decidim_short) if election.end_at %></dd>
+
+      <% if election.manual_start? %>
+        <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.manual_start") if defined?(election.manual_start?) %></dt>
+        <dd class="mb-4">
+          <span class="label secondary"><%= t("decidim.secure_elections.admin.elections.editor.manual_start_label") %></span>
+        </dd>
+      <% end %>
+    </dl>
+  </div>
+</div>

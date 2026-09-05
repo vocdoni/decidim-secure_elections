@@ -19,11 +19,16 @@ decidim_ref = ENV.fetch("DECIDIM_REF", "develop")
 if decidim_path
   gem "decidim", path: decidim_path
   gem "decidim-dev", path: decidim_path
+  gem "decidim-initiatives", path: decidim_path
   gem "decidim-participatory_processes", path: decidim_path
 else
   git "https://github.com/decidim/decidim", branch: decidim_ref do
     gem "decidim"
     gem "decidim-dev"
+    # `rake test_app` (from decidim-dev) generates a dummy_signature_handler
+    # that inherits from Decidim::Initiatives::SignatureHandler, so the
+    # dummy app fails to boot without the initiatives gem loaded.
+    gem "decidim-initiatives"
     gem "decidim-participatory_processes"
   end
 end

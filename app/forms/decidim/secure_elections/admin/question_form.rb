@@ -35,6 +35,7 @@ module Decidim
         attribute :max_choices, Integer
         attribute :min_choices, Integer
         attribute :answers, [AnswerForm]
+        attribute :deleted, Boolean, default: false
 
         validates :question_type, inclusion: { in: Decidim::SecureElections::Question::QUESTION_TYPES }
         validates :title, translatable_presence: true, unless: :unfilled?
@@ -72,9 +73,16 @@ module Decidim
         end
 
         # The options that will actually be persisted, in the order the admin
-        # arranged them. Empty rows are dropped (see `AnswerForm#unfilled?`).
+        # arranged them. Empty rows and rows the admin removed (deleted) are
+        # dropped — the command destroys the deleted ones.
         def options
-          answers.reject(&:unfilled?)
+          answers.reject { |a| a.unfilled? || a.deleted }
+        end
+
+        # How many options will be saved. Used by the per-question max_choices
+        # select to constrain the range offered.
+        def number_of_options
+          answers.size
         end
 
         # Choice bounds are meaningless for a single-choice question — upstream

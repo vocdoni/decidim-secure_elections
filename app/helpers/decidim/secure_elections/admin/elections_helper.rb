@@ -154,14 +154,6 @@ module Decidim
           end
         end
 
-        def vocdoni_result_visibility_options
-          # i18n-tasks-use t("decidim.secure_elections.admin.elections.result_visibility.live")
-          # i18n-tasks-use t("decidim.secure_elections.admin.elections.result_visibility.hidden")
-          Decidim::SecureElections::Admin::ElectionQuestionsForm::RESULT_VISIBILITIES.map do |value|
-            [t(value, scope: "decidim.secure_elections.admin.elections.result_visibility"), value]
-          end
-        end
-
         # Above this many locales `Decidim::FormBuilder` swaps the language tabs
         # of a translatable field for a `<select>`. Verbatim from
         # `FormBuilder#create_language_selector`; there is no hook to ask.
@@ -244,9 +236,10 @@ module Decidim
           started = election.started_at
 
           return l(started, format: :decidim_short) if started.present?
-          return t("decidim.secure_elections.admin.calendar.started_on_publication") if election.on_chain?
+          return t("decidim.secure_elections.admin.elections.editor.started_on_publication") if election.on_chain?
+          return t("decidim.secure_elections.admin.elections.editor.manual_start_label") if election.manual_start?
 
-          t("decidim.secure_elections.admin.calendar.manual_start")
+          t("decidim.secure_elections.admin.elections.editor.starts_on_publication")
         end
 
         # When the local copy of the tally was last read from the chain.

@@ -1,0 +1,42 @@
+<%#
+  Calendar card on the on-chain Dashboard: shows the planned start/end
+  times and, when the election is configured for manual start and is
+  currently paused, offers the "Start election" button.
+
+  Locals: `election`
+%>
+<div class="card mb-6">
+  <div class="card-divider">
+    <h2 class="card-title"><%= t("decidim.secure_elections.admin.dashboard.calendar.title") %></h2>
+  </div>
+
+  <div class="card-section">
+    <dl>
+      <% if election.manual_start? %>
+        <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.start_at") %></dt>
+        <dd class="mb-4">
+          <span class="label secondary"><%= t("decidim.secure_elections.admin.elections.editor.manual_start_label") %></span>
+        </dd>
+      <% elsif election.start_at.present? %>
+        <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.start_at") %></dt>
+        <dd class="mb-4"><%= l(election.start_at, format: :decidim_short) %></dd>
+      <% end %>
+
+      <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.end_at") %></dt>
+      <dd><%= l(election.end_at, format: :decidim_short) if election.end_at %></dd>
+    </dl>
+
+    <% if election.manual_start? && election.paused? && allowed_to?(:update_status, :monitor, election:) %>
+      <div class="mt-4">
+        <%= button_to start_election_dashboard_path(election),
+                      method: :post,
+                      class: "button button__sm button__secondary" do %>
+          <%= t("decidim.secure_elections.admin.dashboard.start.button") %>
+        <% end %>
+        <p class="text-sm text-gray-2 mt-2">
+          <%= t("decidim.secure_elections.admin.dashboard.start.help") %>
+        </p>
+      </div>
+    <% end %>
+  </div>
+</div>

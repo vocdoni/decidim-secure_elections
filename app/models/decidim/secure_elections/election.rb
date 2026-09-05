@@ -74,6 +74,10 @@ module Decidim
       # (`VoterAuthentication/SecurityLevel.tsx#getSecurityLevel`).
       SECURITY_LEVELS = %w(weak mid strong).freeze
 
+      # Results are either shown as votes arrive or only once the election ends.
+      # `per_question` is deliberately excluded — vd's protocol does not support it.
+      RESULTS_AVAILABILITIES = %w(real_time after_end).freeze
+
       component_manifest_name "vocdoni"
 
       has_many :questions,
@@ -97,17 +101,18 @@ module Decidim
 
       validates :title, presence: true
       validates :status, inclusion: { in: STATUSES }
-      validate :end_time_after_start_time
+      validates :results_availability, inclusion: { in: RESULTS_AVAILABILITIES }
+      validate :end_at_after_start_at
 
       scope :on_chain, -> { where.not(vocdoni_process_id: nil) }
       scope :off_chain, -> { where(vocdoni_process_id: nil) }
       scope :with_status, ->(*values) { where(status: values.flatten.compact_blank) }
-      scope :upcoming, -> { published.on_chain.where(start_time: Time.current..) }
-      scope :ongoing, -> { published.on_chain.with_status("ready", "paused").where(end_time: Time.current..) }
-      scope :finished, -> { published.on_chain.where(end_time: ..Time.current).or(published.on_chain.with_status("ended", "results")) }
+      scope :upcoming, -> { published.on_chain.where(start_at: Time.current..) }
+      scope :ongoing, -> { published.on_chain.with_status("ready", "paused").where(end_at: Time.current..) }
+      scope :finished, -> { published.on_chain.where(end_at: ..Time.current).or(published.on_chain.with_status("ended", "results")) }
 
       # `datetime` is what global search orders and filters results by. It is
-      # `published_at` rather than `start_time` because an election that starts
+      # `published_at` rather than `start_at` because an election that starts
       # when it is published has no start time at all, and a null there would
       # sort every such election to one end of every result page.
       searchable_fields({
@@ -158,21 +163,36 @@ module Decidim
         status.to_s.upcase
       end
 
-      def manual_start?
-        start_time.blank?
+      # Whether the on-chain process is currently paused. Task 5 will wire
+      # this against the sequencer status field; for now it is a stub so
+      # the Dashboard's "Start election" button visibility can be tested
+      # without the chain running.
+      def paused?
+        status == "paused"
       end
 
+      # Has voting opened yet on chain? Three semantic states, matching
+      # the three ways `manual_start` and `start_at` can combine:
+      #
+      # - `manual_start = true` → the process is born paused; it has
+      #   "started" the moment the admin clicks Start (status advances
+      #   from `paused` to `ready` or beyond).
+      # - `manual_start = false, start_at blank` → the process opens on
+      #   publish; started iff the election is on chain.
+      # - `manual_start = false, start_at set` → scheduled start; started
+      #   once the clock has passed `start_at`.
       def started?
         return false unless on_chain?
         return LIVE_STATUSES.include?(status) || %w(ended results).include?(status) if manual_start?
+        return true if start_at.blank?
 
-        start_time <= Time.current
+        start_at <= Time.current
       end
 
       def finished?
         return true if %w(ended results canceled).include?(status)
 
-        end_time.present? && end_time <= Time.current
+        end_at.present? && end_at <= Time.current
       end
 
       def ongoing?
@@ -202,7 +222,7 @@ module Decidim
 
       # When voting actually began, as opposed to when it was scheduled to.
       #
-      # `start_time` is authoritative whenever the admin picked a moment. When
+      # `start_at` is authoritative whenever the admin picked a moment. When
       # they chose "start when published" the column is NULL by design
       # (ARCHITECTURE §2.3), and the moment voting opened is the moment the
       # process reached the chain. There is no column for that (ARCHITECTURE §4b),
@@ -212,7 +232,7 @@ module Decidim
       # @return [ActiveSupport::TimeWithZone, nil] nil while the election has
       #   neither a scheduled start nor a publication to point at.
       def started_at
-        return start_time if start_time.present?
+        return start_at if start_at.present?
         return nil unless on_chain? || publishing?
 
         setup_requested_at
@@ -388,8 +408,12 @@ module Decidim
       # The numbered steps, in order. The order *is* the prerequisite chain.
       WIZARD_STEPS = [:details, :questions, :census, :calendar, :publish].freeze
 
-      # Everything reachable from the step navigation.
-      NAV_STEPS = (WIZARD_STEPS + [:monitor]).freeze
+      # The four persistent tabs in the new admin IA.
+      # `:main` maps to the election details/calendar screen (always reachable).
+      # `:questions` maps to the ballot editor (reachable once `details_complete?`).
+      # `:census` maps to the census screen (reachable once `questions_complete?`).
+      # `:dashboard` maps to the dashboard/publish screen (always reachable).
+      NAV_STEPS = [:main, :questions, :census, :dashboard].freeze
 
       # The steps that go read-only — rather than disappearing — once the
       # process is on chain. An admin must still be able to read what was
@@ -407,7 +431,7 @@ module Decidim
       end
 
       def calendar_complete?
-        end_time.present?
+        end_at.present?
       end
 
       # A census is only done when it identifies somebody *and* there is
@@ -540,7 +564,7 @@ module Decidim
       # The instant the admin pressed "publish on the blockchain", which for an
       # election with no scheduled start is the instant voting opened. A single
       # indexed lookup, and only ever asked for by an on-chain election that has
-      # no `start_time` of its own.
+      # no `start_at` of its own.
       def setup_requested_at
         return @setup_requested_at if defined?(@setup_requested_at)
 
@@ -578,11 +602,11 @@ module Decidim
         blocker && :"#{blocker}_incomplete"
       end
 
-      def end_time_after_start_time
-        return if end_time.blank? || start_time.blank?
-        return if end_time > start_time
+      def end_at_after_start_at
+        return if end_at.blank? || start_at.blank?
+        return if end_at > start_at
 
-        errors.add(:end_time, :invalid)
+        errors.add(:end_at, :invalid)
       end
     end
   end

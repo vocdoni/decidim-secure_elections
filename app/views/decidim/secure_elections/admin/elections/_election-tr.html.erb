@@ -1,7 +1,7 @@
 <tr data-id="<%= election.id %>">
   <td data-label="<%= t("decidim.secure_elections.models.election.fields.title") %>">
     <%= link_to present(election).title(html_escape: true),
-                election.on_chain? ? election_monitor_path(election) : edit_election_path(election) %>
+                election.on_chain? ? election_dashboard_path(election) : edit_election_path(election) %>
     <% unless election.published? %>
       <span class="label basic"><%= t("decidim.secure_elections.admin.elections.not_on_public_site") %></span>
     <% end %>
@@ -13,12 +13,12 @@
 
   <%# Never "Starts when published" for an election that has already started:
       see `ElectionsHelper#vocdoni_start_time_text`. %>
-  <td data-label="<%= t("decidim.secure_elections.models.election.fields.start_time") %>">
+  <td data-label="<%= t("decidim.secure_elections.models.election.fields.start_at") %>">
     <%= vocdoni_start_time_text(election) %>
   </td>
 
-  <td data-label="<%= t("decidim.secure_elections.models.election.fields.end_time") %>">
-    <%= l(election.end_time, format: :decidim_short) if election.end_time %>
+  <td data-label="<%= t("decidim.secure_elections.models.election.fields.end_at") %>">
+    <%= l(election.end_at, format: :decidim_short) if election.end_at %>
   </td>
 
   <td data-label="<%= t("decidim.secure_elections.models.election.fields.census") %>">
@@ -37,7 +37,7 @@
   %>
   <td data-label="<%= t("decidim.secure_elections.models.election.fields.votes_count") %>">
     <% if election.on_chain? %>
-      <%= link_to election.votes_count, election_monitor_path(election) %>
+      <%= link_to election.votes_count, election_dashboard_path(election) %>
       <span class="block text-xs text-gray-2"><%= secure_elections_last_synced_text(election) %></span>
     <% else %>
       <span class="text-gray-2">—</span>

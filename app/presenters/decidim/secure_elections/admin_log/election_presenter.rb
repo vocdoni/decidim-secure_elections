@@ -20,8 +20,8 @@ module Decidim
           {
             title: :i18n,
             description: :i18n,
-            start_time: :date,
-            end_time: :date,
+            start_at: :date,
+            end_at: :date,
             published_at: :date,
             status: :string,
             census_group_id: :string,

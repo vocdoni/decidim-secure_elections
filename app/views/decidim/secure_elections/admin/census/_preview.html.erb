@@ -1,0 +1,43 @@
+<%#
+  A compact read-only look at the census — the first five rows only.
+
+  Mirrors upstream decidim-elections' census preview: a `.table-list` with
+  an identifier column and a "joined at" timestamp, followed by the total
+  census size. This partial is rendered inside the `.card-section.census-form`
+  when there is at least one census member.
+
+  The identifier is whatever best names the member (`CensusMember#display_name`):
+  full name, email, phone number, member number, or a national ID in that order.
+
+  Locals: `election`.
+%>
+<%
+  preview_members = election.census_members.first(5)
+  total = election.census_members.count
+%>
+
+<div class="mt-6">
+  <div class="table-scroll">
+    <table class="table-list">
+      <caption class="sr-only"><%= t(".caption") %></caption>
+      <thead>
+        <tr>
+          <th scope="col"><%= t(".identifier") %></th>
+          <th scope="col"><%= t(".joined_at") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% preview_members.each do |member| %>
+          <tr>
+            <td><%= member.display_name %></td>
+            <td><%= l member.created_at.to_date, format: :decidim_short %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-sm text-gray-2 mt-2">
+    <%= t(".size", count: total) %>
+  </p>
+</div>

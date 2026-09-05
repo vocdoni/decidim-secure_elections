@@ -1,28 +1,28 @@
-<%# Step 1 of 5: the details. Always reachable — and read-only, never hidden,
-    once the process is on chain. %>
+<%# The Main tab: title / description / calendar / results availability
+    rendered as three collapsible accordion cards inside one form.
+
+    Always reachable — and read-only, never hidden — once the process
+    is on chain. %>
 <% add_decidim_page_title(t(".title")) %>
 
 <%= render partial: "decidim/secure_elections/admin/shared/configuration_warning" %>
 <%= render partial: "decidim/secure_elections/admin/shared/election_header", locals: { election: } %>
-<%= render partial: "decidim/secure_elections/admin/shared/nav", locals: { election: } %>
+<%= render "decidim/secure_elections/admin/elections/tabs_menu" %>
 
 <div class="item__edit item__edit-1col">
   <div class="item__edit-form">
     <%= decidim_form_for(@form,
                          url: election_path(election),
                          method: :patch,
-                         html: { id: "edit-election-form", class: "form-defaults form edit_election" }) do |f| %>
-      <div class="card">
-        <div class="card-divider">
-          <h2 class="card-title"><%= t(".card_title") %></h2>
-        </div>
-        <div class="card-section">
-          <%= render partial: "decidim/secure_elections/admin/elections/details_fields", locals: { form: f, election: } %>
-        </div>
-      </div>
-
-      <%= render partial: "decidim/secure_elections/admin/shared/step_footer",
-                 locals: { election:, step: :details, form: f } %>
+                         html: { id: "basic-election-form-edit", class: "form-defaults form edit_election" }) do |f| %>
+      <%= render partial: "decidim/secure_elections/admin/elections/form", locals: { form: f, election: } %>
     <% end %>
+  </div>
+  <div class="item__edit-sticky">
+    <div class="item__edit-sticky-container">
+      <%= button_tag t("decidim.secure_elections.admin.elections.save_and_continue"),
+                     form: "basic-election-form-edit",
+                     class: "button button__sm button__secondary" %>
+    </div>
   </div>
 </div>

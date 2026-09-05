@@ -15,10 +15,25 @@ class CreateDecidimVocdoniElections < ActiveRecord::Migration[8.0]
       t.jsonb :title, null: false, default: {}
       t.jsonb :description, default: {}
 
-      # `start_time` is nullable on purpose: a process without a start date
-      # starts the moment it is published on chain.
-      t.datetime :start_time, index: { name: "index_vocdoni_elections_on_start_time" }
-      t.datetime :end_time, index: { name: "index_vocdoni_elections_on_end_time" }
+      # `start_at` is nullable on purpose: a process without a scheduled
+      # start opens the moment it is published on chain. Combined with
+      # `manual_start = false` that means "opens on publish"; with
+      # `manual_start = true` the process is published in a paused state
+      # and only opens when the admin clicks Start on the Dashboard.
+      t.datetime :start_at, index: { name: "index_vocdoni_elections_on_start_at" }
+      t.datetime :end_at, index: { name: "index_vocdoni_elections_on_end_at" }
+
+      # `manual_start` mirrors upstream decidim-elections: the election is
+      # published to the chain in a paused state and does not accept votes
+      # until the admin explicitly clicks "Start election". Requires the
+      # SaaS backend to accept `Status: PAUSED` at NewProcessTx time.
+      t.boolean :manual_start, null: false, default: false
+
+      # Two-value enum: `real_time` (results published as votes arrive) or
+      # `after_end` (results published only when voting closes). Upstream's
+      # third option `per_question` is deliberately excluded — vd's protocol
+      # does not support it.
+      t.string :results_availability, null: false, default: "after_end"
 
       t.datetime :published_at, index: { name: "index_vocdoni_elections_on_published_at" }
       t.datetime :deleted_at, index: { name: "index_vocdoni_elections_on_deleted_at" }

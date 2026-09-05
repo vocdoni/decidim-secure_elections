@@ -24,18 +24,18 @@
         is still shown before voting starts and after it ends, where both ends
         of it are information the reader needs.
       %>
-      <% if election.start_time.present? || election.end_time.present? %>
+      <% if election.start_at.present? || election.end_at.present? %>
         <span>
           <%= icon "calendar-line", role: "img", "aria-hidden": true, class: "inline fill-current" %>
-          <% if voting_open? && election.end_time.present? %>
+          <% if voting_open? && election.end_at.present? %>
             <%= t("decidim.secure_elections.elections.show.calendar_open",
-                  end_date: l(election.end_time, format: :decidim_short)) %>
+                  end_date: l(election.end_at, format: :decidim_short)) %>
           <% elsif voting_open? %>
             <%= t("decidim.secure_elections.elections.show.calendar_open_no_end") %>
           <% else %>
             <%= t("decidim.secure_elections.elections.show.calendar",
-                  start_date: election.start_time.present? ? l(election.start_time, format: :decidim_short) : t("decidim.secure_elections.elections.show.on_publication"),
-                  end_date: election.end_time.present? ? l(election.end_time, format: :decidim_short) : t("decidim.secure_elections.elections.show.no_end_date")) %>
+                  start_date: election.start_at.present? ? l(election.start_at, format: :decidim_short) : t("decidim.secure_elections.elections.show.on_publication"),
+                  end_date: election.end_at.present? ? l(election.end_at, format: :decidim_short) : t("decidim.secure_elections.elections.show.no_end_date")) %>
           <% end %>
         </span>
       <% end %>

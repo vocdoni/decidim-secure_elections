@@ -1,4 +1,6 @@
-<%# Step 1 of 5, before the record exists. A title is all it takes. %>
+<%# New election. Only the Basic info card is available before there is a
+    record — the schedule and results availability come once the record
+    exists. %>
 <% add_decidim_page_title(t(".title")) %>
 
 <%= render partial: "decidim/secure_elections/admin/shared/configuration_warning" %>
@@ -15,11 +17,14 @@
                          url: elections_path,
                          method: :post,
                          html: { id: "new-election-form", class: "form-defaults form new_election" }) do |f| %>
-      <div class="card">
+      <div class="card form-basic" data-controller="accordion" data-component="accordion" id="accordion-basic" role="presentation">
         <div class="card-divider">
-          <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.edit.card_title") %></h2>
+          <button type="button" class="card-divider-button" data-controls="panel-basic" data-open="true" role="button" aria-controls="panel-basic" aria-expanded="true">
+            <%= icon "arrow-right-s-line", class: "flex-none" %>
+            <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.basic_info") %></h2>
+          </button>
         </div>
-        <div class="card-section">
+        <div id="panel-basic" role="region" tabindex="-1" aria-hidden="false">
           <%= render partial: "decidim/secure_elections/admin/elections/details_fields", locals: { form: f, election: nil } %>
         </div>
       </div>

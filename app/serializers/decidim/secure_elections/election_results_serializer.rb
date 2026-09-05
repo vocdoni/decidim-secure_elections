@@ -44,8 +44,8 @@ module Decidim
           url: Decidim::ResourceLocatorPresenter.new(election).url,
           status: election.status,
           published_at: election.published_at,
-          start_time: election.start_time,
-          end_time: election.end_time,
+          start_at: election.start_at,
+          end_at: election.end_at,
           verification:,
           results:,
           questions:

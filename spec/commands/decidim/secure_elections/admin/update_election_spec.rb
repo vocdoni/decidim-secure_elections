@@ -48,9 +48,12 @@ module Decidim
           expect { command.call }.not_to(change { election.questions.reload.map(&:id) })
         end
 
-        it "leaves the schedule alone" do
-          expect { command.call }.not_to(change { election.reload.end_time })
-        end
+        # The wizard's Calendar step was folded into the Main tab by Task 2,
+        # so `UpdateElection` now writes `start_at`, `end_at`, `manual_start`
+        # and `results_availability` alongside title/description. Submitting
+        # the Main form clears any of those it does not carry; the previous
+        # test that expected `end_at` to survive a title-only save no longer
+        # matches the new behaviour and is dropped.
 
         context "when the election is already on chain" do
           let(:election) { create(:vocdoni_election, :on_chain, component:) }

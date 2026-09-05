@@ -26,6 +26,11 @@ module Decidim
       class CensusForm < Decidim::Form
         mimic :census
 
+        # Which census manifest is selected. Only "internal_users" ships today;
+        # future manifests plug in by adding a key to
+        # `CensusController::CENSUS_MANIFESTS` and a corresponding partial.
+        attribute :manifest, String, default: "internal_users"
+
         attribute :credentials, [String]
         attribute :two_factor_method, String, default: "off"
         attribute :weighted, Boolean, default: false

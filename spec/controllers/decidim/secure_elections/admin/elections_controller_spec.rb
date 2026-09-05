@@ -66,30 +66,19 @@ module Decidim
         end
 
         describe "GET show" do
-          it "lands on the furthest step that can be worked on" do
+          it "lands on the Dashboard tab" do
             get :show, params: params.merge(id: election.id)
 
-            # Details and ballot are done; the census is next.
-            expect(response).to redirect_to(/census/)
-          end
-
-          context "when the election is on chain" do
-            let!(:election) { create(:vocdoni_election, :on_chain, component:) }
-
-            it "lands on the monitor instead" do
-              get :show, params: params.merge(id: election.id)
-
-              expect(response).to redirect_to(/monitor/)
-            end
+            expect(response).to redirect_to(/dashboard/)
           end
         end
 
         describe "PATCH update" do
-          it "saves the details and continues to the ballot" do
+          it "saves the details and stays on the Main tab" do
             patch :update, params: params.merge(id: election.id, election: details_params)
 
             expect(translated(election.reload.title)).to eq("Updated election")
-            expect(response).to redirect_to(%r{questions/edit})
+            expect(response).to redirect_to(%r{elections/#{election.id}/edit})
           end
 
           context "when the form is invalid" do
@@ -144,32 +133,10 @@ module Decidim
           end
         end
 
-        describe "PATCH autosave" do
-          it "saves the draft without redirecting" do
-            patch :autosave, params: params.merge(id: election.id, election: details_params), format: :json
-
-            expect(response).to have_http_status(:ok)
-            expect(response.parsed_body["saved"]).to be(true)
-            expect(translated(election.reload.title)).to eq("Updated election")
-          end
-
-          it "reports a draft it could not save instead of redirecting" do
-            patch :autosave, params: params.merge(id: election.id, election: details_params.merge(title_en: "")), format: :json
-
-            expect(response).to have_http_status(:unprocessable_content)
-            expect(response.parsed_body["saved"]).to be(false)
-          end
-
-          context "when the election is already on chain" do
-            let!(:election) { create(:vocdoni_election, :on_chain, component:) }
-
-            it "refuses" do
-              patch :autosave, params: params.merge(id: election.id, election: details_params), format: :json
-
-              expect(response).to have_http_status(:unprocessable_content)
-            end
-          end
-        end
+        # PATCH autosave went away with Task 2's Main-tab rewrite: draft
+        # autosave was dropped in favour of an explicit "Save and continue"
+        # button on every save. The corresponding controller action and its
+        # route are gone.
       end
     end
   end

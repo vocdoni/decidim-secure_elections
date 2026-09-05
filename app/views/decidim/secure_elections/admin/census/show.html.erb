@@ -1,43 +1,45 @@
-<%# The census screens use the admin pack for the member rows, the live
-    security meter and the credential limit. %>
-<% append_javascript_pack_tag "decidim_secure_elections_admin" %>
+<%#
+  Census tab — upstream layout: manifest selector at top, inline auth-config
+  form, 5-row preview, sticky Save on the right.
 
+  The manifest selector (`#census-manifest-selector`) switches between
+  per-manifest form partials via Turbo; today only "internal_users" is
+  registered so the select has one option.  Future manifests (token_csv,
+  dataset_csv, …) plug in by adding a manifest key and a corresponding
+  partial under `admin/censuses/`.
+
+  The authentication-configuration form (`#census-election-form`) is
+  submitted by the sticky Save button via the HTML `form` attribute, so
+  the button can live outside the `<form>` element.
+
+  The members-management section (people count, edit-table link, CSV
+  import, verification import) lives below the form and is unchanged from
+  vd's original census screen — it is not part of any manifest form
+  because those actions POST to their own endpoints.
+%>
 <% add_decidim_page_title(t(".page_title")) %>
 
 <%= render partial: "decidim/secure_elections/admin/shared/election_header", locals: { election: } %>
 <%= render partial: "nav", locals: { election: } %>
 
-<%#
-  The census page.
+<div class="form-defaults my-8 flex justify-end">
+  <%= select_tag "census_manifest",
+                 options_for_select(@census_manifests.map { |m| [t(".manifests.#{m}"), m] }, @form.manifest),
+                 id: "census-manifest-selector" %>
+</div>
 
-  Two things, in the order they matter: *how* a voter proves who they are, and
-  *who* the voters are. An admin never sees a Vocdoni identifier here — Decidim
-  holds the census and the publish job creates the members, the group and the
-  census upstream.
-%>
+<% if election.census_complete? %>
+  <%= cell "decidim/announcement", t(".census_ready"), callout_class: "success" %>
+<% end %>
 
-<div class="card">
-  <div class="card-divider">
-    <h2 class="card-title justify-between">
-      <span class="text-black font-bold"><%= t(".authentication_title") %></span>
-      <% if allowed_to?(:update, :census, election: election) %>
-        <%= link_to edit_election_census_path(election), class: "flex items-end justify-between gap-x-3 text-sm" do %>
-          <%= icon "pencil-line", class: "!w-4 !h-4" %>
-          <%= election.census_configured? ? t(".edit_authentication") : t(".configure_authentication") %>
-        <% end %>
-      <% end %>
-    </h2>
-  </div>
+<div class="card-section census-form form-defaults 2xl:mr-80">
+  <%= decidim_form_for(@form, url: election_census_path(election), method: :patch,
+                       html: { id: "census-election-form", class: "form edit_census" }) do |f| %>
+    <%= render partial: "decidim/secure_elections/admin/censuses/internal_users_form",
+               locals: { form: f, election: } %>
+  <% end %>
 
-  <div class="card-section">
-    <% if election.census_configured? %>
-      <%= render partial: "summary", locals: { election: } %>
-    <% else %>
-      <%= cell "decidim/announcement",
-               { title: t(".not_configured_title"), body: t(".not_configured_body") },
-               callout_class: "warning" %>
-    <% end %>
-  </div>
+  <%= render partial: "decidim/secure_elections/admin/census/preview", locals: { election: } if preview_users(election).present? %>
 </div>
 
 <%# Anything the upstream group validation complained about, named. %>
@@ -58,7 +60,7 @@
         <span class="label basic"><%= t(".people_count", count: census_members.size) %></span>
       </span>
 
-      <% if allowed_to?(:update, :census, election: election) %>
+      <% if allowed_to?(:update, :census, election:) %>
         <%= link_to election_census_members_path(election), class: "flex items-end justify-between gap-x-3 text-sm" do %>
           <%= icon "pencil-line", class: "!w-4 !h-4" %>
           <%= t(".edit_people") %>
@@ -80,18 +82,10 @@
                                             .to_sentence) },
                  callout_class: "alert" %>
       <% end %>
-
-      <%= render partial: "members_preview", locals: { election:, members: census_members.first(10) } %>
-
-      <% if census_members.size > 10 %>
-        <p class="text-sm text-gray-2 mt-2">
-          <%= t(".people_more", count: census_members.size - 10) %>
-        </p>
-      <% end %>
     <% end %>
   </div>
 
-  <% if allowed_to?(:update, :census, election: election) && census_members.any? %>
+  <% if allowed_to?(:update, :census, election:) && census_members.any? %>
     <div class="card-section border-t">
       <%= link_to t(".clear"),
                   election_census_clear_path(election),
@@ -102,7 +96,7 @@
   <% end %>
 </div>
 
-<% if allowed_to?(:update, :census, election: election) %>
+<% if allowed_to?(:update, :census, election:) %>
   <div class="card mt-4">
     <div class="card-divider">
       <h2 class="card-title">
@@ -119,7 +113,10 @@
   </div>
 <% end %>
 
-<%# Step 3 of 5. "Continue" only becomes a link once the census is complete —
-    the shared footer disables it and names the reason otherwise. %>
-<%= render partial: "decidim/secure_elections/admin/shared/step_footer",
-           locals: { election:, step: :census } %>
+<div class="item__edit-sticky">
+  <div class="item__edit-sticky-container">
+    <%= button_tag t(".save"),
+                   form: "census-election-form",
+                   class: "button button__sm button__secondary#{" hide" unless election.census_configured?}" %>
+  </div>
+</div>

@@ -51,7 +51,7 @@ module Decidim
         end
 
         context "when there is no end date" do
-          before { election.update!(end_time: nil) }
+          before { election.update!(end_at: nil) }
 
           it { is_expected.to be_invalid }
         end

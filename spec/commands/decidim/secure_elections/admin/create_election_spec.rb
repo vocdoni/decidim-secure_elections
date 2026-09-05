@@ -47,8 +47,8 @@ module Decidim
           command.call
 
           election = Decidim::SecureElections::Election.last
-          expect(election.start_time).to be_nil
-          expect(election.end_time).to be_nil
+          expect(election.start_at).to be_nil
+          expect(election.end_at).to be_nil
         end
 
         it "completes the details step and unlocks the ballot, and nothing beyond it" do

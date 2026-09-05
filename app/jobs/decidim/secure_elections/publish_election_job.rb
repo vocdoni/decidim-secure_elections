@@ -450,8 +450,7 @@ module Decidim
           upstream = remote_question_for(process, question, index)
           next if upstream.blank?
 
-          # rubocop:disable Rails/SkipsModelValidations
-          question.update_columns(
+          question.update_columns( # rubocop:disable Rails/SkipsModelValidations
             # `GET /processes/{id}` names the question's own id `id`; the
             # results endpoint calls the same value `questionId`.
             vocdoni_question_id: (upstream["id"] || upstream["questionId"]).presence,
@@ -459,7 +458,6 @@ module Decidim
             vocdoni_upstream_id: upstream["upstreamId"].presence,
             vocdoni_status: Decidim::SecureElections::Question.normalize_status(upstream["status"]) || "ready"
           )
-          # rubocop:enable Rails/SkipsModelValidations
         end
 
         election.update!(
@@ -525,14 +523,22 @@ module Decidim
           "orgAddress" => org_address,
           "title" => localize(election.title),
           "description" => localize(election.description) || localize(election.title),
-          "endDate" => election.end_time,
+          "endDate" => election.end_at,
           "census" => census_payload,
           "questions" => election.questions.map { |question| question_payload(question) }
         }
 
-        # Omitted on purpose when the admin chose a manual start: the process
-        # then starts as soon as it is published.
-        payload["startDate"] = election.start_time if election.start_time.present?
+        # Omitted when the admin chose a manual start; in that case the process
+        # begins PAUSED and the admin explicitly starts it from the Dashboard.
+        payload["startDate"] = election.start_at if election.start_at.present? && !election.manual_start?
+
+        # A manual-start election is created paused so that it only becomes
+        # active when the admin presses "Start election" on the Dashboard.
+        # `interruptible` lets the process be paused again after it starts.
+        if election.manual_start?
+          payload["paused"] = true
+          payload["interruptible"] = true
+        end
 
         payload
       end

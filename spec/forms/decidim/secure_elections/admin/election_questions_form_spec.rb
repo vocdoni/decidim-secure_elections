@@ -37,8 +37,6 @@ module Decidim
         let(:attributes) do
           {
             election: {
-              question_type: "singlechoice",
-              result_visibility: "live",
               questions: question_attributes
             }
           }
@@ -232,140 +230,10 @@ module Decidim
           end
         end
 
-        describe "the process-wide question type" do
-          before do
-            attributes[:election][:question_type] = "multichoice"
-            attributes[:election][:questions]["0"][:min_choices] = 1
-            attributes[:election][:questions]["0"][:max_choices] = 2
-          end
-
-          it "is copied down to every question before validating" do
-            form.valid?
-
-            expect(form.questions.map(&:question_type)).to all(eq("multichoice"))
-          end
-
-          it "refuses to allow more choices than there are options" do
-            attributes[:election][:questions]["0"][:max_choices] = 5
-
-            expect(form).to be_invalid
-          end
-
-          # The reported failure: min 5 / max 2 against a question with two
-          # options produced a red border and a bare "is invalid" on the
-          # maximum. It never named the minimum it contradicted, never mentioned
-          # how many options the question offers, and left the minimum — the
-          # number that was actually out of range — unflagged.
-          describe "the selection limits" do
-            subject(:question) { form.questions.first }
-
-            let(:limits) { {} }
-
-            before do
-              attributes[:election][:questions]["0"].merge!(limits)
-              form.invalid?
-            end
-
-            context "when the minimum is above the maximum and both are above the option count" do
-              let(:limits) { { min_choices: 5, max_choices: 2 } }
-
-              it { expect(form).to be_invalid }
-
-              it "flags the minimum against the options it is measured on" do
-                expect(question.errors[:min_choices].join(" "))
-                  .to eq("This question offers 2 options, so nobody can be asked to pick more than 2. Lower this number, or add more options.")
-              end
-
-              it "flags the maximum against the minimum it contradicts" do
-                expect(question.errors[:max_choices].join(" "))
-                  .to eq("The maximum cannot be lower than the minimum, which is 5. Raise this number, or lower the minimum.")
-              end
-
-              # The parent picks up an `:invalid` of its own whenever a nested
-              # question fails. It must not reach the top of the page, or every
-              # missing option anywhere on the ballot would headline it with
-              # "is invalid".
-              it "does not headline the page with the nested form's own error" do
-                expect(form.ballot_error).to be_nil
-              end
-            end
-
-            context "when the minimum is above the maximum and both fit the options" do
-              let(:limits) { { min_choices: 2, max_choices: 1 } }
-
-              it "names the other number on both fields" do
-                expect(question.errors[:min_choices].join(" ")).to include("cannot be higher than the maximum, which is 1")
-                expect(question.errors[:max_choices].join(" ")).to include("cannot be lower than the minimum, which is 2")
-              end
-            end
-
-            context "when only the minimum is above the option count" do
-              let(:limits) { { min_choices: 3, max_choices: nil } }
-
-              it { expect(form).to be_invalid }
-
-              it "flags the minimum, which the old rule never looked at" do
-                expect(question.errors[:min_choices].join(" ")).to include("This question offers 2 options")
-              end
-            end
-
-            context "when only the maximum is above the option count" do
-              let(:limits) { { min_choices: 1, max_choices: 3 } }
-
-              it "says how many options there are rather than \"is invalid\"" do
-                expect(question.errors[:max_choices].join(" "))
-                  .to eq("This question offers 2 options, so nobody can pick more than 2. Lower this number, or add more options.")
-                expect(question.errors[:min_choices]).to be_empty
-              end
-            end
-
-            # Rails' own "must be greater than 0" was the one raw string left on
-            # a form whose other messages say which number to change and why.
-            context "when a limit is zero or negative" do
-              let(:limits) { { min_choices: -3, max_choices: 0 } }
-
-              it { expect(form).to be_invalid }
-
-              it "says what to set it to rather than restating the constraint" do
-                expect(question.errors[:min_choices].join(" "))
-                  .to eq("A voter has to be asked for at least one option. Set this to 1 or more, or leave it empty for no lower limit.")
-                expect(question.errors[:max_choices].join(" "))
-                  .to eq("A voter has to be allowed at least one option. Set this to 1 or more, or leave it empty for no upper limit.")
-              end
-
-              it "never says \"must be greater than\"" do
-                expect(question.errors.full_messages.join(" ")).not_to include("greater than 0")
-              end
-            end
-
-            context "when the limits agree with each other and with the ballot" do
-              let(:limits) { { min_choices: 1, max_choices: 2 } }
-
-              it { expect(form).to be_valid }
-            end
-          end
-
-          context "when the type is single choice" do
-            before { attributes[:election][:question_type] = "singlechoice" }
-
-            it "ignores the choice bounds rather than rejecting them" do
-              expect(form).to be_valid
-              expect(form.questions.first.max_choices).to be_nil
-            end
-          end
-        end
-
-        describe "#secret_until_the_end?" do
-          it "is false for live results" do
-            expect(form).not_to be_secret_until_the_end
-          end
-
-          context "when results are hidden until the end" do
-            before { attributes[:election][:result_visibility] = "hidden" }
-
-            it { is_expected.to be_secret_until_the_end }
-          end
-        end
+        # `#secret_until_the_end?` used to live on this form and was derived
+        # from the ballot-wide `result_visibility`. Task 2 moved the setting
+        # to `ElectionForm` (renamed to `results_availability`) and Task 3
+        # dropped both attributes from this form.
 
         describe ".from_model" do
           subject(:form) { described_class.from_model(election).with_context(context) }
@@ -375,11 +243,6 @@ module Decidim
           it "loads the whole ballot" do
             expect(form.questions.size).to eq(2)
             expect(form.questions.map { |question| question.answers.size }).to all(eq(3))
-          end
-
-          it "derives the process-wide settings from the questions" do
-            expect(form.question_type).to eq("singlechoice")
-            expect(form.result_visibility).to eq("live")
           end
 
           context "when the election has no questions yet" do

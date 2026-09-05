@@ -2,26 +2,23 @@
 
 module Decidim
   module SecureElections
-    # Admin engine: a five-step election wizard, then the live monitoring page.
+    # Admin engine: four persistent tabs, mirroring decidim-elections.
     #
     # ```
-    # 1. details   elections#edit            always reachable
-    # 2. questions questions#edit            needs 1
-    # 3. census    census#show               needs 1–2
-    # 4. calendar  calendar#edit             needs 1–3
-    # 5. publish   setup#show                needs 1–4, irreversible
-    #    monitor   monitor#show              once the process is on chain
+    # Main       elections#edit    title / description / calendar / results availability
+    # Questions  questions#edit    ballot editor
+    # Census     census#show       voter list + auth
+    # Dashboard  dashboard#show    checklist + preview / status + monitor (post-publish)
     # ```
     #
-    # The order is a real prerequisite chain, enforced in three places: the
-    # navigation disables what cannot be opened and says why, `WizardStep`
-    # redirects a request for a locked step, and `Admin::Permissions` withholds
-    # its grant. The rule itself lives on the model, in `Election#step_blocker`.
+    # The tabs are always visible; a tab whose prerequisites are not yet
+    # met renders as a disabled span (see the `admin_secure_elections_menu`
+    # initializer below). Completeness gating for on-chain publication
+    # lives on the Dashboard, not on the tabs themselves.
     #
-    # Steps 1, 2 and 4 edit nested records without reloading: a question or an
-    # option is added in the browser and the whole ballot is submitted at once. Once the process is on chain every content
-    # step stays reachable but renders read-only — an admin has to be able to
-    # see what was published.
+    # Once the process is on chain the content tabs (Main / Questions /
+    # Census) render read-only — an admin has to be able to see what was
+    # published — while the Dashboard branches to the monitor view.
     class AdminEngine < ::Rails::Engine
       isolate_namespace Decidim::SecureElections::Admin
 
@@ -35,20 +32,16 @@ module Decidim
             put :unpublish
             patch :soft_delete
             patch :restore
-            # Draft autosave for the details step. Same save as `update`,
-            # answered as JSON so the page never reloads under the admin's
-            # fingers.
-            patch :autosave
           end
           get :manage_trash, on: :collection
 
-          # Step 2. Questions and their options on one screen, saved together —
-          # adding an option costs no page load.
+          # Questions tab. Questions and their options edited together on
+          # one screen — adding an option costs no page load.
           resource :questions, only: [:edit, :update], controller: "questions" do
             patch :autosave
           end
 
-          # Step 3. The census. `show` is the hub, `edit`/`update` is voter
+          # Census tab. `show` is the hub, `edit`/`update` is voter
           # authentication, the rest is the list of people. No route here
           # takes, or could take, a Vocdoni identifier: Decidim owns the
           # census and an administrator never sees an upstream id.
@@ -61,15 +54,14 @@ module Decidim
           post "census/verifications", to: "census#import_from_verifications", as: :census_verifications
           delete "census/clear", to: "census#clear", as: :census_clear
 
-          # Step 4. The schedule.
-          resource :calendar, only: [:edit, :update], controller: "calendar"
-
-          # Step 5 and beyond. `setup` pushes the process to Vocdoni;
-          # `status` moves questions between ready/paused/ended.
-          resource :setup, only: [:show, :create], controller: "setup"
-          resource :monitor, only: [:show], controller: "monitor" do
-            put :status
+          # Dashboard tab: pre-publish checklist + publish action (unpublished),
+          # or live status + results + monitor controls (published/on-chain).
+          resource :dashboard, only: [:show], controller: "dashboard" do
+            post :publish
+            delete :unpublish
+            post :start
             get :refresh
+            put :status
           end
         end
 
@@ -77,29 +69,35 @@ module Decidim
       end
 
       initializer "decidim_secure_elections_admin.menu" do
-        Decidim.menu :admin_vocdoni_menu do |menu|
+        Decidim.menu :admin_secure_elections_menu do |menu|
           election = @election
           next if election.blank?
 
           proxy = Decidim::EngineRouter.admin_proxy(election.component)
 
-          Decidim::SecureElections::Election::NAV_STEPS.each do |step|
-            path = case step
-                   when :details then proxy.edit_election_path(election)
-                   when :questions then proxy.edit_election_questions_path(election)
-                   when :census then proxy.election_census_path(election)
-                   when :calendar then proxy.edit_election_calendar_path(election)
-                   when :publish then proxy.election_setup_path(election)
-                   when :monitor then proxy.election_monitor_path(election)
-                   end
+          # Main — always reachable.
+          menu.add_item :secure_elections_main,
+                        I18n.t("main", scope: "decidim.secure_elections.admin.menu"),
+                        proxy.edit_election_path(election),
+                        icon_name: "bill-line"
 
-            # A locked step keeps its place in the menu — an admin has to be
-            # able to see what is still ahead of them — but leads nowhere.
-            menu.add_item :"vocdoni_#{step}",
-                          I18n.t(step, scope: "decidim.secure_elections.admin.menu"),
-                          election.step_reachable?(step) ? path : "#",
-                          icon_name: Decidim::SecureElections::Admin::ElectionsHelper::STEP_ICONS.fetch(step)
-          end
+          # Questions — reachable once the election has a title.
+          menu.add_item :secure_elections_questions,
+                        I18n.t("questions", scope: "decidim.secure_elections.admin.menu"),
+                        election.step_reachable?(:questions) ? proxy.edit_election_questions_path(election) : "#",
+                        icon_name: "question-answer-line"
+
+          # Census — reachable once both title and ballot are complete.
+          menu.add_item :secure_elections_census,
+                        I18n.t("census", scope: "decidim.secure_elections.admin.menu"),
+                        election.step_reachable?(:census) ? proxy.election_census_path(election) : "#",
+                        icon_name: "group-2-line"
+
+          # Dashboard — always reachable; completion is checked inside the page.
+          menu.add_item :secure_elections_dashboard,
+                        I18n.t("dashboard", scope: "decidim.secure_elections.admin.menu"),
+                        proxy.election_dashboard_path(election),
+                        icon_name: "dashboard-line"
         end
       end
 

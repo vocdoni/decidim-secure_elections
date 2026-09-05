@@ -55,8 +55,8 @@ module Decidim
         # Only `ready` gets this far: on chain and not stopped by anyone, so
         # the calendar is what decides whether the ballot is open, still to
         # come, or over.
-        return :ended if election.end_time.present? && election.end_time <= Time.current
-        return :scheduled if election.start_time.present? && election.start_time > Time.current
+        return :ended if election.end_at.present? && election.end_at <= Time.current
+        return :scheduled if election.start_at.present? && election.start_at > Time.current
 
         status == "ready" ? :ongoing : :draft
       end

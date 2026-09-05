@@ -3,43 +3,26 @@
 module Decidim
   module SecureElections
     module Admin
-      # Step 2 of the wizard: the ballot.
+      # The Questions tab: the ballot.
       #
       # Questions **and** their options are on this one form: adding an option
       # must not cost a page load, so the options are nested attributes of the
       # questions, which are nested attributes of this form, and the whole
       # ballot arrives in a single submit.
       #
-      # Two things are decided here once and copied down to every question,
-      # mirroring the Vocdoni app even though the database keeps them per
-      # question (ARCHITECTURE §4d):
-      #
-      # * `question_type` — the app calls it "This applies to all questions in
-      #   this voting process".
-      # * `result_visibility` — "live" or "hidden until the end", which is the
-      #   per-question `secret_until_the_end` column.
+      # `question_type` is now per-question (on `QuestionForm`) — the old
+      # ballot-wide copy that was duplicated down to every question has been
+      # removed. `result_visibility` has moved to `ElectionForm` (the Main tab).
       class ElectionQuestionsForm < Decidim::Form
         mimic :election
 
         include Decidim::TranslatableAttributes
 
-        # Results are readable while voting is open, or only once the
-        # keykeepers publish the encryption keys.
-        RESULT_VISIBILITIES = %w(live hidden).freeze
-
-        attribute :question_type, String, default: "singlechoice"
-        attribute :result_visibility, String, default: "live"
-
         attribute :questions, [QuestionForm]
 
-        validates :question_type, inclusion: { in: Decidim::SecureElections::Question::QUESTION_TYPES }
-        validates :result_visibility, inclusion: { in: RESULT_VISIBILITIES }
         validate :at_least_one_question
 
         def map_model(election)
-          self.question_type = election.questions.first&.question_type || "singlechoice"
-          self.result_visibility = election.questions.any?(&:secret_until_the_end?) ? "hidden" : "live"
-
           self.questions = election.questions.map { |question| QuestionForm.from_model(question) }
           ensure_default_questions!
         end
@@ -52,32 +35,16 @@ module Decidim
           election.nil? || election.editable?
         end
 
-        def multichoice?
-          question_type == "multichoice"
-        end
-
-        # "Hidden until the end" is the per-question `secret_until_the_end`
-        # column: no partial tally is readable until the keys are published.
-        def secret_until_the_end?
-          result_visibility == "hidden"
-        end
-
         # The questions that will actually be persisted. A card the admin added
         # and left completely empty is dropped instead of being reported, the
-        # same way an empty option is.
+        # same way an empty option is. Cards the admin marked for deletion via
+        # the Remove button are also excluded — the command destroys them.
         def submitted_questions
-          questions.reject(&:unfilled?)
+          questions.reject { |q| q.unfilled? || q.deleted }
         end
 
         # The database ids the browser does not know about yet, keyed by the
         # client-side identity of each row.
-        #
-        # This is what makes repeated autosaves idempotent: a question the admin
-        # added in the browser has no `id` on the first save, and without
-        # handing it back the second save would create it all over again.
-        #
-        # Only meaningful after a command has run — that is what fills the ids
-        # in.
         #
         # @return [Hash] `{ "q0" => { "id" => 5, "answers" => { "q0-a0" => 9 } } }`
         def saved_ids
@@ -110,19 +77,10 @@ module Decidim
 
         # Makes sure the editor always has something to edit. A brand new
         # ballot opens with one question and two empty options, exactly like
-        # the Vocdoni app.
+        # upstream decidim-elections.
         def ensure_default_questions!
           self.questions = [QuestionForm.blank_question] if questions.blank?
           self
-        end
-
-        # Every question of a process shares its type and its result visibility.
-        # They are copied down here rather than rendered as hidden fields per
-        # question, so that a tampered request cannot produce a process whose
-        # questions disagree with each other.
-        def valid?(validation_context = nil)
-          questions.each { |question| question.question_type = question_type }
-          super
         end
 
         private

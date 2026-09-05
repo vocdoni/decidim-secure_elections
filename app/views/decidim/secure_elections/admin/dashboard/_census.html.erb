@@ -1,0 +1,37 @@
+<%#
+  Read-only census preview on the pre-publish Dashboard.
+  Reuses the census/_preview partial (first 5 members + count).
+  Pencil-edit link goes to the Census tab.
+
+  Locals: `election`
+%>
+<div class="card mb-6">
+  <div class="card-divider">
+    <h2 class="card-title justify-between">
+      <span><%= t("decidim.secure_elections.admin.census.show.title") %></span>
+      <%= link_to election_census_path(election),
+                  class: "button button__xs button__transparent-secondary",
+                  aria: { label: t("decidim.secure_elections.admin.census.show.title") } do %>
+        <%= icon "pencil-line", class: "!w-4 !h-4", aria_hidden: true %>
+      <% end %>
+    </h2>
+  </div>
+
+  <div class="card-section">
+    <% if election.census_configured? %>
+      <p class="text-sm mb-2">
+        <%= election.auth_fields.map { |field| t(field, scope: "decidim.secure_elections.auth_fields", default: field) }.to_sentence %>
+        <% if election.auth_only? %>
+          <span class="label secondary"><%= t("decidim.secure_elections.admin.census.auth_only") %></span>
+        <% end %>
+      </p>
+    <% else %>
+      <span class="label alert"><%= t("decidim.secure_elections.admin.census.not_configured") %></span>
+    <% end %>
+
+    <% if election.census_members.exists? %>
+      <%= render partial: "decidim/secure_elections/admin/census/preview",
+                 locals: { election: } %>
+    <% end %>
+  </div>
+</div>

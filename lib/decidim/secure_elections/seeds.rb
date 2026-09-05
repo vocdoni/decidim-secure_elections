@@ -83,8 +83,8 @@ module Decidim
           end,
           # Left blank on purpose: an election with no start time opens as soon
           # as it is published on chain, which is the common case.
-          start_time: nil,
-          end_time: 1.week.from_now,
+          start_at: nil,
+          end_at: 1.week.from_now,
           status: "draft",
           published_at: published ? Time.current : nil,
           census_auth_fields: ["memberNumber"],

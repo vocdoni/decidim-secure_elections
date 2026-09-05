@@ -1,0 +1,55 @@
+<%#
+  The sticky publish action: confirm_irreversible checkbox + "Publish on the
+  blockchain" submit button.
+
+  Moved verbatim from `setup/show.html.erb` into the sticky sidebar column of
+  the Dashboard's unpublished half. The SetupForm and its six server-side
+  validators remain the guard.
+
+  Locals: `election`, `form` (a SetupForm instance)
+%>
+<%
+  checks_pass = election.details_complete? &&
+                election.questions_complete? &&
+                election.census_complete? &&
+                election.calendar_complete?
+  ready      = checks_pass && election.editable?
+  publishing = election.publishing?
+%>
+
+<% if publishing %>
+  <%= cell "decidim/announcement", t("decidim.secure_elections.admin.setup.show.in_progress"), callout_class: "warning" %>
+<% end %>
+
+<div id="js-vocdoni-setup">
+  <%= decidim_form_for(form,
+                       url: publish_election_dashboard_path(election),
+                       method: :post,
+                       html: { id: "setup-form", class: "form-defaults form" }) do |f| %>
+    <div class="row column">
+      <%= f.check_box :confirm_irreversible,
+                      label: t("decidim.secure_elections.admin.setup.show.confirm_irreversible_label"),
+                      disabled: !ready || publishing,
+                      data: { "vocdoni-confirm-irreversible": true } %>
+    </div>
+
+    <div class="row column mt-4">
+      <% if ready && !publishing %>
+        <%= f.submit t("decidim.secure_elections.admin.setup.show.publish_button"),
+                     class: "button button__sm alert w-full",
+                     data: { "vocdoni-publish": true } %>
+        <p class="text-sm text-gray-2 mt-2" data-vocdoni-publish-hint hidden>
+          <%= t("decidim.secure_elections.admin.setup.show.publish_needs_confirmation") %>
+        </p>
+      <% else %>
+        <button type="submit" class="button button__sm alert w-full" disabled aria-disabled="true">
+          <%= t("decidim.secure_elections.admin.setup.show.publish_button") %>
+        </button>
+        <p class="text-sm text-gray-2 mt-2">
+          <%= publishing ? t("decidim.secure_elections.admin.setup.show.in_progress")
+                        : t("decidim.secure_elections.admin.setup.show.publish_disabled") %>
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,22 @@
+<%#
+  The four-tab strip above every admin editor screen of a single election.
+
+  Tabs are rendered from the :admin_secure_elections_menu registry: Main,
+  Questions, Census, Dashboard. Blocked tabs render as disabled spans;
+  the active tab carries aria-current="page".
+
+  The admin pack is idempotent and is appended here so that every editor
+  screen gets the CSS and JS regardless of whether it also requests the pack
+  directly.
+%>
+<% append_javascript_pack_tag "decidim_secure_elections_admin" %>
+<% append_stylesheet_pack_tag "decidim_secure_elections_admin", media: "all" %>
+
+<div class="main-tabs-menu">
+  <div class="main-tabs-menu__tabs">
+    <%= admin_tabs(:admin_secure_elections_menu).render %>
+  </div>
+  <div class="main-tabs-menu__buttons">
+    <%= yield if block_given? %>
+  </div>
+</div>

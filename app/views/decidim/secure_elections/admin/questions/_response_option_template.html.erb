@@ -1,0 +1,17 @@
+<%#
+  Blueprint for a blank response option, rendered inside the per-question
+  <script type="text/template"> tag. DynamicFieldsComponent clones this
+  content and replaces DECIDIM_RECORD_ID with a fresh counter when the
+  admin clicks "Add response option".
+
+  Locals:
+    parent_name    — the question's field name prefix
+    question_index — parent question's index (Integer or "DECIDIM_RECORD_ID")
+%>
+<%= render partial: "decidim/secure_elections/admin/questions/response_option",
+           locals: {
+             parent_name:,
+             answer: Decidim::SecureElections::Admin::AnswerForm.new,
+             index: "DECIDIM_RECORD_ID",
+             question_index:
+           } %>

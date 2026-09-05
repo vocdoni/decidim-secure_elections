@@ -36,11 +36,11 @@ module Decidim
       end
 
       def start_date
-        election.start_time&.to_time
+        election.start_at&.to_time
       end
 
       def end_date
-        election.end_time&.to_time
+        election.end_at&.to_time
       end
 
       def current_date

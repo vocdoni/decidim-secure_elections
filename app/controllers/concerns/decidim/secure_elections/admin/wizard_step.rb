@@ -44,12 +44,10 @@ module Decidim
           # Named rather than anonymous (`**`) on purpose: this is the DSL every
           # wizard controller calls, and the name is what tells a reader what
           # may go in there without opening this file.
-          # rubocop:disable Style/ArgumentsForwarding
-          def wizard_step(step, **options)
+          def wizard_step(step, **options) # rubocop:disable Style/ArgumentsForwarding
             @wizard_step = step
-            before_action(:ensure_step_reachable!, **options)
+            before_action(:ensure_step_reachable!, **options) # rubocop:disable Style/ArgumentsForwarding
           end
-          # rubocop:enable Style/ArgumentsForwarding
 
           # @return [Symbol, nil]
           def declared_wizard_step
@@ -121,11 +119,12 @@ module Decidim
           case step.to_sym
           when :questions then edit_election_questions_path(election)
           when :census then election_census_path(election)
-          when :calendar then edit_election_calendar_path(election)
-          when :publish then election_setup_path(election)
-          when :monitor then election_monitor_path(election)
-          # `:details` and anything unrecognised. The first step is where a
-          # wizard with nowhere better to send someone belongs.
+          # `:publish` and `:monitor` both fold into the Dashboard tab now,
+          # so any step key that used to point at either lands there.
+          when :publish, :monitor then election_dashboard_path(election)
+          # Everything else — `:details`, `:main`, `:calendar` (the
+          # calendar step is folded into the Main tab), and any
+          # unrecognised key — lands on the Main tab.
           else edit_election_path(election)
           end
         end

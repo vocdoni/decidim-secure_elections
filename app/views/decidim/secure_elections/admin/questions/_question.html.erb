@@ -1,0 +1,101 @@
+<%#
+  One question card in the ballot editor, matching upstream
+  decidim-elections DOM conventions.
+
+  The card-divider is the entire drag surface (html5sortable grabs the
+  whole header). Collapse/Remove are in the header so they are always
+  visible even when the card body is collapsed.
+
+  Locals:
+    form_name  — the outer form's object_name ("election")
+    index      — Integer position in the list, or "DECIDIM_RECORD_ID"
+                 in the <script> blueprint that DynamicFieldsComponent clones
+    question   — QuestionForm instance
+    election   — the Election record (for context, not mutated here)
+%>
+<%
+  parent_name = "#{form_name}[questions][#{index}]"
+  card_id     = question.id.presence || index.to_s
+%>
+<%= fields_for parent_name, question do |q| %>
+  <div class="card questionnaire-question" id="accordion-<%= card_id %>-field">
+    <div class="form__wrapper" data-controller="accordion">
+      <div class="card-divider">
+        <h2 class="card-title flex items-center">
+          <span>
+            <%= icon "draggable", class: "dragger hover:cursor-grab" %>
+            <span class="question-title-preview"></span>
+          </span>
+          <span class="ml-auto flex flex-row-reverse items-center gap-2">
+            <button type="button"
+                    class="question--collapse"
+                    data-controls="panel-<%= card_id %>-question-card">
+              <span class="icon-collapse"><%= icon "arrow-up-s-line" %></span>
+              <span class="icon-expand"><%= icon "arrow-down-s-line" %></span>
+            </button>
+            <button type="button"
+                    class="button button__xs button__transparent-secondary small alert remove-question button--title">
+              <%= icon "delete-bin-line" %>
+              <span class="hidden md:block">
+                <%= t("decidim.secure_elections.admin.questions.question.remove") %>
+              </span>
+            </button>
+          </span>
+        </h2>
+      </div>
+
+      <div id="panel-<%= card_id %>-question-card" class="mt-4 card-section collapsible">
+        <%= q.translated :text_field, :title,
+                         label: t("decidim.secure_elections.admin.questions.question.statement_label") %>
+        <%= q.translated :editor, :description,
+                         label: t("decidim.secure_elections.admin.questions.question.description_label") %>
+        <%= q.select :question_type,
+                     options_for_select(secure_elections_question_type_options, q.object.question_type),
+                     label: t("decidim.secure_elections.admin.questions.question.question_type_label") %>
+
+        <%# These two hidden fields are submitted with every save.
+            `id` lets the command match the form row to its DB record.
+            `deleted` is set to "true" by DynamicFieldsComponent when the admin
+            clicks Remove; the command destroys rows absent from the kept set. %>
+        <%= q.hidden_field :id if question.persisted? %>
+        <%= q.hidden_field :deleted, value: false %>
+
+        <div class="questionnaire-question-response-options"
+             data-template="#response-option-template-<%= card_id %>">
+          <%# Per-question response-option blueprint. DynamicFieldsComponent reads
+              the data-template pointer, clones this script content and appends
+              the result to the options list. %>
+          <script type="text/template" id="response-option-template-<%= card_id %>">
+            <%= render partial: "decidim/secure_elections/admin/questions/response_option_template",
+                       locals: { parent_name:, question_index: index } %>
+          </script>
+
+          <div class="questionnaire-question-response-options-list">
+            <% question.answers.each_with_index do |answer, answer_index| %>
+              <%= render partial: "decidim/secure_elections/admin/questions/response_option",
+                         locals: { parent_name:, answer:, index: answer_index, question_index: index } %>
+            <% end %>
+          </div>
+
+          <button type="button"
+                  class="button button__sm button__transparent-secondary add-response-option">
+            <%= t("decidim.secure_elections.admin.questions.question.add_response_option") %>
+          </button>
+        </div>
+
+        <%# max_choices only matters for multichoice; the JS hides this field for
+            singlechoice questions. The range starts at 2 (the minimum) up to the
+            current number of options. %>
+        <%= q.select :max_choices,
+                     options_for_select(
+                       [[t("decidim.secure_elections.admin.questions.question.max_choices_any"), ""]].concat(
+                         (2..([2, question.number_of_options].max)).map { |n| [n.to_s, n] }
+                       ),
+                       question.max_choices
+                     ),
+                     { label: t("decidim.secure_elections.admin.questions.question.max_choices_label"),
+                       include_blank: false } %>
+      </div>
+    </div>
+  </div>
+<% end %>

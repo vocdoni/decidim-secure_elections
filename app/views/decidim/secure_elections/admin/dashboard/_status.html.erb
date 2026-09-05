@@ -1,0 +1,90 @@
+<%#
+  Live status + turnout panel for an on-chain election.
+  Wraps the #js-vocdoni-monitor element; the monitor pack polls
+  `data-status-url` and updates data-monitor-* targets in place.
+
+  Locals: `election`
+%>
+<div id="js-vocdoni-monitor"
+     class="flex flex-col md:flex-row gap-4 w-full mb-6"
+     data-status-url="<%= election_dashboard_path(election, format: :json) %>"
+     data-refresh-url="<%= refresh_election_dashboard_path(election, format: :json) %>"
+     data-refreshing-label="<%= t("decidim.secure_elections.admin.monitor.show.refreshing") %>"
+     data-refreshed-label="<%= t("decidim.secure_elections.admin.monitor.show.refreshed") %>"
+     data-refresh-failed-label="<%= t("decidim.secure_elections.admin.monitor.show.refresh_failed") %>"
+     data-refresh-slow-label="<%= t("decidim.secure_elections.admin.monitor.show.refresh_slow") %>">
+
+  <%#
+    Left card — election state, dates, and technical identifiers.
+    "ready" from the Vocdoni API means "not started", so we always
+    display the human label, never the raw upstream string.
+  %>
+  <div class="flex-1">
+    <div class="card h-full">
+      <div class="card-divider">
+        <h2 class="card-title"><%= t("decidim.secure_elections.admin.monitor.show.status_title") %></h2>
+      </div>
+      <div class="card-section">
+        <dl>
+          <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.status") %></dt>
+          <dd class="mb-4" data-monitor-state><%= secure_elections_election_status_label(election) %></dd>
+
+          <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.start_at") %></dt>
+          <dd class="mb-4"><%= vocdoni_start_time_text(election) %></dd>
+
+          <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.end_at") %></dt>
+          <dd><%= l(election.end_at, format: :decidim_short) if election.end_at %></dd>
+        </dl>
+
+        <details class="mt-4">
+          <summary class="text-sm text-gray-2 cursor-pointer"><%= t("decidim.secure_elections.admin.monitor.show.technical_title") %></summary>
+          <dl class="mt-2">
+            <dt class="h6"><%= t("decidim.secure_elections.admin.monitor.show.upstream_status") %></dt>
+            <dd class="mb-4"><code class="text-sm" data-monitor-upstream-status><%= vocdoni_upstream_status_label(election) %></code></dd>
+
+            <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.vocdoni_process_id") %></dt>
+            <dd class="mb-4"><code class="text-sm break-all"><%= election.vocdoni_process_id %></code></dd>
+
+            <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.vocdoni_chain_id") %></dt>
+            <dd><code class="text-sm break-all"><%= election.vocdoni_chain_id.presence || "—" %></code></dd>
+          </dl>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <%#
+    Right card — turnout and the refresh control.
+    A link rather than a button so the refresh still works when the
+    monitor pack is unavailable; with the pack it stays on the page
+    and swaps figures once the sync job lands.
+  %>
+  <div class="flex-1">
+    <div class="card h-full">
+      <div class="card-divider">
+        <h2 class="card-title justify-between">
+          <span class="text-black font-bold"><%= t("decidim.secure_elections.admin.monitor.show.turnout_title") %></span>
+          <% if allowed_to? :refresh, :monitor, election: election %>
+            <%= link_to refresh_election_dashboard_path(election),
+                        id: "js-vocdoni-monitor-refresh",
+                        class: "flex items-center gap-1 text-sm text-secondary",
+                        data: { "monitor-refresh": true } do %>
+              <%= icon "refresh-line", class: "!w-4 !h-4", aria_hidden: true %>
+              <span data-monitor-refresh-label><%= t("decidim.secure_elections.admin.monitor.show.refresh") %></span>
+            <% end %>
+          <% end %>
+        </h2>
+      </div>
+      <div class="card-section">
+        <p class="text-2xl font-bold" data-monitor-turnout><%= vocdoni_turnout_text(election) %></p>
+
+        <p class="text-sm text-gray-2 mt-2" data-monitor-synced><%= secure_elections_last_synced_text(election) %></p>
+
+        <%# Announces the outcome of a refresh — silent figure changes are the failure mode this card guards against. %>
+        <p class="text-sm text-gray-2 mt-1" role="status" aria-live="polite" data-monitor-feedback></p>
+
+        <p class="text-sm text-gray-2 mt-1"><%= t("decidim.secure_elections.admin.monitor.show.refresh_help") %></p>
+      </div>
+    </div>
+  </div>
+</div>

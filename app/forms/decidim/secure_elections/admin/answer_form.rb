@@ -21,6 +21,11 @@ module Decidim
         # It is compared, never persisted.
         attribute :uid, String
 
+        # Soft-delete flag set by the Remove button. A deleted option is excluded
+        # from `options` in `QuestionForm` and is therefore destroyed by the
+        # save command's `where.not(id: kept).destroy_all`.
+        attribute :deleted, Boolean, default: false
+
         # An option the admin added and left empty is discarded rather than
         # reported. Clicking "Add a new option" one time too many is not a
         # mistake worth an error message, and the question still refuses to be

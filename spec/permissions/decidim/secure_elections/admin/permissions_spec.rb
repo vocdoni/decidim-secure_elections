@@ -159,13 +159,13 @@ module Decidim
           it { is_expected.to be true }
 
           context "and the election is running on chain" do
-            let(:election) { create(:vocdoni_election, :on_chain, end_time: 2.days.from_now) }
+            let(:election) { create(:vocdoni_election, :on_chain, end_at: 2.days.from_now) }
 
             it_behaves_like "permission is not set"
           end
 
           context "and the election is over" do
-            let(:election) { create(:vocdoni_election, :on_chain, end_time: 1.day.ago) }
+            let(:election) { create(:vocdoni_election, :on_chain, end_at: 1.day.ago) }
 
             it { is_expected.to be true }
           end

@@ -1,3 +1,22 @@
+<%#
+  The per-row action dropdown.
+
+  What is *not* here is as intentional as what is. There is no on-chain
+  Publish action — writing an election to the blockchain is irreversible,
+  and an irreversible action does not belong one click away from a table
+  row. That flow lives on the Dashboard, behind the checklist and the
+  `confirm_irreversible` acknowledgement. Decidim-elections upstream
+  ships Publish here with no confirmation at all, which is not a safety
+  story vd will copy.
+
+  What *is* here is the Decidim-visibility toggle ("Show / Hide on
+  public site"), which is reversible and never touches the chain — hence
+  the explicit renaming away from "Publish / Unpublish" (a word that in
+  this module belongs to on-chain publication, and reusing it here made
+  people read the row action as an on-chain write). Also here: a link
+  to the Dashboard, replacing the old direct Monitor link — the Dashboard
+  branches on `published?` and reaches the monitor for on-chain elections.
+%>
 <button type="button"
         data-controller="dropdown"
         data-target="actions-election-<%= election.id %>"
@@ -35,14 +54,17 @@
         <% end %>
       </li>
 
-      <% if election.on_chain? %>
-        <li class="dropdown__item">
-          <%= link_to election_monitor_path(election), class: "dropdown__button" do %>
-            <%= icon "dashboard-line" %>
-            <%= t("decidim.secure_elections.admin.elections.monitor") %>
-          <% end %>
-        </li>
-      <% end %>
+      <%# Dashboard, not monitor: the dashboard branches on `published?`
+          and reaches the live monitor for on-chain elections. Available
+          from every row, whether or not the election is on chain — an
+          unpublished election shows the completeness checklist + preview
+          there, and a published one shows the live monitor. %>
+      <li class="dropdown__item">
+        <%= link_to election_dashboard_path(election), class: "dropdown__button" do %>
+          <%= icon "dashboard-line" %>
+          <%= t("decidim.secure_elections.admin.elections.dashboard") %>
+        <% end %>
+      </li>
 
       <hr>
 

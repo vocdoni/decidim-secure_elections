@@ -80,7 +80,7 @@ module Decidim
         end
 
         it "is not ready for setup without an end date" do
-          election.update!(end_time: nil)
+          election.update!(end_at: nil)
 
           expect(election).not_to be_calendar_complete
           expect(election).not_to be_ready_for_setup
@@ -97,7 +97,7 @@ module Decidim
       # ask, so that they cannot drift apart.
       describe "step reachability" do
         context "with nothing but a title" do
-          let(:election) { create(:vocdoni_election, end_time: nil) }
+          let(:election) { create(:vocdoni_election, end_at: nil) }
 
           it "opens the details and the ballot, and nothing beyond" do
             expect(election.step_reachable?(:details)).to be(true)
@@ -196,12 +196,23 @@ module Decidim
       end
 
       describe "#manual_start?" do
-        it "is true when no start time is set" do
+        # The old meaning ("start_at is blank") was renamed under the
+        # naming-gotcha rule: `manual_start` is now an explicit admin
+        # decision, stored as its own boolean column. A blank `start_at`
+        # with `manual_start = false` means "opens on publish", which is
+        # a distinct state.
+        it "is true when the admin explicitly ticked the manual_start checkbox" do
+          election.update!(manual_start: true)
+
           expect(election).to be_manual_start
         end
 
-        it "is false with an explicit start time" do
-          election.update!(start_time: 1.day.from_now)
+        it "is false by default (manual_start is a deliberate admin choice)" do
+          expect(election).not_to be_manual_start
+        end
+
+        it "stays false when start_at is blank without the checkbox" do
+          election.update!(manual_start: false, start_at: nil)
 
           expect(election).not_to be_manual_start
         end
@@ -216,20 +227,20 @@ module Decidim
         end
 
         it "says voting is open for a live election, not 'ready'" do
-          election = create(:vocdoni_election, :on_chain, start_time: 1.hour.ago, end_time: 1.hour.from_now)
+          election = create(:vocdoni_election, :on_chain, start_at: 1.hour.ago, end_at: 1.hour.from_now)
 
           expect(election.status).to eq("ready")
           expect(election.display_state).to eq(:ongoing)
         end
 
         it "says voting is open for a live election that starts on publication" do
-          election = create(:vocdoni_election, :on_chain, start_time: nil, end_time: 1.hour.from_now)
+          election = create(:vocdoni_election, :on_chain, start_at: nil, end_at: 1.hour.from_now)
 
           expect(election.display_state).to eq(:ongoing)
         end
 
         it "is scheduled before its start time" do
-          election = create(:vocdoni_election, :on_chain, start_time: 1.hour.from_now, end_time: 2.hours.from_now)
+          election = create(:vocdoni_election, :on_chain, start_at: 1.hour.from_now, end_at: 2.hours.from_now)
 
           expect(election.display_state).to eq(:scheduled)
         end
@@ -237,14 +248,14 @@ module Decidim
         # The upstream status lags the calendar. The admin must not be told an
         # election is open when its own end time has passed.
         it "is ended past its end time even while upstream still says ready" do
-          election = build(:vocdoni_election, status: "ready", start_time: 2.hours.ago, end_time: 1.hour.ago,
+          election = build(:vocdoni_election, status: "ready", start_at: 2.hours.ago, end_at: 1.hour.ago,
                                               vocdoni_process_id: "6885f0c2c1a4e2f0b1d33a01")
 
           expect(election.display_state).to eq(:ended)
         end
 
         it "agrees with the badge the public side renders" do
-          election = create(:vocdoni_election, :on_chain, start_time: 1.hour.ago, end_time: 1.hour.from_now)
+          election = create(:vocdoni_election, :on_chain, start_at: 1.hour.ago, end_at: 1.hour.from_now)
 
           expect(election.display_state).to eq(Decidim::SecureElections::ElectionStatusCell.state_for(election))
         end
@@ -252,10 +263,10 @@ module Decidim
 
       describe "#started_at" do
         it "is the scheduled start when there is one" do
-          start_time = 1.hour.ago
-          election.update!(start_time:)
+          start_at = 1.hour.ago
+          election.update!(start_at:)
 
-          expect(election.started_at).to be_within(1.second).of(start_time)
+          expect(election.started_at).to be_within(1.second).of(start_at)
         end
 
         it "is nil while the election is still a draft with no schedule" do
@@ -266,7 +277,7 @@ module Decidim
         # it is the lie that made a running election look dormant. With no
         # column for the publication instant, the action log is what remembers.
         it "is the moment publication was requested for an election that starts on publication" do
-          election = create(:vocdoni_election, :on_chain, start_time: nil)
+          election = create(:vocdoni_election, :on_chain, start_at: nil)
           user = create(:user, :admin, :confirmed, organization: election.component.organization)
 
           # Exactly what `SetupElection` records when the admin presses the
@@ -279,11 +290,11 @@ module Decidim
 
       describe "validations" do
         it "rejects an end time before the start time" do
-          election.start_time = 2.days.from_now
-          election.end_time = 1.day.from_now
+          election.start_at = 2.days.from_now
+          election.end_at = 1.day.from_now
 
           expect(election).not_to be_valid
-          expect(election.errors[:end_time]).not_to be_empty
+          expect(election.errors[:end_at]).not_to be_empty
         end
 
         it "rejects an unknown status" do

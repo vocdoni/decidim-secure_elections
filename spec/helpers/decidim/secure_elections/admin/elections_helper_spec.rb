@@ -27,7 +27,7 @@ module Decidim
           end
 
           context "with an election that is open and taking votes" do
-            let(:election) { create(:vocdoni_election, :on_chain, component:, end_time: 1.day.from_now) }
+            let(:election) { create(:vocdoni_election, :on_chain, component:, end_at: 1.day.from_now) }
 
             it "is picked from the display state, not the upstream status" do
               expect(election.status).to eq("ready")
@@ -58,7 +58,7 @@ module Decidim
           end
 
           context "with an election that is on chain and over" do
-            let(:election) { create(:vocdoni_election, :on_chain, component:, status: "ended", end_time: 1.day.ago) }
+            let(:election) { create(:vocdoni_election, :on_chain, component:, status: "ended", end_at: 1.day.ago) }
 
             it "says the process and its results stay on chain" do
               expect(helper.vocdoni_trash_confirm_key(election)).to eq("on_chain")
@@ -83,7 +83,7 @@ module Decidim
           let(:question) { election.questions.first }
 
           context "with a question that is open and taking votes" do
-            let(:election) { create(:vocdoni_election, :on_chain, component:, end_time: 1.day.from_now) }
+            let(:election) { create(:vocdoni_election, :on_chain, component:, end_at: 1.day.from_now) }
 
             it "reads the way the election's own badge reads" do
               expect(question.vocdoni_status).to eq("ready")
@@ -95,7 +95,7 @@ module Decidim
 
           context "with a question whose election has not opened yet" do
             let(:election) do
-              create(:vocdoni_election, :on_chain, component:, start_time: 1.day.from_now, end_time: 2.days.from_now)
+              create(:vocdoni_election, :on_chain, component:, start_at: 1.day.from_now, end_at: 2.days.from_now)
             end
 
             it "does not claim voting is open" do
@@ -105,7 +105,7 @@ module Decidim
           end
 
           context "with a question that has been stopped on its own" do
-            let(:election) { create(:vocdoni_election, :on_chain, component:, end_time: 1.day.from_now) }
+            let(:election) { create(:vocdoni_election, :on_chain, component:, end_at: 1.day.from_now) }
 
             before { question.update!(vocdoni_status: "paused") }
 

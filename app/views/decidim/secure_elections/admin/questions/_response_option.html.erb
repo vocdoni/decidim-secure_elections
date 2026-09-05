@@ -1,0 +1,35 @@
+<%#
+  One response option card within a question, matching upstream
+  decidim-elections DOM conventions.
+
+  Response options are not drag-reorderable (upstream does not support
+  it and neither does vd — the choice value is positional and fixed at
+  publish time).
+
+  Locals:
+    parent_name    — the question's field name prefix
+    answer         — AnswerForm instance
+    index          — Integer position, or "DECIDIM_RECORD_ID" in templates
+    question_index — parent question's index (or "DECIDIM_RECORD_ID")
+%>
+<%= fields_for "#{parent_name}[answers][#{index}]", answer do |o| %>
+  <div class="card questionnaire-question-response-option mx-4 my-8">
+    <div class="card-divider">
+      <h2 class="card-title mb-2">
+        <span><%= t("decidim.secure_elections.admin.questions.response_option.title") %></span>
+        <button type="button"
+                class="button button__xs button__transparent-secondary small alert remove-response-option button--title"
+                style="display:none">
+          <%= icon "delete-bin-line" %>
+          <%= t("decidim.secure_elections.admin.questions.response_option.remove") %>
+        </button>
+      </h2>
+    </div>
+    <div class="card-section">
+      <%= o.translated :text_field, :title,
+                       label: t("decidim.secure_elections.admin.questions.response_option.statement_label") %>
+    </div>
+    <%= o.hidden_field :id if answer.persisted? %>
+    <%= o.hidden_field :deleted, value: false %>
+  </div>
+<% end %>

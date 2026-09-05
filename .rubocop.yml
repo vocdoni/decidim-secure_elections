@@ -18,3 +18,13 @@ Metrics/BlockLength:
     - "lib/decidim/secure_elections/component.rb"
     - "lib/decidim/secure_elections/admin_engine.rb"
     - "spec/**/*"
+
+# The Gemfile's `# rubocop:disable Bundler/DuplicatedGem` pair wraps a
+# full if/else block that declares the same set of gems from either a
+# local path or a git ref — the two branches are mutually exclusive but
+# name the same gems. `disable-next-line` would only cover the `if`
+# line and leave the else branch flagged, so the block-scoped
+# disable/enable pair stays as the least-noisy option.
+Style/DirectiveScope:
+  Exclude:
+    - "Gemfile"

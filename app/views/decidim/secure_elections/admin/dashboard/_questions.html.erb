@@ -1,0 +1,47 @@
+<%#
+  Read-only summary of the first few questions and their type + option count.
+  Pencil-edit link goes to `edit_election_questions_path`.
+
+  Locals: `election`
+%>
+<%
+  all_questions = election.questions.includes(:answers)
+  preview_count = 3
+  preview = all_questions.first(preview_count)
+%>
+
+<div class="card mb-6">
+  <div class="card-divider">
+    <h2 class="card-title justify-between">
+      <span><%= t("decidim.secure_elections.admin.questions.edit.title") %></span>
+      <%= link_to edit_election_questions_path(election),
+                  class: "button button__xs button__transparent-secondary",
+                  aria: { label: t("decidim.secure_elections.admin.questions.edit.title") } do %>
+        <%= icon "pencil-line", class: "!w-4 !h-4", aria_hidden: true %>
+      <% end %>
+    </h2>
+  </div>
+
+  <div class="card-section">
+    <% if all_questions.empty? %>
+      <p class="text-sm text-gray-2"><%= t("decidim.secure_elections.admin.dashboard.questions.none") %></p>
+    <% else %>
+      <ol class="list-decimal ml-4">
+        <% preview.each do |question| %>
+          <li class="mb-1">
+            <%= present(question).title(html_escape: true) %>
+            <span class="text-gray-2 text-sm">
+              (<%= t(question.question_type, scope: "decidim.secure_elections.question_types") %>,
+              <%= t("decidim.secure_elections.admin.elections.options_count", count: question.answers_count) %>)
+            </span>
+          </li>
+        <% end %>
+      </ol>
+      <% if all_questions.size > preview_count %>
+        <p class="text-sm text-gray-2 mt-2">
+          <%= t("decidim.secure_elections.admin.dashboard.questions.and_more", count: all_questions.size - preview_count) %>
+        </p>
+      <% end %>
+    <% end %>
+  </div>
+</div>

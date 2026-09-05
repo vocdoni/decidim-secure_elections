@@ -1,0 +1,98 @@
+<%#
+  The Dashboard tab — single page that branches on the election's on-chain
+  state.
+
+  Pre-publish: completeness checklist, read-only summary cards and the sticky
+  confirm_irreversible + "Publish on the blockchain" form.
+
+  On-chain (or publishing): status card, calendar (with optional "Start
+  election"), results and the live-refresh monitor markup.
+
+  The on-chain half is the monitor.show.html.erb view, moved here and given
+  the same tab frame. The packs and JS data attributes that drive the live
+  refresh are preserved verbatim.
+%>
+<% add_decidim_page_title(t(".title")) %>
+
+<%= render partial: "decidim/secure_elections/admin/shared/election_header", locals: { election: } %>
+<%= render partial: "decidim/secure_elections/admin/elections/tabs_menu" %>
+
+<% if election.editable? %>
+  <%# ------------------------------------------------------------------
+      Unpublished: checklist + summary cards + sticky publish action
+  -------------------------------------------------------------------- %>
+  <div class="item__edit item__edit-1col">
+    <div class="item__edit-form 2xl:mr-80">
+      <%= render partial: "decidim/secure_elections/admin/dashboard/checklist",
+                 locals: { election: } %>
+      <%= render partial: "decidim/secure_elections/admin/dashboard/main",
+                 locals: { election: } %>
+      <%= render partial: "decidim/secure_elections/admin/dashboard/questions",
+                 locals: { election: } %>
+      <%= render partial: "decidim/secure_elections/admin/dashboard/census",
+                 locals: { election: } %>
+    </div>
+
+    <div class="item__edit-sticky">
+      <div class="item__edit-sticky-container">
+        <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
+                   locals: { election:, form: @form } %>
+      </div>
+    </div>
+  </div>
+<% else %>
+  <%# ------------------------------------------------------------------
+      On-chain / publishing: status, calendar, results, monitor controls
+  -------------------------------------------------------------------- %>
+  <% if election.publishing? && !election.on_chain? %>
+    <%= cell "decidim/announcement",
+             { title: t("decidim.secure_elections.admin.monitor.show.incomplete_title"),
+               body: t("decidim.secure_elections.admin.monitor.show.incomplete_body") },
+             callout_class: "alert" %>
+
+    <% if allowed_to? :refresh, :monitor, election: election %>
+      <p class="mb-6">
+        <%= link_to t("decidim.secure_elections.admin.monitor.show.resume"),
+                    refresh_election_dashboard_path(election),
+                    class: "button button__sm button__secondary" %>
+      </p>
+    <% end %>
+  <% end %>
+
+  <div class="item__edit item__edit-1col">
+    <div class="item__edit-form 2xl:mr-80">
+      <%= render partial: "decidim/secure_elections/admin/dashboard/status",
+                 locals: { election: } %>
+      <%= render partial: "decidim/secure_elections/admin/dashboard/calendar",
+                 locals: { election: } %>
+      <%= render partial: "decidim/secure_elections/admin/dashboard/results",
+                 locals: { election:, questions: } %>
+
+      <% if allowed_to? :update_status, :monitor, election: election %>
+        <div class="card mb-6">
+          <div class="card-divider">
+            <h2 class="card-title"><%= t("decidim.secure_elections.admin.monitor.show.controls_title") %></h2>
+          </div>
+          <div class="card-section">
+            <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
+
+            <div class="flex flex-wrap gap-2">
+              <% Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES.each do |s| %>
+                <%= button_to status_election_dashboard_path(election),
+                              method: :put,
+                              params: { question_status: { status: s } },
+                              data: vocdoni_status_confirm_data(s),
+                              class: "button button__xs #{s == "canceled" ? "alert" : "button__secondary"}",
+                              disabled: election.status == s do %>
+                  <%= t(s, scope: "decidim.secure_elections.status_actions") %>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<%= render partial: "decidim/secure_elections/admin/shared/public_link", locals: { election: } %>

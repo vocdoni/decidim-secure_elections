@@ -1,0 +1,47 @@
+<%#
+  Completeness checklist: each row shows a check-line icon (passed) or
+  error-warning-line icon (failed) with a "fix it" link to the failing tab.
+
+  Every item is sourced from an `Election#*_complete?` predicate — the same
+  methods SetupForm re-validates server-side before enqueuing the job.
+  Showing them here gives the admin an early answer to "why is Publish
+  disabled" rather than a validation error after clicking.
+
+  Locals: `election`
+%>
+<%
+  checks = [
+    [:details,       election.details_complete?,   edit_election_path(election)],
+    [:questions,     election.questions_complete?,  edit_election_questions_path(election)],
+    [:census,        election.census_complete?,     election_census_path(election)],
+    [:calendar,      election.calendar_complete?,   edit_election_path(election)],
+    [:configuration, module_configured?,            nil]
+  ]
+%>
+
+<div class="card mb-6">
+  <div class="card-divider">
+    <h2 class="card-title"><%= t("decidim.secure_elections.admin.setup.show.checklist_title") %></h2>
+  </div>
+
+  <div class="card-section">
+    <ul class="list-none">
+      <% checks.each do |(key, ok, path)| %>
+        <li class="flex items-center gap-2 mb-2">
+          <% if ok %>
+            <%= icon "check-line", class: "fill-success", aria_hidden: true %>
+            <span class="sr-only"><%= t("decidim.secure_elections.admin.setup.show.check_ok") %>:</span>
+          <% else %>
+            <%= icon "error-warning-line", class: "fill-alert", aria_hidden: true %>
+            <span class="sr-only"><%= t("decidim.secure_elections.admin.setup.show.check_missing") %>:</span>
+          <% end %>
+          <span><%= t(key, scope: "decidim.secure_elections.admin.setup.checks") %></span>
+          <% if !ok && path %>
+            <%= link_to t("decidim.secure_elections.admin.setup.show.fix_it"), path,
+                        class: "text-secondary text-sm underline" %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>

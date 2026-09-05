@@ -1,0 +1,92 @@
+<%#
+  The Main tab body: three collapsible accordion cards inside one form.
+
+  DOM contract mirrors decidim-elections upstream, verified against
+  try.decidim.org: `.card[data-controller="accordion"]` wrapping a
+  `.card-divider > .card-divider-button` and a `<div id="panel-<name>"
+  role="region">` body. Do not add `.card-section` around the panel
+  contents — upstream does not, and the Stimulus accordion controller
+  keys on `data-controls` alone.
+
+  Locals: `form` (the Decidim form builder), `election` (nil on create).
+%>
+<%
+  disabled = !form.object.editable?
+  election = local_assigns[:election]
+%>
+
+<% append_javascript_pack_tag "decidim_secure_elections_admin" %>
+
+<%# Basic info — always open on new; open on edit too, since it is where
+    a title change happens. %>
+<div class="card form-basic" data-controller="accordion" data-component="accordion" id="accordion-basic" role="presentation">
+  <div class="card-divider">
+    <button type="button" class="card-divider-button" data-controls="panel-basic" data-open="true" role="button" aria-controls="panel-basic" aria-expanded="true">
+      <%= icon "arrow-right-s-line", class: "flex-none" %>
+      <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.basic_info") %></h2>
+    </button>
+  </div>
+  <div id="panel-basic" role="region" tabindex="-1" aria-hidden="false">
+    <%= render partial: "decidim/secure_elections/admin/elections/details_fields", locals: { form:, election: } %>
+  </div>
+</div>
+
+<%# Calendar — start / end datetime pickers + manual_start checkbox. %>
+<div class="card form-calendar" data-controller="accordion" data-component="accordion" id="accordion-calendar" role="presentation">
+  <div class="card-divider">
+    <button type="button" class="card-divider-button" data-controls="panel-calendar" data-open="true" role="button" aria-controls="panel-calendar" aria-expanded="true">
+      <%= icon "arrow-right-s-line", class: "flex-none" %>
+      <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.calendar") %></h2>
+    </button>
+  </div>
+  <div id="panel-calendar" role="region" tabindex="-1" aria-hidden="false">
+    <p class="help-text">
+      <%= t("decidim.secure_elections.admin.elections.editor.timezone_notice",
+            timezone: "#{current_organization.time_zone} (#{l(Time.current.in_time_zone(current_organization.time_zone), format: :long)})") %>
+    </p>
+
+    <div class="md:flex w-100 gap-4">
+      <div class="row column">
+        <%= form.datetime_field :start_at,
+                                label: t("decidim.secure_elections.admin.elections.editor.start_at_label"),
+                                help_text: t("decidim.secure_elections.admin.elections.editor.start_at_help"),
+                                disabled: disabled %>
+      </div>
+      <div class="row column">
+        <%= form.datetime_field :end_at,
+                                label: t("decidim.secure_elections.admin.elections.editor.end_at_label"),
+                                help_text: t("decidim.secure_elections.admin.elections.editor.end_at_help"),
+                                disabled: disabled %>
+      </div>
+    </div>
+
+    <div class="row column mt-4">
+      <%= form.check_box :manual_start,
+                         label: t("decidim.secure_elections.admin.elections.editor.manual_start_label"),
+                         help_text: t("decidim.secure_elections.admin.elections.editor.manual_start_help"),
+                         disabled: disabled %>
+    </div>
+  </div>
+</div>
+
+<%# Results availability — two-value radio group. `per_question` is
+    deliberately excluded; vd's protocol does not support it. %>
+<div class="card form-results" data-controller="accordion" data-component="accordion" id="accordion-results" role="presentation">
+  <div class="card-divider">
+    <button type="button" class="card-divider-button" data-controls="panel-results" data-open="true" role="button" aria-controls="panel-results" aria-expanded="true">
+      <%= icon "arrow-right-s-line", class: "flex-none" %>
+      <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.results_availability_title") %></h2>
+    </button>
+  </div>
+  <div id="panel-results" role="region" tabindex="-1" aria-hidden="false">
+    <% Decidim::SecureElections::Election::RESULTS_AVAILABILITIES.each do |value| %>
+      <label class="flex items-start gap-2 mb-2">
+        <%= form.radio_button :results_availability, value, disabled: disabled %>
+        <span>
+          <strong><%= t(value, scope: "decidim.secure_elections.admin.elections.form.results_availability") %></strong>
+          <small class="block text-gray-2"><%= t("#{value}_help", scope: "decidim.secure_elections.admin.elections.form.results_availability") %></small>
+        </span>
+      </label>
+    <% end %>
+  </div>
+</div>

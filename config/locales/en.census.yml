@@ -196,10 +196,18 @@ en:
               mid: Mid-level guarantees — three credentials, but no second factor. Turning on two-factor verification would make this strong.
               strong: Strong guarantees. Two-factor verification means a voter has to hold the contact you have on file, not just know a few details about somebody.
               weak: Basic guarantees. Anybody who knows these details about a voter could vote in their place. Add more credentials, or turn on two-factor verification.
+          preview:
+            caption: First people in the census
+            identifier: Name or identifier
+            joined_at: Added
+            size:
+              one: 1 person in the census.
+              other: "%{count} people in the census."
           show:
             add_people_help: Add people one at a time, upload a spreadsheet, or bring in participants you have already verified in Decidim.
             add_people_title: Add people to the census
             authentication_title: Voter authentication
+            census_ready: The census is configured and all entries are valid.
             clear: Empty the census
             clear_confirm:
               one: This will remove the 1 person in the census. Continue?
@@ -211,6 +219,8 @@ en:
             incomplete_title:
               one: 1 person is missing something they need in order to vote
               other: "%{count} people are missing something they need in order to vote"
+            manifests:
+              internal_users: Internal users
             missing_field:
               one: 1 has no %{field}
               other: "%{count} have no %{field}"
@@ -229,6 +239,7 @@ en:
             reported_missing_title:
               one: 1 person was rejected by the voting network
               other: "%{count} people were rejected by the voting network"
+            save: Save
           summary:
             credentials: Required credentials
             no_credentials: None — voters are identified by the second factor alone.

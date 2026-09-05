@@ -71,9 +71,7 @@ module Decidim
 
       def persist_locally!
         Decidim::SecureElections::Election.transaction do
-          # rubocop:disable Rails/SkipsModelValidations
-          Decidim::SecureElections::Question.where(id: questions.map(&:id)).update_all(vocdoni_status: status, updated_at: Time.current)
-          # rubocop:enable Rails/SkipsModelValidations
+          Decidim::SecureElections::Question.where(id: questions.map(&:id)).update_all(vocdoni_status: status, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
           next unless whole_process?
           next unless Decidim::SecureElections::Election::STATUSES.include?(status)

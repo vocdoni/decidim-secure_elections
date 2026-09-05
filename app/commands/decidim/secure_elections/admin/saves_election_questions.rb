@@ -48,12 +48,15 @@ module Decidim
           question.assign_attributes(
             title: question_form.title,
             description: question_form.description,
-            # Set once for the whole process by the editor, stored per question
-            # because that is what the schema and the voting page expect.
-            question_type: form.question_type,
-            secret_until_the_end: form.secret_until_the_end?,
-            max_choices: form.multichoice? ? question_form.max_choices : nil,
-            min_choices: form.multichoice? ? question_form.min_choices : nil,
+            # question_type is now per-question: each card carries its own select.
+            question_type: question_form.question_type,
+            # secret_until_the_end mirrors the election's results_availability,
+            # which the Main form owns. Reading it here keeps all questions in sync
+            # whenever the ballot is saved, even if the Main form was submitted
+            # earlier in the session.
+            secret_until_the_end: election.results_availability == "after_end",
+            max_choices: question_form.multichoice? ? question_form.max_choices : nil,
+            min_choices: question_form.multichoice? ? question_form.min_choices : nil,
             position: index
           )
           question.save!
@@ -105,9 +108,7 @@ module Decidim
         # and the values are overwritten a few lines later anyway.
         def park_existing_values!(question)
           question.answers.reload.each_with_index do |answer, index|
-            # rubocop:disable Rails/SkipsModelValidations
-            answer.update_columns(value: VALUE_PARKING_OFFSET + index)
-            # rubocop:enable Rails/SkipsModelValidations
+            answer.update_columns(value: VALUE_PARKING_OFFSET + index) # rubocop:disable Rails/SkipsModelValidations
           end
         end
       end

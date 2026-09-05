@@ -2,38 +2,9 @@
 //
 // Nearly everything on these screens is plain Decidim: cards, form fields, the
 // admin sticky bar. What is here are the few things Tailwind utilities cannot
-// express from the markup — the borderless title and question fields, the
-// height the sticky settings column is allowed to take, and a step navigation
-// that fits on a phone.
-
-// The step navigation above every screen of a single election.
-//
-// Decidim's `tab-x-container` is a plain flex row that neither wraps nor
-// scrolls. With six steps in it the row was wider than a phone, and because
-// nothing along the way is allowed to shrink, the *page* grew with it: at 390px
-// the whole admin panned sideways and "Publish" and "Monitor" sat off screen.
-// The row is allowed to wrap when there is no space, and never to widen its
-// container.
-.vocdoni-step-nav {
-  max-width: 100%;
-
-  // A flex item with the default `min-width: auto` cannot be narrower than its
-  // content, which is how the row of tabs was widening the page rather than
-  // being constrained by it.
-  .main-tabs-menu__tabs {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  ul.tab-x-container {
-    // Wrapping, not shrinking. The entries keep Decidim's `grow`, so they still
-    // fill the width on a desktop and simply fold onto a second and third line
-    // on a phone — every step stays visible and none is cut in half.
-    flex-wrap: wrap;
-    max-width: 100%;
-    min-width: 0;
-  }
-}
+// express from the markup — fieldset overrides, the datepicker column widths,
+// the height the sticky settings column is allowed to take, the live-monitor
+// highlight, and the census members table.
 
 .vocdoni-editor {
   // A `<fieldset>` carries a UA rule no other element has: `min-width:
@@ -99,54 +70,6 @@
 
   .datepicker__datepicker-row {
     margin-bottom: 1rem;
-  }
-
-  // Borderless inputs, the way the Vocdoni app writes a voting process: the
-  // title reads as a heading and only shows its edges once it has focus.
-  //
-  // The size and the borderlessness are set from here rather than with utility
-  // classes on the field, because `Decidim::FormBuilder` passes the field's
-  // options straight to `error_for`: a `text-3xl font-bold` on the input landed
-  // on "cannot be blank" as well, and rendered it in display type.
-  &__title input,
-  .vocdoni-question__title input,
-  .vocdoni-question__description textarea,
-  input.border-0,
-  textarea.border-0 {
-    background-color: transparent;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    padding-left: 0;
-    padding-right: 0;
-
-    &:focus {
-      background-color: transparent;
-      box-shadow: none;
-      outline: 2px solid var(--focus, currentColor);
-      outline-offset: 2px;
-    }
-
-    &::placeholder {
-      opacity: 1;
-    }
-  }
-
-  &__title input {
-    font-size: 1.875rem;
-    line-height: 2.25rem;
-    font-weight: 700;
-  }
-
-  .vocdoni-question__title input {
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-    font-weight: 700;
-  }
-
-  .vocdoni-question__title input,
-  .vocdoni-question__description textarea {
-    border-bottom: 1px solid var(--gray-3, #d1d5db);
   }
 
   // The error stays the size an error is, whatever the field above it does.

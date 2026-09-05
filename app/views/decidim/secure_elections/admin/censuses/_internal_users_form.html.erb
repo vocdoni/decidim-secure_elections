@@ -1,0 +1,153 @@
+<%#
+  The "internal users" census manifest form partial.
+
+  Contains vd's voter-authentication configuration: which credential fields
+  a voter has to type, which second factor (if any) they have to pass, and
+  the resulting security-level summary.
+
+  This is the Vocdoni app's three-part dialog
+  (`Process/Create/VoterAuthentication/`) expressed as three stacked cards:
+  Credentials → Two-factor → Summary. The app puts them behind tabs that
+  unlock one after the other; here they are visible together so the summary
+  updates as the choices above it are made.
+
+  Locals: `form` (the census form builder), `election`.
+%>
+<%
+  disabled = !election.editable?
+  advice = @form.credentials_advice
+%>
+
+<div class="form__wrapper" id="js-census-authentication"
+     data-max-credentials="<%= @form.max_credentials %>">
+
+  <%# ─── 1. Credentials ─────────────────────────────────────────────── %>
+  <div class="card">
+    <div class="card-divider">
+      <h2 class="card-title">
+        <span class="text-black font-bold">
+          <span aria-hidden="true">1.</span>
+          <%= t("decidim.secure_elections.admin.census.credentials.title") %>
+        </span>
+      </h2>
+    </div>
+
+    <div class="card-section">
+      <fieldset aria-describedby="census-credentials-help">
+        <legend class="h6"><%= t("decidim.secure_elections.admin.census.credentials.legend") %></legend>
+        <p class="help-text" id="census-credentials-help">
+          <%= t("decidim.secure_elections.admin.census.credentials.help", count: @form.max_credentials) %>
+        </p>
+
+        <%= form.collection_check_boxes :credentials, @form.available_credentials, :to_s, :to_s, { include_hidden: true } do |field| %>
+          <div class="mb-1">
+            <%= field.label do %>
+              <%= field.check_box(disabled: disabled, data: { "census-credential": field.value }) %>
+              <%= Decidim::SecureElections::CensusMember.field_label(field.value) %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <p class="text-sm text-gray-2 mt-2"
+           id="js-census-credentials-count"
+           role="status"
+           data-template="<%= t("decidim.secure_elections.admin.census.credentials.count", selected: "%selected%", max: "%max%") %>">
+          <%= t("decidim.secure_elections.admin.census.credentials.count",
+                selected: @form.auth_fields.size, max: @form.max_credentials) %>
+        </p>
+      </fieldset>
+
+      <%#
+        Inline advice: one field earns a nudge, two or more a reassurance.
+        Both are rendered; the browser shows only the relevant one so that
+        translated prose is never composed in JavaScript.
+      %>
+      <div class="mt-4" data-census-advice="recommend" <%= "hidden" unless advice == :recommend %>>
+        <%= cell "decidim/announcement",
+                 { title: t("decidim.secure_elections.admin.census.credentials.advice.recommend_title"),
+                   body: t("decidim.secure_elections.admin.census.credentials.advice.recommend_body") },
+                 callout_class: "secondary" %>
+      </div>
+
+      <div class="mt-4" data-census-advice="good" <%= "hidden" unless advice == :good %>>
+        <%= cell "decidim/announcement",
+                 { title: t("decidim.secure_elections.admin.census.credentials.advice.good_title"),
+                   body: t("decidim.secure_elections.admin.census.credentials.advice.good_body") },
+                 callout_class: "success" %>
+      </div>
+    </div>
+  </div>
+
+  <%# ─── 2. Two-factor ──────────────────────────────────────────────── %>
+  <div class="card mt-4">
+    <div class="card-divider">
+      <h2 class="card-title">
+        <span class="text-black font-bold">
+          <span aria-hidden="true">2.</span>
+          <%= t("decidim.secure_elections.admin.census.two_factor.title") %>
+        </span>
+      </h2>
+    </div>
+
+    <div class="card-section">
+      <fieldset aria-describedby="census-two-factor-help">
+        <legend class="h6"><%= t("decidim.secure_elections.admin.census.two_factor.legend") %></legend>
+        <p class="help-text" id="census-two-factor-help"><%= t("decidim.secure_elections.admin.census.two_factor.help") %></p>
+
+        <% @form.available_two_factor_methods.each do |method| %>
+          <div class="mb-2">
+            <label for="<%= "census_two_factor_method_#{method}" %>">
+              <%= form.radio_button :two_factor_method, method,
+                                    id: "census_two_factor_method_#{method}",
+                                    label: false,
+                                    disabled: disabled,
+                                    data: { "census-two-factor": method } %>
+              <span class="font-semibold"><%= t(method, scope: "decidim.secure_elections.admin.census.two_factor.methods") %></span>
+            </label>
+            <p class="help-text ml-6">
+              <%= t(method, scope: "decidim.secure_elections.admin.census.two_factor.descriptions") %>
+            </p>
+          </div>
+        <% end %>
+      </fieldset>
+
+      <div id="js-census-two-factor-note" class="mt-4" <%= "hidden" unless @form.two_fa? %>>
+        <%= cell "decidim/announcement",
+                 { title: t("decidim.secure_elections.admin.census.two_factor.contact_required_title"),
+                   body: t("decidim.secure_elections.admin.census.two_factor.contact_required_body") },
+                 callout_class: "warning" %>
+      </div>
+    </div>
+  </div>
+
+  <%# ─── 3. Summary ─────────────────────────────────────────────────── %>
+  <div class="card mt-4">
+    <div class="card-divider">
+      <h2 class="card-title">
+        <span class="text-black font-bold">
+          <span aria-hidden="true">3.</span>
+          <%= t("decidim.secure_elections.admin.census.summary.title") %>
+        </span>
+      </h2>
+    </div>
+
+    <div class="card-section">
+      <div class="mb-4">
+        <%= form.check_box :weighted,
+                           disabled: disabled,
+                           label: t("decidim.secure_elections.admin.census.summary.weighted_label"),
+                           help_text: t("decidim.secure_elections.admin.census.summary.weighted_help") %>
+      </div>
+
+      <h3 class="h6"><%= t("decidim.secure_elections.admin.census.summary.security") %></h3>
+      <%= render partial: "decidim/secure_elections/admin/census/security_meter",
+                 locals: { level: @form.security_level, id_prefix: "census-security-live" } %>
+    </div>
+  </div>
+
+  <% if disabled %>
+    <div class="mt-4">
+      <%= cell "decidim/announcement", t("decidim.secure_elections.admin.census.locked_on_chain"), callout_class: "warning" %>
+    </div>
+  <% end %>
+</div>

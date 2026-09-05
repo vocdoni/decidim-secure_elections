@@ -1,7 +1,6 @@
 <%#
-  The census screens are step 3 of the wizard and use the same navigation as
-  every other step. This partial only exists so that the census views can keep
-  saying `render partial: "nav"`; the step is derived from the controller, so
-  nothing has to be passed.
+  The census screens share the same tab navigation as every other editor
+  screen. This partial exists so census views can keep saying
+  `render partial: "nav"` without needing to know the full path.
 %>
-<%= render partial: "decidim/secure_elections/admin/shared/nav", locals: { election: } %>
+<%= render "decidim/secure_elections/admin/elections/tabs_menu" %>

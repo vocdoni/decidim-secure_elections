@@ -11,12 +11,12 @@ en:
         census_two_fa_fields: Two-factor fields
       election:
         description: Description
-        end_time: End date and time
+        end_at: End date and time
+        manual_start: Manual start
         question_type: Question type
         questions: Questions
-        result_visibility: Result visibility
-        start_immediately: Start immediately
-        start_time: Start date and time
+        results_availability: Results availability
+        start_at: Start date and time
         stream_uri: Live streaming video
         title: Title
       question:
@@ -50,12 +50,12 @@ en:
               inclusion: This is not a verification this organization offers. Choose one from the list.
         election:
           attributes:
-            end_time:
+            end_at:
               not_in_the_future: must be in the future — it is now %{now} in the organization time zone
             questions:
               blank: 'Add at least one question: an election with nothing on the ballot has nothing to vote on.'
-            start_time:
-              not_before_end_time: must be before the end of voting, %{end_time}
+            start_at:
+              not_before_end_at: must be before the end of voting, %{end_at}
               not_in_the_future: must be in the future — it is now %{now} in the organization time zone. A start in the past is not refused by the voting network, it is silently moved to the moment the election is published, so this election would open immediately and show a start time it never had. Tick "Start immediately" if that is what you meant.
         question:
           attributes:
@@ -135,14 +135,14 @@ en:
         election_results:
           component: The unique id of the component the election belongs to
           description: The description of the election
-          end_time: The date and time when voting stops
+          end_at: The date and time when voting stops
           id: The unique id of the election
           participatory_space: The space the election belongs to, and its URL
           published_at: The date and time when the election was published
           questions: Every question, its options and its tally, keyed by position
           reference: The unique reference of the election
           results: The tally as a whole - when it was last read, whether it is final, the census size, the votes cast and the turnout
-          start_time: The date and time when voting starts
+          start_at: The date and time when voting starts
           status: The state of the election
           title: The title of the election
           url: The URL of the election
@@ -165,47 +165,33 @@ en:
         census_verifications:
           authorization_handler: Choose the verification to import from. Everybody who has been granted it joins the census.
         election:
-          end_time: Enter when voting stops. It has to be a date and time in the future.
-          start_time: Enter when voting starts. It has to be a date and time in the future.
+          end_at: Enter when voting stops. It has to be a date and time in the future.
+          start_at: Enter when voting starts. It has to be a date and time in the future.
     secure_elections:
       admin:
         autosave:
           locked: This step can no longer be edited. Reload the page to see where the election stands.
           on_chain: This election is now on the blockchain, so it can no longer be edited. Reload the page to see it as published.
-        calendar:
-          edit:
-            card_title: Voting period
-            title: Schedule
-          # Needed wherever a start time is *displayed* rather than set.
-          manual_start: Starts when published
-          # The same election once it is on the blockchain. "Starts when
-          # published" past that point reads as "nothing has happened yet",
-          # which is the opposite of the truth.
-          started_on_publication: Started when published on the blockchain
-          update:
-            invalid: There was a problem saving the schedule.
-            success: Schedule saved successfully.
         census:
           auth_only: No second factor
-          edit:
-            title: Census
-            warning_body: An election with no authentication field identifies nobody and cannot be published. Choose the member fields voters will be asked for, and the member group they must belong to.
-            warning_title: This is who will be able to vote
-          form:
-            auth_fields_help: Voters will be asked for these fields to prove they belong to the census. At least one is required.
-            auth_fields_legend: Authentication fields
-            auth_title: Voter authentication
-            group_help: The identifier of the member group in your Vocdoni organization whose members may vote. Only members of this group will be admitted.
-            group_title: Member group
-            size_help: Used to display turnout. It is refreshed automatically once the election is on the blockchain.
-            two_fa_help: If you pick any of these, voters receive a one-time code and have to enter it before voting. Leave empty for authentication only.
-            two_fa_legend: Two-factor verification
           not_configured: Not configured
           show:
             title: Census
-          update:
-            invalid: There was a problem saving the census.
-            success: Census saved successfully.
+        dashboard:
+          calendar:
+            title: Calendar
+          questions:
+            and_more:
+              one: and 1 more
+              other: "and %{count} more"
+            none: This election has no questions yet.
+          show:
+            title: Dashboard
+          start:
+            button: Start election
+            help: Voting opens on the blockchain straight away and cannot be paused again unless election controls allow it.
+            invalid: There was a problem starting the election.
+            success: The election has started. Voting is now open.
         elections:
           actions_title: Actions
           cancel: Cancel
@@ -223,76 +209,55 @@ en:
           create:
             invalid: There was a problem creating the election.
             success: Election created successfully.
+          dashboard: Dashboard
           delete_disabled: A running election cannot be moved to the trash. Wait until it has ended.
           edit:
             card_title: About this election
             title: Details
           edit_action: Edit election
+          # Accordion card titles + results-availability copy on the Main tab.
+          form:
+            basic_info: Basic info
+            calendar: Calendar
+            results_availability_title: Results availability
+            results_availability:
+              real_time: Real time
+              real_time_help: Results are published as votes arrive.
+              after_end: After the election ends
+              after_end_help: Results stay encrypted until voting closes.
           editor:
-            add_option: Add a new option
-            add_question: Add question
-            announce:
-              moved: Order changed.
-              option_added: Option added.
-              option_removed: Option removed.
-              question_added: Question added.
-              question_removed: Question removed.
-              save_failed: The draft could not be saved. Your changes are still on this page.
-              saved: Draft saved.
-              saving: Saving the draft…
-            ballot_settings_title: Ballot settings
-            census_title: Census
-            choice_limits_help: How many options a voter may pick. Leave empty to allow any number.
-            choice_limits_legend: Selection limits
             description_label: Description
             # Rendered under the option input itself. `error_for` prints the
             # message and nothing else, so it is a whole sentence rather than
             # the fragment an ActiveModel message usually is.
             duplicate_option: This option says the same as another one in this question.
-            end_datetime: End date and time
-            end_datetime_help: The election stops accepting votes at this moment. It is required.
+            end_at_help: Voting closes at this instant.
+            end_at_label: End date and time
             # The per-field language switcher Decidim renders next to every
             # translatable input. It is a plain unlabelled <select> in core, so
             # the field it belongs to is named here instead.
             language_selector_label: 'Translation language for: %{field}'
-            # Every reordering control names the thing it acts on, the way the
-            # census table names a row. Nine identical "button"s beside controls
-            # that delete a question is what these replace.
-            move_option_down: Move option %{number} of question %{question} down
-            move_option_up: Move option %{number} of question %{question} up
-            move_question_down: Move question %{number} down
-            move_question_up: Move question %{number} up
-            option_label: Option
-            option_placeholder: Option %{number}
-            options_legend: Options
-            question_description_label: Question description
-            question_description_placeholder: Add the description of the question here (optional)…
-            question_legend: Question %{number}
-            question_number: Question %{number} of %{total}
-            question_title_label: Question title
-            question_title_placeholder: Add a title to the question
-            question_type_help: This applies to every question of this election. Each question still becomes its own election on the blockchain.
-            question_type_label: Question type
-            remove_option: Remove option %{number} of question %{question}
-            remove_question: Remove question %{number}
-            result_visibility_help: Hidden results stay encrypted until the election ends and the keys are published.
-            result_visibility_label: Result visibility
-            start_immediately: Start immediately
-            start_immediately_help: The election opens the instant it reaches the blockchain.
+            manual_start_help: Publish the election in a paused state; voting only opens when you click "Start election" on the Dashboard.
+            manual_start_label: Manual start
+            start_at_help: Leave empty to open the election the moment it is published on chain.
+            start_at_label: Start date and time
+            # Displayed on the elections index and the Dashboard when a start
+            # has not been set — mirrors what the wizard's Schedule step used
+            # to say. `started_on_publication` is the same idea past the fact.
+            started_on_publication: Started when published on the blockchain
+            starts_on_publication: Starts when published
             stream_help: A public video the voters will see next to the ballot.
             stream_label: Live streaming video
             stream_summary: Attach video (optional)
             timezone_notice: Times are interpreted in the organization time zone. The current configuration is %{timezone}.
             title_label: Election title
             title_placeholder: Voting process title
-            unsaved_warning: You have changes that have not been saved yet.
           hide_from_public_site: Hide from public site
           index:
             empty: There are no elections yet.
             title: Elections
           manage_trash:
             title: Deleted elections
-          monitor: Monitor
           new:
             help: A title is all you need to start. The questions, the census and the schedule come next, one step at a time, and nothing is written to the blockchain until you publish it — which is a separate and irreversible step.
             title: New election
@@ -309,10 +274,6 @@ en:
             invalid: There was a problem showing the election on the public site.
             success: This election is now shown on the public site.
             success_not_on_chain: This election is now shown on the public site. It cannot take votes until you publish it on the blockchain.
-          result_visibility:
-            hidden: Hidden until the end
-            live: Live results
-          save: Save
           save_and_continue: Save and continue
           show_on_public_site: Show on public site
           show_on_public_site_disabled: Add at least one question before showing this election on the public site.
@@ -328,12 +289,12 @@ en:
           last_job_failure: 'The last background operation failed:'
           not_configured_body: The Vocdoni API URL, API key and organization address must be configured before an election can be published on the blockchain. Ask your system administrator to set them.
           not_configured_title: This installation is not connected to Vocdoni
-        exports:
-          election_results: Election results
         menu:
           calendar: Schedule
           census: Census
+          dashboard: Dashboard
           details: Details
+          main: Main
           monitor: Monitor
           publish: Publish
           questions: Questions
@@ -378,7 +339,6 @@ en:
             results_title: Results
             status_title: Status
             technical_title: Technical details
-            title: Monitor
             turnout_title: Turnout
             upstream_status: Status reported by Vocdoni
           status:
@@ -393,12 +353,7 @@ en:
             one: 1 vote
             other: "%{count} votes"
         nav:
-          aria_label: Election setup steps
-          back_to: "Back: %{step}"
-          continue_to: "Continue: %{step}"
-          locked: Locked
           locked_on_chain: This election is on the blockchain and can no longer be edited.
-          locked_summary: "Still to do before you can open %{steps}:"
           progress: Step %{number} of %{total}. %{completed} completed.
           reasons:
             calendar_incomplete: Set the end date and time first. An election with no end can never be tallied.
@@ -408,9 +363,6 @@ en:
             not_on_chain: This election is not on the blockchain yet.
             questions_incomplete: Add at least one question with two options first.
             unsaved: Save the election first.
-          state:
-            complete: Completed
-            locked: Not available yet
         public_link:
           copy: "Copy link"
           # The two links go to different places, and an organiser has to be
@@ -444,6 +396,23 @@ en:
         questions:
           edit:
             title: Questions
+          form:
+            add_question: Add question
+            collapse_all: Collapse all
+            expand_all: Expand all
+            save: Save questions
+          question:
+            add_response_option: Add response option
+            description_label: Description
+            max_choices_any: "(any number)"
+            max_choices_label: Maximum choices
+            question_type_label: Question type
+            remove: Remove question
+            statement_label: Statement
+          response_option:
+            remove: Remove response option
+            statement_label: Statement
+            title: Response option
           update:
             invalid: There was a problem saving the questions.
             success: Questions saved successfully.
@@ -469,16 +438,11 @@ en:
             check_ok: Done
             checklist_title: Before you publish
             confirm_irreversible_label: I understand that publishing writes this election to a public blockchain and that it cannot be edited, deleted or undone afterwards.
-            confirm_title: Confirm publication
             fix_it: Fix it
             in_progress: This election is being published on the blockchain. Refresh in a moment to see the result.
-            irreversible_body: Publishing writes the questions, the answers and the census to a public blockchain. From that moment on nothing can be changed, deleted or taken back — not the wording of a question, not an answer, not who is allowed to vote. Review everything below before you continue.
-            irreversible_title: This step cannot be undone
             publish_button: Publish on the blockchain
             publish_disabled: Complete every item in the checklist above before publishing.
             publish_needs_confirmation: Tick the acknowledgement above to enable this button.
-            summary_title: What will be published
-            title: Publish on the blockchain
       admin_log:
         answer:
           create: "%{user_name} added an answer to the %{resource_name} question"
@@ -526,9 +490,10 @@ en:
             census: Census
             census_group_id: Member group ID
             census_size: Expected voters
-            end_time: End time
+            end_at: End time
+            manual_start: Manual start
             questions: Questions
-            start_time: Start time
+            start_at: Start time
             status: Status
             title: Title
             vocdoni_chain_id: Chain ID

@@ -121,6 +121,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Install libvips (image-processing native dep loaded at Rails boot)
+        run: sudo apt-get update && sudo apt-get install -y libvips42
+
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true

@@ -28,8 +28,8 @@ unless FactoryBot::Internal.factories.registered?(:vocdoni_component)
       description { generate_localized_description(:vocdoni_election_description, skip_injection:) }
       component { create(:vocdoni_component, skip_injection:) }
 
-      start_time { nil }
-      end_time { 2.days.from_now }
+      start_at { nil }
+      end_at { 2.days.from_now }
       status { "draft" }
       published_at { nil }
       deleted_at { nil }
