@@ -15,14 +15,33 @@
  *
  * The guard on .questionnaire-questions means this is a no-op on every
  * other admin page.
+ *
+ * We listen on `turbo:load` for a Turbo Drive navigation AND
+ * `DOMContentLoaded` for a full page load, because the Decidim
+ * application this module ships into (the reference deployment behind
+ * decidim.vocdoni.io) doesn't include Turbo. `turbo:load` never fires
+ * there and createEditableForm never runs — Add response option and
+ * Add question look bound but do nothing. A `bootstrapped` flag on the
+ * container keeps the two listeners from double-initialising the JS
+ * when both events do fire.
  */
 
-document.addEventListener("turbo:load", () => {
-  if (!document.querySelector(".questionnaire-questions")) {
+const bootstrap = () => {
+  const container = document.querySelector(".questionnaire-questions");
+  if (!container || container.dataset.bootstrapped === "true") {
     return;
   }
   const createEditableForm = window.Decidim && window.Decidim.createEditableForm;
-  if (typeof createEditableForm === "function") {
-    createEditableForm();
+  if (typeof createEditableForm !== "function") {
+    return;
   }
-});
+  container.dataset.bootstrapped = "true";
+  createEditableForm();
+};
+
+document.addEventListener("turbo:load", bootstrap);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrap);
+} else {
+  bootstrap();
+}
