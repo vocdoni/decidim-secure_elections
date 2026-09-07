@@ -507,8 +507,8 @@ en:
             question_type: Type
             title: Question
       question_types:
-        multichoice: Multiple choice
-        singlechoice: Single choice
+        multichoice: Multiple option
+        singlechoice: Single option
       status_actions:
         canceled: Cancel election
         ended: End election
