@@ -84,6 +84,73 @@ const wireTitlePreviews = () => {
   observer.observe(list, { childList: true, subtree: false });
 };
 
+// createEditableForm wires two upstream FieldDependentInputsComponent
+// instances per question card: one that shows the response-options
+// section when the question_type is in ["single_option",
+// "multiple_option", "sorting", "matrix_single", "matrix_multiple"]
+// (see `re` in decidim_forms_admin.js), and another that shows the
+// max_choices select only when the value is "multiple_option" or
+// "matrix_multiple". Our question_type values are "singlechoice" and
+// "multichoice" — the enclosing Vochain rejects camelCase with error
+// 40037 and the underscore convention is not portable — so both
+// enablingConditions return false unconditionally, and both sections
+// stay display:none for every card.
+//
+// The upstream handlers run on the same `change` event, so a later
+// listener wins the last write. We register ours after
+// createEditableForm has bound its own, and drive it directly from our
+// two values: response-options is always visible (every question in our
+// data model carries answers), max_choices is visible only when the
+// question is multichoice.
+const applyQuestionTypeVisibility = (card) => {
+  const select = card.querySelector('select[name$="[question_type]"]');
+  if (!select) {
+    return;
+  }
+  const responseOptions = card.querySelector(".questionnaire-question-response-options");
+  const maxChoices = card.querySelector(".questionnaire-question-max-choices");
+  const setVisible = (element, visible) => {
+    if (!element) {
+      return;
+    }
+    if (visible) {
+      element.classList.remove("hidden");
+      element.style.display = "";
+    } else {
+      element.classList.add("hidden");
+      element.style.display = "none";
+    }
+  };
+  const apply = () => {
+    setVisible(responseOptions, true);
+    setVisible(maxChoices, select.value === "multichoice");
+  };
+  select.addEventListener("change", apply);
+  apply();
+};
+
+const wireQuestionTypeVisibility = () => {
+  const list = document.getElementById("questionnaire-questions-list");
+  if (!list) {
+    return;
+  }
+  list.querySelectorAll(".card.questionnaire-question").forEach(applyQuestionTypeVisibility);
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return;
+        }
+        if (node.matches?.(".card.questionnaire-question")) {
+          applyQuestionTypeVisibility(node);
+        }
+        node.querySelectorAll?.(".card.questionnaire-question").forEach(applyQuestionTypeVisibility);
+      });
+    }
+  });
+  observer.observe(list, { childList: true, subtree: false });
+};
+
 const bootstrap = () => {
   const container = document.querySelector(".questionnaire-questions");
   if (!container || container.dataset.bootstrapped === "true") {
@@ -96,6 +163,7 @@ const bootstrap = () => {
   container.dataset.bootstrapped = "true";
   createEditableForm();
   wireTitlePreviews();
+  wireQuestionTypeVisibility();
 };
 
 document.addEventListener("turbo:load", bootstrap);
