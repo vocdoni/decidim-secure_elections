@@ -1,22 +1,35 @@
 <%#
   Questions tab: outer container for the ballot editor.
 
-  DOM contract mirrors decidim-elections upstream, verified against
-  try.decidim.org. Both the question-card blueprint and the shared
-  response-option blueprint are top-level SIBLINGS inside
-  `.questionnaire-questions.form__wrapper`, never nested. A
-  `<script type="text/template">` inside another `<script>` is not a
-  script inside a script — the browser terminates the outer script at
-  the FIRST `</script>` it sees, so the rest of the outer blueprint
-  (the response-options list and its Add button) escapes into real DOM
-  and lands next to the question card instead of inside it.
+  DOM contract mirrors decidim-forms upstream (verified against
+  try.decidim.org and cross-referenced with
+  decidim-forms/app/views/decidim/forms/admin/questionnaires/_questions_form.html.erb):
 
-  Placeholders match the upstream DynamicFieldsComponent (`createEditableForm`
-  in `decidim_forms_admin`): `questionnaire-question-id` for the parent
-  question, `questionnaire-question-response-option-id` for a new option.
-  The class hooks (`decidim-question-template`, `decidim-response-option-template`)
-  are what `createEditableForm` looks up to find the blueprints; the ids
-  are for `data-controls` back-references only.
+    div.questionnaire-questions.form__wrapper
+      div.row.column.text-right.my-4       (collapse / expand strip)
+      script#question-template             (blueprint for new questions)
+      script#response-option-template-dummy(blueprint referenced by NEW cards)
+      div#questionnaire-questions-list
+        card.questionnaire-question        (existing question 0)
+        script#response-option-template-0  (blueprint referenced by card 0)
+        card.questionnaire-question        (existing question 1)
+        script#response-option-template-1  (blueprint referenced by card 1)
+        ...
+
+  Each existing question card carries `data-template="#response-option-template-N"`
+  on its `.questionnaire-question-response-options` wrapper; the matching
+  script sibling has that question's parent id baked in, so Add response
+  option creates fields under the right question. The blueprint at the top
+  points to the shared `-dummy` template — when Add question fires,
+  DynamicFieldsComponent's `$.fn.template` clones both the card and the
+  shared template into a uid-suffixed pair, keeping every new card's
+  wrapper pointing at its own copy.
+
+  Never nest a `<script type="text/template">` inside another one — the
+  parser exits the outer script at the FIRST `</script>` it sees, and
+  everything that comes after in the outer blueprint escapes into real
+  DOM as siblings of the outer container. That is the whole reason for
+  the sibling-not-child layout.
 
   Locals: form (the Decidim form builder), election.
 %>
@@ -24,6 +37,7 @@
   form_name = form.object_name
   questions = form.object.questions
   blank_q   = Decidim::SecureElections::Admin::QuestionForm.blank_question
+  blank_a   = Decidim::SecureElections::Admin::AnswerForm.new
 %>
 
 <div class="questionnaire-questions form__wrapper">
@@ -37,26 +51,33 @@
     </button>
   </div>
 
-  <%# Question card blueprint. Cloned when the admin clicks "Add question";
-      `questionnaire-question-id` is the placeholder createEditableForm
-      swaps for a fresh id on each clone. %>
+  <%# Blueprint for a new question card. `questionnaire-question-id` is
+      the placeholder createEditableForm substitutes at clone time; the
+      matching data-template pointer inside the card resolves to the
+      shared `-dummy` template below, which is what
+      `$.fn.template`'s `[data-template]` handler then clones for that
+      new question. %>
   <script type="text/template" id="question-template" class="decidim-question-template decidim-template">
     <%= render partial: "decidim/secure_elections/admin/questions/question",
-               locals: { form_name:, index: "questionnaire-question-id", question: blank_q, election: } %>
+               locals: { form_name:,
+                         index: "questionnaire-question-id",
+                         question: blank_q,
+                         election:,
+                         response_option_template_selector: "#response-option-template-dummy" } %>
   </script>
 
-  <%# Shared response-option blueprint. One instance is enough for every
-      question card — createEditableForm finds it by the
-      `.decidim-response-option-template` class and, at clone time,
-      substitutes the enclosing question id for `questionnaire-question-id`
-      and a fresh option id for `questionnaire-question-response-option-id`.
-      The `-dummy` suffix on the id is upstream's convention for
-      "single shared instance, id irrelevant". %>
+  <%# Shared response-option blueprint used by the question blueprint
+      above. `$.fn.template` finds it via the card's
+      `data-template="#response-option-template-dummy"`, clones it into
+      `#response-option-template-dummy-<uid>` for each new question, and
+      substitutes `questionnaire-question-id` in the clone's content
+      with the new question's uid — that is how the parent question id
+      ends up correct in a dynamically-added option. %>
   <script type="text/template" id="response-option-template-dummy" class="decidim-response-option-template decidim-template">
     <%= render partial: "decidim/secure_elections/admin/questions/response_option",
                locals: {
                  parent_name: "#{form_name}[questions][questionnaire-question-id]",
-                 answer: Decidim::SecureElections::Admin::AnswerForm.new,
+                 answer: blank_a,
                  index: "questionnaire-question-response-option-id",
                  question_index: "questionnaire-question-id"
                } %>
@@ -68,7 +89,24 @@
        data-draggable-handle=".card-divider">
     <% questions.each_with_index do |question, index| %>
       <%= render partial: "decidim/secure_elections/admin/questions/question",
-                 locals: { form_name:, index:, question:, election: } %>
+                 locals: { form_name:,
+                           index:,
+                           question:,
+                           election:,
+                           response_option_template_selector: "#response-option-template-#{index}" } %>
+      <%# Per-existing-question blueprint. Its parent question index is
+          baked in server-side, so Add response option lands the new
+          fields under this specific question's params — not under the
+          `-dummy` placeholder used by the new-question blueprint. %>
+      <script type="text/template" id="response-option-template-<%= index %>" class="decidim-response-option-template decidim-template">
+        <%= render partial: "decidim/secure_elections/admin/questions/response_option",
+                   locals: {
+                     parent_name: "#{form_name}[questions][#{index}]",
+                     answer: blank_a,
+                     index: "questionnaire-question-response-option-id",
+                     question_index: index
+                   } %>
+      </script>
     <% end %>
   </div>
 </div>

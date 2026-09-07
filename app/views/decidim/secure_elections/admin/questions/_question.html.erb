@@ -7,11 +7,16 @@
   visible even when the card body is collapsed.
 
   Locals:
-    form_name  — the outer form's object_name ("election")
-    index      — Integer position in the list, or "questionnaire-question-id"
-                 in the <script> blueprint that createEditableForm() clones
-    question   — QuestionForm instance
-    election   — the Election record (for context, not mutated here)
+    form_name — the outer form's object_name ("election")
+    index     — Integer position in the list, or "questionnaire-question-id"
+                in the <script> blueprint that createEditableForm() clones
+    question  — QuestionForm instance
+    election  — the Election record (for context, not mutated here)
+    response_option_template_selector — CSS selector of the per-card
+                response-option blueprint, e.g. "#response-option-template-0"
+                for existing card 0 or "#response-option-template-dummy" in
+                the new-question blueprint. `$.fn.template` follows this
+                `data-template` pointer at clone time.
 %>
 <%
   parent_name = "#{form_name}[questions][#{index}]"
@@ -73,15 +78,17 @@
         <%= q.hidden_field :id if question.persisted? %>
         <%= q.hidden_field :deleted, value: false %>
 
-        <%# Response-option list for this question. The Add button and the
-            blueprint template live at the outer form level (see
-            _form.html.erb) — createEditableForm() finds the shared
-            `.decidim-response-option-template` and inserts a clone into
-            the `.questionnaire-question-response-options-list` scoped to
-            this card. Nesting the template <script> inside this card,
-            which itself lives inside the question-template <script>,
-            terminates the outer script early and detaches this list. %>
-        <div class="questionnaire-question-response-options">
+        <%# Response-option list for this question. `data-template` points
+            to the per-card blueprint (a top-level sibling of the card in
+            _form.html.erb). createEditableForm calls `$.fn.template`
+            during activation and on each Add: it fetches the blueprint,
+            clones it into `{original_id}-<uid>`, updates this wrapper's
+            data-template to the clone, and substitutes placeholders in
+            the clone's content. The Add button is right below the list
+            — createEditableForm binds it by its `.add-response-option`
+            class within the wrapper. %>
+        <div class="questionnaire-question-response-options"
+             data-template="<%= response_option_template_selector %>">
           <div class="questionnaire-question-response-options-list">
             <% question.answers.each_with_index do |answer, answer_index| %>
               <%= render partial: "decidim/secure_elections/admin/questions/response_option",
