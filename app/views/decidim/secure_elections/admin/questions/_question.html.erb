@@ -24,7 +24,20 @@
         <h2 class="card-title flex items-center">
           <span>
             <%= icon "draggable", class: "dragger hover:cursor-grab" %>
-            <span class="question-title-preview"></span>
+            <%# createEditableForm() sets up a LiveTextUpdateComponent per
+                question card, keyed on `.question-title-statement`. The
+                component's `_run()` reads `.length` off the text, so an
+                undefined `data-placeholder` crashes the whole editor setup
+                and every downstream handler (add/remove response option,
+                add question) with it. Ship the class + placeholder even
+                though our field is `[title]` rather than upstream's
+                `[body]` — the input selector never matches so no live sync
+                happens here, but the crash is what actually mattered. %>
+            <span class="question-title-statement"
+                  data-locale="en"
+                  data-max-length="50"
+                  data-omission="…"
+                  data-placeholder="<%= t("decidim.secure_elections.admin.questions.question.title_placeholder", default: "New question") %>"></span>
           </span>
           <span class="ml-auto flex flex-row-reverse items-center gap-2">
             <button type="button"
