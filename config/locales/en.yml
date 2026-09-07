@@ -215,39 +215,45 @@ en:
             card_title: About this election
             title: Details
           edit_action: Edit election
-          # Accordion card titles + results-availability copy on the Main tab.
+          # Main tab form strings. `form.*` mirrors decidim-elections
+          # upstream `decidim.elections.admin.elections.form.*` key-for-key,
+          # value-for-value, so re-syncing on a Decidim bump is a diff and
+          # not a rewrite. Field labels that upstream renders via the
+          # form-builder's implicit `activemodel.attributes.election.*`
+          # lookup (title, description, stream_uri) are resolved the same
+          # way here and do not need a key under `form.*`.
+          #
+          # Vocdoni-only additions live under `editor.*`, kept apart so the
+          # delta from upstream is explicit.
           form:
-            basic_info: Basic info
+            basic_title: Basic info
             calendar: Calendar
-            results_availability_title: Results availability
+            calendar_description: Check that the organization time zone is correct in the organization settings. The current configuration is %{timezone}.
+            end_at: End time
+            manual_start: Manual start
             results_availability:
-              real_time: Real time
-              real_time_help: automatically publish results during the election while voting
               after_end: After elections end
               after_end_help: publish results when the election is finished
+              real_time: Real time
+              real_time_help: automatically publish results during the election while voting
+              title: Results availability
+            start_at: Start time
           editor:
-            description_label: Description
             # Rendered under the option input itself. `error_for` prints the
             # message and nothing else, so it is a whole sentence rather than
             # the fragment an ActiveModel message usually is.
             duplicate_option: This option says the same as another one in this question.
-            end_at_label: End time
             # The per-field language switcher Decidim renders next to every
             # translatable input. It is a plain unlabelled <select> in core, so
             # the field it belongs to is named here instead.
             language_selector_label: 'Translation language for: %{field}'
-            manual_start_label: Manual start
-            start_at_label: Start time
             # Displayed on the elections index and the Dashboard when a start
             # has not been set — mirrors what the wizard's Schedule step used
             # to say. `started_on_publication` is the same idea past the fact.
             started_on_publication: Started when published on the blockchain
             starts_on_publication: Starts when published
             stream_help: A public video the voters will see next to the ballot.
-            stream_label: Live streaming video
             stream_summary: Attach video (optional)
-            timezone_notice: Check that the organization time zone is correct in the organization settings. The current configuration is %{timezone}.
-            title_label: Title
           hide_from_public_site: Hide from public site
           index:
             empty: There are no elections yet.

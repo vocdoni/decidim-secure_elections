@@ -14,11 +14,11 @@
     name of its own. See `ElectionsHelper#secure_elections_language_selector_label`;
     it goes first so it is read before the control it names. %>
 <%= secure_elections_language_selector_label("vocdoni-election-title-tabs",
-                                             t("decidim.secure_elections.admin.elections.editor.title_label")) %>
+                                             t("activemodel.attributes.election.title")) %>
 <%= form.translated :text_field,
                     :title,
                     tabs_id: "vocdoni-election-title-tabs",
-                    label: t("decidim.secure_elections.admin.elections.editor.title_label"),
+                    label: t("activemodel.attributes.election.title"),
                     label_options: { class: "sr-only" },
                     autofocus: true,
                     disabled: disabled %>
@@ -30,7 +30,7 @@
   </summary>
   <div class="mt-2">
     <%= form.url_field :stream_uri,
-                       label: t("decidim.secure_elections.admin.elections.editor.stream_label"),
+                       label: t("activemodel.attributes.election.stream_uri"),
                        placeholder: "https://www.youtube.com/watch?v=…",
                        help_text: t("decidim.secure_elections.admin.elections.editor.stream_help"),
                        disabled: disabled %>
@@ -38,10 +38,10 @@
 </details>
 
 <%= secure_elections_language_selector_label("vocdoni-election-description-tabs",
-                                             t("decidim.secure_elections.admin.elections.editor.description_label")) %>
+                                             t("activemodel.attributes.election.description")) %>
 <%= form.translated :editor,
                     :description,
                     tabs_id: "vocdoni-election-description-tabs",
-                    label: t("decidim.secure_elections.admin.elections.editor.description_label"),
+                    label: t("activemodel.attributes.election.description"),
                     lines: 6,
                     disabled: disabled %>

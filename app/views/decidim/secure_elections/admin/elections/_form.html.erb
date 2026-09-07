@@ -29,7 +29,7 @@
       <div class="card-divider">
         <button type="button" class="card-divider-button" data-controls="panel-basic" data-open="true" role="button" aria-controls="panel-basic" aria-expanded="true">
           <%= icon "arrow-right-s-line", class: "flex-none" %>
-          <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.basic_info") %></h2>
+          <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.basic_title") %></h2>
         </button>
       </div>
       <div id="panel-basic" role="region" tabindex="-1" aria-hidden="false">
@@ -47,25 +47,25 @@
       </div>
       <div id="panel-calendar" role="region" tabindex="-1" aria-hidden="false">
         <p class="help-text">
-          <%= t("decidim.secure_elections.admin.elections.editor.timezone_notice",
+          <%= t("decidim.secure_elections.admin.elections.form.calendar_description",
                 timezone: "#{current_organization.time_zone} (#{l(Time.current.in_time_zone(current_organization.time_zone), format: :long)})") %>
         </p>
 
         <div class="row column">
           <%= form.check_box :manual_start,
-                             label: t("decidim.secure_elections.admin.elections.editor.manual_start_label"),
+                             label: t("decidim.secure_elections.admin.elections.form.manual_start"),
                              disabled: disabled %>
         </div>
 
         <div class="md:flex w-100 gap-4 mt-4">
           <div class="row column">
             <%= form.datetime_field :start_at,
-                                    label: t("decidim.secure_elections.admin.elections.editor.start_at_label"),
+                                    label: t("decidim.secure_elections.admin.elections.form.start_at"),
                                     disabled: disabled %>
           </div>
           <div class="row column">
             <%= form.datetime_field :end_at,
-                                    label: t("decidim.secure_elections.admin.elections.editor.end_at_label"),
+                                    label: t("decidim.secure_elections.admin.elections.form.end_at"),
                                     disabled: disabled %>
           </div>
         </div>
@@ -78,7 +78,7 @@
       <div class="card-divider">
         <button type="button" class="card-divider-button" data-controls="panel-results" data-open="true" role="button" aria-controls="panel-results" aria-expanded="true">
           <%= icon "arrow-right-s-line", class: "flex-none" %>
-          <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.results_availability_title") %></h2>
+          <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.results_availability.title") %></h2>
         </button>
       </div>
       <div id="panel-results" role="region" tabindex="-1" aria-hidden="false">

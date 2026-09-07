@@ -237,7 +237,7 @@ module Decidim
 
           return l(started, format: :decidim_short) if started.present?
           return t("decidim.secure_elections.admin.elections.editor.started_on_publication") if election.on_chain?
-          return t("decidim.secure_elections.admin.elections.editor.manual_start_label") if election.manual_start?
+          return t("decidim.secure_elections.admin.elections.form.manual_start") if election.manual_start?
 
           t("decidim.secure_elections.admin.elections.editor.starts_on_publication")
         end
