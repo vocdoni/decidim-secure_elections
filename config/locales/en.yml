@@ -211,6 +211,7 @@ en:
             success: Election created successfully.
           dashboard: Dashboard
           delete_disabled: A running election cannot be moved to the trash. Wait until it has ended.
+          deleted_election_info: Deleted elections are not shown in the list. You can view them by clicking the button below.
           edit:
             card_title: About this election
             title: Details
