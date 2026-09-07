@@ -8,8 +8,8 @@
 
   Locals:
     form_name  — the outer form's object_name ("election")
-    index      — Integer position in the list, or "DECIDIM_RECORD_ID"
-                 in the <script> blueprint that DynamicFieldsComponent clones
+    index      — Integer position in the list, or "questionnaire-question-id"
+                 in the <script> blueprint that createEditableForm() clones
     question   — QuestionForm instance
     election   — the Election record (for context, not mutated here)
 %>
@@ -60,16 +60,15 @@
         <%= q.hidden_field :id if question.persisted? %>
         <%= q.hidden_field :deleted, value: false %>
 
-        <div class="questionnaire-question-response-options"
-             data-template="#response-option-template-<%= card_id %>">
-          <%# Per-question response-option blueprint. DynamicFieldsComponent reads
-              the data-template pointer, clones this script content and appends
-              the result to the options list. %>
-          <script type="text/template" id="response-option-template-<%= card_id %>">
-            <%= render partial: "decidim/secure_elections/admin/questions/response_option_template",
-                       locals: { parent_name:, question_index: index } %>
-          </script>
-
+        <%# Response-option list for this question. The Add button and the
+            blueprint template live at the outer form level (see
+            _form.html.erb) — createEditableForm() finds the shared
+            `.decidim-response-option-template` and inserts a clone into
+            the `.questionnaire-question-response-options-list` scoped to
+            this card. Nesting the template <script> inside this card,
+            which itself lives inside the question-template <script>,
+            terminates the outer script early and detaches this list. %>
+        <div class="questionnaire-question-response-options">
           <div class="questionnaire-question-response-options-list">
             <% question.answers.each_with_index do |answer, answer_index| %>
               <%= render partial: "decidim/secure_elections/admin/questions/response_option",
@@ -83,18 +82,23 @@
           </button>
         </div>
 
-        <%# max_choices only matters for multichoice; the JS hides this field for
-            singlechoice questions. The range starts at 2 (the minimum) up to the
-            current number of options. %>
-        <%= q.select :max_choices,
-                     options_for_select(
-                       [[t("decidim.secure_elections.admin.questions.question.max_choices_any"), ""]].concat(
-                         (2..([2, question.number_of_options].max)).map { |n| [n.to_s, n] }
+        <%# max_choices only matters for multichoice; the JS hides this field
+            for singlechoice questions and, when it is visible, keeps its
+            options in sync with the number of response options. Upstream keys
+            on the `.questionnaire-question-max-choices` wrapper class to find
+            the select from the outer editor. The range starts at 2 (the
+            minimum) up to the current number of options. %>
+        <div class="questionnaire-question-max-choices row column">
+          <%= q.select :max_choices,
+                       options_for_select(
+                         [[t("decidim.secure_elections.admin.questions.question.max_choices_any"), ""]].concat(
+                           (2..([2, question.number_of_options].max)).map { |n| [n.to_s, n] }
+                         ),
+                         question.max_choices
                        ),
-                       question.max_choices
-                     ),
-                     { label: t("decidim.secure_elections.admin.questions.question.max_choices_label"),
-                       include_blank: false } %>
+                       { label: t("decidim.secure_elections.admin.questions.question.max_choices_label"),
+                         include_blank: false } %>
+        </div>
       </div>
     </div>
   </div>
