@@ -51,26 +51,23 @@
                 timezone: "#{current_organization.time_zone} (#{l(Time.current.in_time_zone(current_organization.time_zone), format: :long)})") %>
         </p>
 
-        <div class="md:flex w-100 gap-4">
+        <div class="row column">
+          <%= form.check_box :manual_start,
+                             label: t("decidim.secure_elections.admin.elections.editor.manual_start_label"),
+                             disabled: disabled %>
+        </div>
+
+        <div class="md:flex w-100 gap-4 mt-4">
           <div class="row column">
             <%= form.datetime_field :start_at,
                                     label: t("decidim.secure_elections.admin.elections.editor.start_at_label"),
-                                    help_text: t("decidim.secure_elections.admin.elections.editor.start_at_help"),
                                     disabled: disabled %>
           </div>
           <div class="row column">
             <%= form.datetime_field :end_at,
                                     label: t("decidim.secure_elections.admin.elections.editor.end_at_label"),
-                                    help_text: t("decidim.secure_elections.admin.elections.editor.end_at_help"),
                                     disabled: disabled %>
           </div>
-        </div>
-
-        <div class="row column mt-4">
-          <%= form.check_box :manual_start,
-                             label: t("decidim.secure_elections.admin.elections.editor.manual_start_label"),
-                             help_text: t("decidim.secure_elections.admin.elections.editor.manual_start_help"),
-                             disabled: disabled %>
         </div>
       </div>
     </div>
@@ -87,7 +84,7 @@
       <div id="panel-results" role="region" tabindex="-1" aria-hidden="false">
         <% Decidim::SecureElections::Election::RESULTS_AVAILABILITIES.each do |value| %>
           <label class="flex items-start gap-2 mb-2">
-            <%= form.radio_button :results_availability, value, disabled: disabled %>
+            <%= form.radio_button :results_availability, value, disabled: disabled, label: false %>
             <span>
               <strong><%= t(value, scope: "decidim.secure_elections.admin.elections.form.results_availability") %></strong>
               <small class="block text-gray-2"><%= t("#{value}_help", scope: "decidim.secure_elections.admin.elections.form.results_availability") %></small>

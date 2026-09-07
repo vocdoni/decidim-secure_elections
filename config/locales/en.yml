@@ -11,12 +11,12 @@ en:
         census_two_fa_fields: Two-factor fields
       election:
         description: Description
-        end_at: End date and time
+        end_at: End time
         manual_start: Manual start
         question_type: Question type
         questions: Questions
         results_availability: Results availability
-        start_at: Start date and time
+        start_at: Start time
         stream_uri: Live streaming video
         title: Title
       question:
@@ -222,25 +222,22 @@ en:
             results_availability_title: Results availability
             results_availability:
               real_time: Real time
-              real_time_help: Results are published as votes arrive.
-              after_end: After the election ends
-              after_end_help: Results stay encrypted until voting closes.
+              real_time_help: automatically publish results during the election while voting
+              after_end: After elections end
+              after_end_help: publish results when the election is finished
           editor:
             description_label: Description
             # Rendered under the option input itself. `error_for` prints the
             # message and nothing else, so it is a whole sentence rather than
             # the fragment an ActiveModel message usually is.
             duplicate_option: This option says the same as another one in this question.
-            end_at_help: Voting closes at this instant.
-            end_at_label: End date and time
+            end_at_label: End time
             # The per-field language switcher Decidim renders next to every
             # translatable input. It is a plain unlabelled <select> in core, so
             # the field it belongs to is named here instead.
             language_selector_label: 'Translation language for: %{field}'
-            manual_start_help: Publish the election in a paused state; voting only opens when you click "Start election" on the Dashboard.
             manual_start_label: Manual start
-            start_at_help: Leave empty to open the election the moment it is published on chain.
-            start_at_label: Start date and time
+            start_at_label: Start time
             # Displayed on the elections index and the Dashboard when a start
             # has not been set — mirrors what the wizard's Schedule step used
             # to say. `started_on_publication` is the same idea past the fact.
@@ -249,9 +246,8 @@ en:
             stream_help: A public video the voters will see next to the ballot.
             stream_label: Live streaming video
             stream_summary: Attach video (optional)
-            timezone_notice: Times are interpreted in the organization time zone. The current configuration is %{timezone}.
-            title_label: Election title
-            title_placeholder: Voting process title
+            timezone_notice: Check that the organization time zone is correct in the organization settings. The current configuration is %{timezone}.
+            title_label: Title
           hide_from_public_site: Hide from public site
           index:
             empty: There are no elections yet.
