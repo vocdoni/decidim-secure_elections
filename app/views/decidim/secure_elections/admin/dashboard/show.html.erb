@@ -19,10 +19,14 @@
 
 <% if election.editable? %>
   <%# ------------------------------------------------------------------
-      Unpublished: checklist + summary cards + sticky publish action
+      Unpublished: checklist + summary cards + publish action card at
+      the bottom. The publish card used to be pinned in a sticky sidebar,
+      but the sidebar's dark background clashed with the checkbox label
+      and disabled-button styling; a normal in-body card reads better
+      and does not need the extra styling shims.
   -------------------------------------------------------------------- %>
   <div class="item__edit item__edit-1col">
-    <div class="item__edit-form 2xl:mr-80">
+    <div class="item__edit-form">
       <%= render partial: "decidim/secure_elections/admin/dashboard/checklist",
                  locals: { election: } %>
       <%= render partial: "decidim/secure_elections/admin/dashboard/main",
@@ -31,13 +35,8 @@
                  locals: { election: } %>
       <%= render partial: "decidim/secure_elections/admin/dashboard/census",
                  locals: { election: } %>
-    </div>
-
-    <div class="item__edit-sticky">
-      <div class="item__edit-sticky-container">
-        <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
-                   locals: { election:, form: @form } %>
-      </div>
+      <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
+                 locals: { election:, form: @form } %>
     </div>
   </div>
 <% else %>
