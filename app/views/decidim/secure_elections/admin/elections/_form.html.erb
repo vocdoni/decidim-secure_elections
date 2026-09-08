@@ -7,10 +7,12 @@
   wrapper CSS (full-width fields, vertical rhythm) reaches them. Each
   card is `.card[data-controller="accordion"]` wrapping a
   `.card-divider > .card-divider-button` and a `<div id="panel-<name>"
-  role="region">` body. Panel bodies stay unclassed — upstream does not
-  put `.card-section` inside, and the Stimulus accordion controller keys
-  on `data-controls` alone. Cards 2 and 3 carry `.my-4` for the gap
-  upstream draws between them.
+  role="region">` body. Every content block inside a panel body is
+  itself wrapped in `.row column`; that is how Foundation gets the
+  horizontal padding between the card border and the field labels —
+  without it the inputs run flush to the card edge and the whole tab
+  looks broken. Cards 2 and 3 carry `.my-4` for the gap upstream draws
+  between them.
 
   Locals: `form` (the Decidim form builder), `election` (nil on create).
 %>
@@ -33,7 +35,9 @@
         </button>
       </div>
       <div id="panel-basic" role="region" tabindex="-1" aria-hidden="false">
-        <%= render partial: "decidim/secure_elections/admin/elections/details_fields", locals: { form:, election: } %>
+        <div class="row column">
+          <%= render partial: "decidim/secure_elections/admin/elections/details_fields", locals: { form:, election: } %>
+        </div>
       </div>
     </div>
 
@@ -46,10 +50,12 @@
         </button>
       </div>
       <div id="panel-calendar" role="region" tabindex="-1" aria-hidden="false">
-        <p class="help-text">
-          <%= t("decidim.secure_elections.admin.elections.form.calendar_description",
-                timezone: "#{current_organization.time_zone} (#{l(Time.current.in_time_zone(current_organization.time_zone), format: :long)})") %>
-        </p>
+        <div class="row column">
+          <p class="help-text">
+            <%= t("decidim.secure_elections.admin.elections.form.calendar_description",
+                  timezone: "#{current_organization.time_zone} (#{l(Time.current.in_time_zone(current_organization.time_zone), format: :long)})") %>
+          </p>
+        </div>
 
         <div class="row column">
           <%= form.check_box :manual_start,
@@ -57,16 +63,18 @@
                              disabled: disabled %>
         </div>
 
-        <div class="md:flex w-100 gap-4 mt-4">
-          <div class="row column">
-            <%= form.datetime_field :start_at,
-                                    label: t("decidim.secure_elections.admin.elections.form.start_at"),
-                                    disabled: disabled %>
-          </div>
-          <div class="row column">
-            <%= form.datetime_field :end_at,
-                                    label: t("decidim.secure_elections.admin.elections.form.end_at"),
-                                    disabled: disabled %>
+        <div class="row column">
+          <div class="md:flex w-100 gap-4">
+            <div class="row column">
+              <%= form.datetime_field :start_at,
+                                      label: t("decidim.secure_elections.admin.elections.form.start_at"),
+                                      disabled: disabled %>
+            </div>
+            <div class="row column">
+              <%= form.datetime_field :end_at,
+                                      label: t("decidim.secure_elections.admin.elections.form.end_at"),
+                                      disabled: disabled %>
+            </div>
           </div>
         </div>
       </div>
@@ -82,15 +90,17 @@
         </button>
       </div>
       <div id="panel-results" role="region" tabindex="-1" aria-hidden="false">
-        <% Decidim::SecureElections::Election::RESULTS_AVAILABILITIES.each do |value| %>
-          <label class="flex items-start gap-2 mb-2">
-            <%= form.radio_button :results_availability, value, disabled: disabled, label: false %>
-            <span>
-              <strong><%= t(value, scope: "decidim.secure_elections.admin.elections.form.results_availability") %></strong>
-              <small class="block text-gray-2"><%= t("#{value}_help", scope: "decidim.secure_elections.admin.elections.form.results_availability") %></small>
-            </span>
-          </label>
-        <% end %>
+        <div class="row column">
+          <% Decidim::SecureElections::Election::RESULTS_AVAILABILITIES.each do |value| %>
+            <label class="flex items-start gap-2 mb-2">
+              <%= form.radio_button :results_availability, value, disabled: disabled, label: false %>
+              <span>
+                <strong><%= t(value, scope: "decidim.secure_elections.admin.elections.form.results_availability") %></strong>
+                <small class="block text-gray-2"><%= t("#{value}_help", scope: "decidim.secure_elections.admin.elections.form.results_availability") %></small>
+              </span>
+            </label>
+          <% end %>
+        </div>
       </div>
     </div>
   </div>
