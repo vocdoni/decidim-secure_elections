@@ -1,108 +1,20 @@
 // The admin side of the module.
 //
-// Nearly everything on these screens is plain Decidim: cards, form fields, the
-// admin sticky bar. What is here are the few things Tailwind utilities cannot
-// express from the markup — fieldset overrides, the datepicker column widths,
-// the height the sticky settings column is allowed to take, the live-monitor
-// highlight, and the census members table.
-
-.vocdoni-editor {
-  // A `<fieldset>` carries a UA rule no other element has: `min-width:
-  // min-content`, so it refuses to be narrower than its widest child and
-  // overflows its own container rather than shrinking inside it. Every grouping
-  // on these screens is a real fieldset with a real legend — that is what makes
-  // the ballot navigable from the keyboard — so the rule is undone once here
-  // instead of giving up the semantics to get a page that fits on a phone.
-  fieldset {
-    min-width: 0;
-  }
-
-  // Decidim's date picker replaces a `datetime-local` field with two text
-  // inputs of its own, built in the browser and outside the form builder's
-  // markup. They carry no width, so they fall back to the intrinsic size of a
-  // text input — about 235px, wider than the column they sit in and wider than
-  // a phone. They fill their column instead.
-  .datepicker__date-column > input,
-  .datepicker__time-column > input {
-    width: 100%;
-  }
-
-  // The cards on these screens sit directly inside the editor, not inside the
-  // Foundation `.grid-x.grid-margin-x` wrapper Decidim uses on every other
-  // admin form. Without that ancestor `.card-section` has no horizontal
-  // padding at all, so labels and inputs hug the left and right edges of the
-  // card. Restore the space here.
-  .card-section {
-    padding: 1rem;
-  }
-
-  // The Schedule step: give the fieldset back the vertical rhythm the form
-  // builder assumes.
-  //
-  // Decidim's meeting form wraps each `f.datetime_field` in `<div
-  // class="row"><div class="columns">` — Foundation's grid gives the wrapper
-  // `margin-bottom: 16px` and that is what separates one field from the next.
-  // Our Schedule step is a plain fieldset with the fields as direct children:
-  // the `.form__wrapper` on the editor now stretches the inputs to full width
-  // and gives them their top margin, but the labels, help text and the
-  // checkbox row still have no spacing of their own. The rule below restores
-  // the space between them and lifts the field labels to the weight they read
-  // as on every other Decidim form.
-  fieldset {
-    > p.help-text,
-    > span.help-text,
-    > label,
-    > [data-vocdoni-start-time] {
-      display: block;
-      margin-bottom: 0.75rem;
-    }
-
-    > label {
-      font-weight: 600;
-      margin-top: 0.5rem;
-      margin-bottom: 0.25rem;
-    }
-  }
-
-  .datepicker__help-text-container {
-    margin-bottom: 0.25rem;
-  }
-
-  .datepicker__datepicker-row {
-    margin-bottom: 1rem;
-  }
-
-  // The error stays the size an error is, whatever the field above it does.
-  .form-error {
-    font-size: 0.75rem;
-    line-height: 1rem;
-    font-weight: 400;
-  }
-
-  // The sticky settings column must never be taller than the viewport, or the
-  // census panel at its foot becomes unreachable.
-  &__settings {
-    @media (min-width: 1024px) {
-      max-height: calc(100vh - 2rem);
-      overflow-y: auto;
-    }
-  }
-
-  // Reordering and removal controls stay out of the way until the row they
-  // belong to is hovered or focused, but never disappear from the tab order.
-  .vocdoni-option [data-vocdoni-move-option],
-  .vocdoni-option [data-vocdoni-remove-option] {
-    opacity: 0.35;
-    transition: opacity 0.15s ease-in-out;
-  }
-
-  .vocdoni-option:hover [data-vocdoni-move-option],
-  .vocdoni-option:hover [data-vocdoni-remove-option],
-  .vocdoni-option:focus-within [data-vocdoni-move-option],
-  .vocdoni-option:focus-within [data-vocdoni-remove-option] {
-    opacity: 1;
-  }
-}
+// Almost everything on these screens is plain Decidim rendered inside
+// upstream-style `.row.column` wrappers, so there is very little here: the
+// live-monitor highlight and the census members table are the two things
+// Tailwind utilities cannot say from the markup alone.
+//
+// An earlier `.vocdoni-editor { … }` scope carried a dozen rules — the
+// datepicker column widths, a `.card-section { padding: 1rem }` fallback for
+// the missing Foundation grid ancestor, `.form-error` sizing, an
+// `&__settings` sticky column and a `.vocdoni-option` reorder-hover UI —
+// but no element in the tree ever wound up with the `.vocdoni-editor` class,
+// so none of the rules ever applied. The Main tab card padding that they were
+// most missed for now comes from wrapping every field in `.row.column`
+// upstream-style, and the schedule / stream / reorder screens the other
+// rules targeted have all been rewritten or removed. Rather than move dead
+// selectors around, the block is gone.
 
 // The monitoring page.
 //
