@@ -25,23 +25,25 @@
   </div>
 
   <div class="card-section">
-    <ul class="list-none">
-      <% checks.each do |(key, ok, path)| %>
-        <li class="flex items-center gap-2 mb-2">
-          <% if ok %>
-            <%= icon "check-line", class: "fill-success", aria_hidden: true %>
-            <span class="sr-only"><%= t("decidim.secure_elections.admin.setup.show.check_ok") %>:</span>
-          <% else %>
-            <%= icon "error-warning-line", class: "fill-alert", aria_hidden: true %>
-            <span class="sr-only"><%= t("decidim.secure_elections.admin.setup.show.check_missing") %>:</span>
-          <% end %>
-          <span><%= t(key, scope: "decidim.secure_elections.admin.setup.checks") %></span>
-          <% if !ok && path %>
-            <%= link_to t("decidim.secure_elections.admin.setup.show.fix_it"), path,
-                        class: "text-secondary text-sm underline" %>
-          <% end %>
-        </li>
-      <% end %>
-    </ul>
+    <div class="row column">
+      <ul class="list-none">
+        <% checks.each do |(key, ok, path)| %>
+          <li class="flex items-center gap-2 mb-2">
+            <% if ok %>
+              <%= icon "check-line", class: "fill-success", aria_hidden: true %>
+              <span class="sr-only"><%= t("decidim.secure_elections.admin.setup.show.check_ok") %>:</span>
+            <% else %>
+              <%= icon "error-warning-line", class: "fill-alert", aria_hidden: true %>
+              <span class="sr-only"><%= t("decidim.secure_elections.admin.setup.show.check_missing") %>:</span>
+            <% end %>
+            <span><%= t(key, scope: "decidim.secure_elections.admin.setup.checks") %></span>
+            <% if !ok && path %>
+              <%= link_to t("decidim.secure_elections.admin.setup.show.fix_it"), path,
+                          class: "text-secondary text-sm underline" %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
   </div>
 </div>

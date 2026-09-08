@@ -74,19 +74,21 @@
             <h2 class="card-title"><%= t("decidim.secure_elections.admin.monitor.show.controls_title") %></h2>
           </div>
           <div class="card-section">
-            <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
+            <div class="row column">
+              <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
 
-            <div class="flex flex-wrap gap-2">
-              <% Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES.each do |s| %>
-                <%= button_to status_election_dashboard_path(election),
-                              method: :put,
-                              params: { question_status: { status: s } },
-                              data: vocdoni_status_confirm_data(s),
-                              class: "button button__xs #{s == "canceled" ? "alert" : "button__secondary"}",
-                              disabled: election.status == s do %>
-                  <%= t(s, scope: "decidim.secure_elections.status_actions") %>
+              <div class="flex flex-wrap gap-2">
+                <% Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES.each do |s| %>
+                  <%= button_to status_election_dashboard_path(election),
+                                method: :put,
+                                params: { question_status: { status: s } },
+                                data: vocdoni_status_confirm_data(s),
+                                class: "button button__xs #{s == "canceled" ? "alert" : "button__secondary"}",
+                                disabled: election.status == s do %>
+                    <%= t(s, scope: "decidim.secure_elections.status_actions") %>
+                  <% end %>
                 <% end %>
-              <% end %>
+              </div>
             </div>
           </div>
         </div>

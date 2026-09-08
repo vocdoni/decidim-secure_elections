@@ -23,25 +23,27 @@
   </div>
 
   <div class="card-section">
-    <% if all_questions.empty? %>
-      <p class="text-sm text-gray-2"><%= t("decidim.secure_elections.admin.dashboard.questions.none") %></p>
-    <% else %>
-      <ol class="list-decimal ml-4">
-        <% preview.each do |question| %>
-          <li class="mb-1">
-            <%= present(question).title(html_escape: true) %>
-            <span class="text-gray-2 text-sm">
-              (<%= t(question.question_type, scope: "decidim.secure_elections.question_types") %>,
-              <%= t("decidim.secure_elections.admin.elections.options_count", count: question.answers_count) %>)
-            </span>
-          </li>
+    <div class="row column">
+      <% if all_questions.empty? %>
+        <p class="text-sm text-gray-2"><%= t("decidim.secure_elections.admin.dashboard.questions.none") %></p>
+      <% else %>
+        <ol class="list-decimal ml-4">
+          <% preview.each do |question| %>
+            <li class="mb-1">
+              <%= present(question).title(html_escape: true) %>
+              <span class="text-gray-2 text-sm">
+                (<%= t(question.question_type, scope: "decidim.secure_elections.question_types") %>,
+                <%= t("decidim.secure_elections.admin.elections.options_count", count: question.answers_count) %>)
+              </span>
+            </li>
+          <% end %>
+        </ol>
+        <% if all_questions.size > preview_count %>
+          <p class="text-sm text-gray-2 mt-2">
+            <%= t("decidim.secure_elections.admin.dashboard.questions.and_more", count: all_questions.size - preview_count) %>
+          </p>
         <% end %>
-      </ol>
-      <% if all_questions.size > preview_count %>
-        <p class="text-sm text-gray-2 mt-2">
-          <%= t("decidim.secure_elections.admin.dashboard.questions.and_more", count: all_questions.size - preview_count) %>
-        </p>
       <% end %>
-    <% end %>
+    </div>
   </div>
 </div>
