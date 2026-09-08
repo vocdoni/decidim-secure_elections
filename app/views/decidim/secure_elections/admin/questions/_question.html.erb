@@ -63,13 +63,21 @@
       </div>
 
       <div id="panel-<%= card_id %>-question-card" class="mt-4 card-section collapsible">
-        <%= q.translated :text_field, :title,
-                         label: t("decidim.secure_elections.admin.questions.question.statement_label") %>
-        <%= q.translated :editor, :description,
-                         label: t("decidim.secure_elections.admin.questions.question.description_label") %>
-        <%= q.select :question_type,
-                     options_for_select(secure_elections_question_type_options, q.object.question_type),
-                     label: t("decidim.secure_elections.admin.questions.question.question_type_label") %>
+        <div class="row column">
+          <%= q.translated :text_field, :title,
+                           label: t("decidim.secure_elections.admin.questions.question.statement_label") %>
+        </div>
+
+        <div class="row column">
+          <%= q.translated :editor, :description,
+                           label: t("decidim.secure_elections.admin.questions.question.description_label") %>
+        </div>
+
+        <div class="row column">
+          <%= q.select :question_type,
+                       options_for_select(secure_elections_question_type_options, q.object.question_type),
+                       label: t("decidim.secure_elections.admin.questions.question.question_type_label") %>
+        </div>
 
         <%# These two hidden fields are submitted with every save.
             `id` lets the command match the form row to its DB record.
@@ -96,10 +104,12 @@
             <% end %>
           </div>
 
-          <button type="button"
-                  class="button button__sm button__transparent-secondary add-response-option">
-            <%= t("decidim.secure_elections.admin.questions.question.add_response_option") %>
-          </button>
+          <div class="row column mb-2 mt-4">
+            <button type="button"
+                    class="button button__sm button__transparent-secondary add-response-option">
+              <%= t("decidim.secure_elections.admin.questions.question.add_response_option") %>
+            </button>
+          </div>
         </div>
 
         <%# max_choices only matters for multichoice; the JS hides this field

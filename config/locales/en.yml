@@ -401,8 +401,8 @@ en:
             title: Questions
           form:
             add_question: Add question
-            collapse_all: Collapse all
-            expand_all: Expand all
+            collapse_all: Collapse all questions
+            expand_all: Expand all questions
             save: Save questions
           question:
             add_response_option: Add response option
@@ -410,7 +410,7 @@ en:
             max_choices_any: "(any number)"
             max_choices_label: Maximum choices
             question_type_label: Question type
-            remove: Remove question
+            remove: Remove
             statement_label: Statement
           response_option:
             remove: Remove response option
