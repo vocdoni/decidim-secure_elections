@@ -70,58 +70,37 @@ module Decidim
 
       initializer "decidim_secure_elections_admin.menu" do
         Decidim.menu :admin_secure_elections_menu do |menu|
-          election = @election
+          # Menu block runs in the controller's context, so path helpers and
+          # `is_active_link?` are both in scope. Structure mirrors upstream
+          # `decidim-elections`'s `admin_elections_menu`: Main links to
+          # `new_election_path` on the New form so the tab is clickable and
+          # detected as active, and to `edit_election_path` on every other
+          # screen where the record exists. The later three tabs render as
+          # a disabled span until the step they lead to is reachable.
+          proxy = @election ? Decidim::EngineRouter.admin_proxy(@election.component) : nil
 
-          # New-election form — no record to link the later tabs to yet, so
-          # render every tab except Main as a disabled span (Decidim's admin
-          # menu turns `"#"` into an unclickable one). The user sees the
-          # same four tabs upstream shows on `new`, and it is obvious what
-          # they get once Main is saved.
-          if election.blank?
-            menu.add_item :secure_elections_main,
-                          I18n.t("main", scope: "decidim.secure_elections.admin.menu"),
-                          "#",
-                          active: true,
-                          icon_name: "bill-line"
-            menu.add_item :secure_elections_questions,
-                          I18n.t("questions", scope: "decidim.secure_elections.admin.menu"),
-                          "#",
-                          icon_name: "question-answer-line"
-            menu.add_item :secure_elections_census,
-                          I18n.t("census", scope: "decidim.secure_elections.admin.menu"),
-                          "#",
-                          icon_name: "group-2-line"
-            menu.add_item :secure_elections_dashboard,
-                          I18n.t("dashboard", scope: "decidim.secure_elections.admin.menu"),
-                          "#",
-                          icon_name: "dashboard-line"
-            next
-          end
-
-          proxy = Decidim::EngineRouter.admin_proxy(election.component)
-
-          # Main — always reachable.
           menu.add_item :secure_elections_main,
                         I18n.t("main", scope: "decidim.secure_elections.admin.menu"),
-                        proxy.edit_election_path(election),
+                        @election.nil? ? new_election_path : proxy&.edit_election_path(@election),
+                        active: @election.nil? && is_active_link?(new_election_path),
                         icon_name: "bill-line"
 
-          # Questions — reachable once the election has a title.
           menu.add_item :secure_elections_questions,
                         I18n.t("questions", scope: "decidim.secure_elections.admin.menu"),
-                        election.step_reachable?(:questions) ? proxy.edit_election_questions_path(election) : "#",
+                        @election&.step_reachable?(:questions) ? proxy&.edit_election_questions_path(@election) : "#",
+                        active: @election.present? && is_active_link?(proxy&.edit_election_questions_path(@election)),
                         icon_name: "question-answer-line"
 
-          # Census — reachable once both title and ballot are complete.
           menu.add_item :secure_elections_census,
                         I18n.t("census", scope: "decidim.secure_elections.admin.menu"),
-                        election.step_reachable?(:census) ? proxy.election_census_path(election) : "#",
+                        @election&.step_reachable?(:census) ? proxy&.election_census_path(@election) : "#",
+                        active: @election.present? && is_active_link?(proxy&.election_census_path(@election)),
                         icon_name: "group-2-line"
 
-          # Dashboard — always reachable; completion is checked inside the page.
           menu.add_item :secure_elections_dashboard,
                         I18n.t("dashboard", scope: "decidim.secure_elections.admin.menu"),
-                        proxy.election_dashboard_path(election),
+                        @election ? proxy&.election_dashboard_path(@election) : "#",
+                        active: @election.present? && is_active_link?(proxy&.election_dashboard_path(@election)),
                         icon_name: "dashboard-line"
         end
       end
