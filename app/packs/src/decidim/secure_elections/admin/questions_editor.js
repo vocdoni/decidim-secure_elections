@@ -94,14 +94,19 @@ const wireTitlePreviews = () => {
 // "multichoice" — the enclosing Vochain rejects camelCase with error
 // 40037 and the underscore convention is not portable — so both
 // enablingConditions return false unconditionally, and both sections
-// stay display:none for every card.
+// stay display:none AND every input inside them is `disabled` for every
+// card. The disabled part is the silent bug: a disabled input is not
+// submitted with the form, so an admin who types response options into
+// a singlechoice question and hits Save loses every answer.
 //
 // The upstream handlers run on the same `change` event, so a later
 // listener wins the last write. We register ours after
 // createEditableForm has bound its own, and drive it directly from our
 // two values: response-options is always visible (every question in our
 // data model carries answers), max_choices is visible only when the
-// question is multichoice.
+// question is multichoice. In both cases visibility and the disabled
+// attribute of every text input, select and textarea inside track each
+// other — otherwise upstream's disabled flag survives our display fix.
 const applyQuestionTypeVisibility = (card) => {
   const select = card.querySelector('select[name$="[question_type]"]');
   if (!select) {
@@ -109,21 +114,32 @@ const applyQuestionTypeVisibility = (card) => {
   }
   const responseOptions = card.querySelector(".questionnaire-question-response-options");
   const maxChoices = card.querySelector(".questionnaire-question-max-choices");
-  const setVisible = (element, visible) => {
+  const setEnabled = (element, enabled) => {
     if (!element) {
       return;
     }
-    if (visible) {
+    if (enabled) {
       element.classList.remove("hidden");
       element.style.display = "";
     } else {
       element.classList.add("hidden");
       element.style.display = "none";
     }
+    // Undo upstream's `disabled = true` on the fields nested here.
+    // `<script type="text/template">` blueprints for new cards are
+    // skipped: clones inherit their attributes at insert time and
+    // `applyQuestionTypeVisibility` reruns on the clone via the outer
+    // MutationObserver.
+    element.querySelectorAll("input, select, textarea").forEach((input) => {
+      if (input.closest("script")) {
+        return;
+      }
+      input.disabled = !enabled;
+    });
   };
   const apply = () => {
-    setVisible(responseOptions, true);
-    setVisible(maxChoices, select.value === "multichoice");
+    setEnabled(responseOptions, true);
+    setEnabled(maxChoices, select.value === "multichoice");
   };
   select.addEventListener("change", apply);
   apply();
