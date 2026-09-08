@@ -19,10 +19,14 @@
 
 <% if election.editable? %>
   <%# ------------------------------------------------------------------
-      Unpublished: checklist + summary cards + sticky publish action
+      Unpublished: checklist + summary cards + publish action card at
+      the bottom. The publish card used to be pinned in a sticky sidebar,
+      but the sidebar's dark background clashed with the checkbox label
+      and disabled-button styling; a normal in-body card reads better
+      and does not need the extra styling shims.
   -------------------------------------------------------------------- %>
   <div class="item__edit item__edit-1col">
-    <div class="item__edit-form 2xl:mr-80">
+    <div class="item__edit-form">
       <%= render partial: "decidim/secure_elections/admin/dashboard/checklist",
                  locals: { election: } %>
       <%= render partial: "decidim/secure_elections/admin/dashboard/main",
@@ -31,13 +35,8 @@
                  locals: { election: } %>
       <%= render partial: "decidim/secure_elections/admin/dashboard/census",
                  locals: { election: } %>
-    </div>
-
-    <div class="item__edit-sticky">
-      <div class="item__edit-sticky-container">
-        <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
-                   locals: { election:, form: @form } %>
-      </div>
+      <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
+                 locals: { election:, form: @form } %>
     </div>
   </div>
 <% else %>
@@ -74,19 +73,21 @@
             <h2 class="card-title"><%= t("decidim.secure_elections.admin.monitor.show.controls_title") %></h2>
           </div>
           <div class="card-section">
-            <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
+            <div class="row column">
+              <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
 
-            <div class="flex flex-wrap gap-2">
-              <% Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES.each do |s| %>
-                <%= button_to status_election_dashboard_path(election),
-                              method: :put,
-                              params: { question_status: { status: s } },
-                              data: vocdoni_status_confirm_data(s),
-                              class: "button button__xs #{s == "canceled" ? "alert" : "button__secondary"}",
-                              disabled: election.status == s do %>
-                  <%= t(s, scope: "decidim.secure_elections.status_actions") %>
+              <div class="flex flex-wrap gap-2">
+                <% Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES.each do |s| %>
+                  <%= button_to status_election_dashboard_path(election),
+                                method: :put,
+                                params: { question_status: { status: s } },
+                                data: vocdoni_status_confirm_data(s),
+                                class: "button button__xs #{s == "canceled" ? "alert" : "button__secondary"}",
+                                disabled: election.status == s do %>
+                    <%= t(s, scope: "decidim.secure_elections.status_actions") %>
+                  <% end %>
                 <% end %>
-              <% end %>
+              </div>
             </div>
           </div>
         </div>

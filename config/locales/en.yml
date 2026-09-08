@@ -11,12 +11,12 @@ en:
         census_two_fa_fields: Two-factor fields
       election:
         description: Description
-        end_at: End date and time
+        end_at: End time
         manual_start: Manual start
         question_type: Question type
         questions: Questions
         results_availability: Results availability
-        start_at: Start date and time
+        start_at: Start time
         stream_uri: Live streaming video
         title: Title
       question:
@@ -211,47 +211,50 @@ en:
             success: Election created successfully.
           dashboard: Dashboard
           delete_disabled: A running election cannot be moved to the trash. Wait until it has ended.
+          deleted_election_info: Deleted elections are not shown in the list. You can view them by clicking the button below.
           edit:
             card_title: About this election
             title: Details
           edit_action: Edit election
-          # Accordion card titles + results-availability copy on the Main tab.
+          # Main tab form strings. `form.*` mirrors decidim-elections
+          # upstream `decidim.elections.admin.elections.form.*` key-for-key,
+          # value-for-value, so re-syncing on a Decidim bump is a diff and
+          # not a rewrite. Field labels that upstream renders via the
+          # form-builder's implicit `activemodel.attributes.election.*`
+          # lookup (title, description, stream_uri) are resolved the same
+          # way here and do not need a key under `form.*`.
+          #
+          # Vocdoni-only additions live under `editor.*`, kept apart so the
+          # delta from upstream is explicit.
           form:
-            basic_info: Basic info
+            basic_title: Basic info
             calendar: Calendar
-            results_availability_title: Results availability
+            calendar_description: Check that the organization time zone is correct in the organization settings. The current configuration is %{timezone}.
+            end_at: End time
+            manual_start: Manual start
             results_availability:
+              after_end: After elections end
+              after_end_help: publish results when the election is finished
               real_time: Real time
-              real_time_help: Results are published as votes arrive.
-              after_end: After the election ends
-              after_end_help: Results stay encrypted until voting closes.
+              real_time_help: automatically publish results during the election while voting
+              title: Results availability
+            start_at: Start time
           editor:
-            description_label: Description
             # Rendered under the option input itself. `error_for` prints the
             # message and nothing else, so it is a whole sentence rather than
             # the fragment an ActiveModel message usually is.
             duplicate_option: This option says the same as another one in this question.
-            end_at_help: Voting closes at this instant.
-            end_at_label: End date and time
             # The per-field language switcher Decidim renders next to every
             # translatable input. It is a plain unlabelled <select> in core, so
             # the field it belongs to is named here instead.
             language_selector_label: 'Translation language for: %{field}'
-            manual_start_help: Publish the election in a paused state; voting only opens when you click "Start election" on the Dashboard.
-            manual_start_label: Manual start
-            start_at_help: Leave empty to open the election the moment it is published on chain.
-            start_at_label: Start date and time
             # Displayed on the elections index and the Dashboard when a start
             # has not been set — mirrors what the wizard's Schedule step used
             # to say. `started_on_publication` is the same idea past the fact.
             started_on_publication: Started when published on the blockchain
             starts_on_publication: Starts when published
             stream_help: A public video the voters will see next to the ballot.
-            stream_label: Live streaming video
             stream_summary: Attach video (optional)
-            timezone_notice: Times are interpreted in the organization time zone. The current configuration is %{timezone}.
-            title_label: Election title
-            title_placeholder: Voting process title
           hide_from_public_site: Hide from public site
           index:
             empty: There are no elections yet.
@@ -259,7 +262,7 @@ en:
           manage_trash:
             title: Deleted elections
           new:
-            help: A title is all you need to start. The questions, the census and the schedule come next, one step at a time, and nothing is written to the blockchain until you publish it — which is a separate and irreversible step.
+            help: Fill in the basic details, pick when voting closes, and choose how results are shown. The questions and the census come next, one tab at a time, and nothing is written to the blockchain until you publish it — which is a separate and irreversible step.
             title: New election
           new_election: New election
           not_on_public_site: Not on public site
@@ -398,8 +401,8 @@ en:
             title: Questions
           form:
             add_question: Add question
-            collapse_all: Collapse all
-            expand_all: Expand all
+            collapse_all: Collapse all questions
+            expand_all: Expand all questions
             save: Save questions
           question:
             add_response_option: Add response option
@@ -407,7 +410,7 @@ en:
             max_choices_any: "(any number)"
             max_choices_label: Maximum choices
             question_type_label: Question type
-            remove: Remove question
+            remove: Remove
             statement_label: Statement
           response_option:
             remove: Remove response option
@@ -440,7 +443,7 @@ en:
             confirm_irreversible_label: I understand that publishing writes this election to a public blockchain and that it cannot be edited, deleted or undone afterwards.
             fix_it: Fix it
             in_progress: This election is being published on the blockchain. Refresh in a moment to see the result.
-            publish_button: Publish on the blockchain
+            publish_button: Publish
             publish_disabled: Complete every item in the checklist above before publishing.
             publish_needs_confirmation: Tick the acknowledgement above to enable this button.
       admin_log:
@@ -507,8 +510,8 @@ en:
             question_type: Type
             title: Question
       question_types:
-        multichoice: Multiple choice
-        singlechoice: Single choice
+        multichoice: Multiple option
+        singlechoice: Single option
       status_actions:
         canceled: Cancel election
         ended: End election

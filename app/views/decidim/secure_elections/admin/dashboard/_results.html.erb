@@ -11,13 +11,15 @@
   </div>
 
   <div class="card-section" id="js-vocdoni-monitor-results">
-    <% unless election.results_available? %>
-      <%= cell "decidim/announcement", t("decidim.secure_elections.admin.monitor.show.no_results_yet"), callout_class: "secondary" %>
-    <% end %>
+    <div class="row column">
+      <% unless election.results_available? %>
+        <%= cell "decidim/announcement", t("decidim.secure_elections.admin.monitor.show.no_results_yet"), callout_class: "secondary" %>
+      <% end %>
 
-    <% questions.each do |question| %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/question_results",
-                 locals: { election:, question: } %>
-    <% end %>
+      <% questions.each do |question| %>
+        <%= render partial: "decidim/secure_elections/admin/dashboard/question_results",
+                   locals: { election:, question: } %>
+      <% end %>
+    </div>
   </div>
 </div>

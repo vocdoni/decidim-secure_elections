@@ -17,7 +17,8 @@
   </div>
 
   <div class="card-section">
-    <dl>
+    <div class="row column">
+      <dl>
       <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.title") %></dt>
       <dd class="mb-4"><%= present(election).title(html_escape: true) %></dd>
 
@@ -30,9 +31,10 @@
       <% if election.manual_start? %>
         <dt class="h6"><%= t("decidim.secure_elections.models.election.fields.manual_start") if defined?(election.manual_start?) %></dt>
         <dd class="mb-4">
-          <span class="label secondary"><%= t("decidim.secure_elections.admin.elections.editor.manual_start_label") %></span>
+          <span class="label secondary"><%= t("decidim.secure_elections.admin.elections.form.manual_start") %></span>
         </dd>
       <% end %>
-    </dl>
+      </dl>
+    </div>
   </div>
 </div>

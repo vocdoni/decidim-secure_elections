@@ -113,10 +113,40 @@
   </div>
 <% end %>
 
+<%# The credentials + 2FA choices auto-save through the census.js pack:
+    every change is POSTed back to `update` in the background and the
+    indicator below reports what the server did. No sticky Save is
+    rendered because there is nothing left to save by hand — the button
+    used to sit here disabled until the config was valid, which turned
+    into a chicken-and-egg the moment `census_configured?` was false.
+
+    Kept a plain fallback submit inside a `<noscript>` so an admin
+    without JavaScript is not stranded — it submits the same form the
+    JS would have. %>
+<div class="row column flex items-center gap-2 text-sm text-gray-2" role="status" aria-live="polite">
+  <span id="js-census-autosave-indicator" data-idle-label="<%= t(".autosave.idle") %>"
+        data-saving-label="<%= t(".autosave.saving") %>"
+        data-saved-label="<%= t(".autosave.saved") %>"
+        data-error-label="<%= t(".autosave.error") %>">
+    <%= t(".autosave.idle") %>
+  </span>
+</div>
+
+<%# The Census page has no actionable Save (auto-save handles it), but the
+    admin still needs a visible next step so the tab doesn't feel like a
+    dead end. The sticky bar now carries a "Continue" that lands them on
+    the Dashboard, matching the "Save and continue" affordance every other
+    tab has. `<noscript>` keeps a real Save reachable for admins without
+    the pack: without auto-save, the button is what persists edits. %>
 <div class="item__edit-sticky">
   <div class="item__edit-sticky-container">
-    <%= button_tag t(".save"),
-                   form: "census-election-form",
-                   class: "button button__sm button__secondary#{" hide" unless election.census_configured?}" %>
+    <noscript>
+      <%= button_tag t(".save"),
+                     form: "census-election-form",
+                     class: "button button__sm button__transparent-secondary" %>
+    </noscript>
+    <%= link_to t(".continue"),
+                election_dashboard_path(election),
+                class: "button button__sm button__secondary" %>
   </div>
 </div>

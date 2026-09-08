@@ -31,6 +31,8 @@ const MEMBER_ROWS_ID = "js-census-members-rows";
 const MEMBER_TEMPLATE_ID = "js-census-member-template";
 const ADD_MEMBER_ID = "js-census-add-member";
 
+import setupAutoSave from "./census_autosave";
+
 const IMPORT_SUBMIT_ID = "js-census-import-submit";
 const IMPORT_REPLACE_SELECTOR = "[data-census-import-replace]";
 
@@ -282,6 +284,7 @@ const setupCensusAdmin = () => {
   setupAuthentication();
   setupMembers();
   setupImport();
+  setupAutoSave();
 };
 
 if (document.readyState === "loading") {

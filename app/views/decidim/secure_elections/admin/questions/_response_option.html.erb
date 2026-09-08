@@ -17,17 +17,26 @@
     <div class="card-divider">
       <h2 class="card-title mb-2">
         <span><%= t("decidim.secure_elections.admin.questions.response_option.title") %></span>
-        <button type="button"
-                class="button button__xs button__transparent-secondary small alert remove-response-option button--title"
-                style="display:none">
-          <%= icon "delete-bin-line" %>
-          <%= t("decidim.secure_elections.admin.questions.response_option.remove") %>
-        </button>
+        <%# Right-aligned action strip, mirroring the question card header
+            layout. createEditableForm() toggles the remove button's
+            visibility (see `hideOnMinItemsOrLessSelector`) — no inline
+            style needed. %>
+        <span class="ml-auto flex flex-row-reverse items-center gap-2">
+          <button type="button"
+                  class="button button__xs button__transparent-secondary small alert remove-response-option button--title">
+            <%= icon "delete-bin-line" %>
+            <span class="hidden md:block">
+              <%= t("decidim.secure_elections.admin.questions.response_option.remove") %>
+            </span>
+          </button>
+        </span>
       </h2>
     </div>
     <div class="card-section">
-      <%= o.translated :text_field, :title,
-                       label: t("decidim.secure_elections.admin.questions.response_option.statement_label") %>
+      <div class="row column">
+        <%= o.translated :text_field, :title,
+                         label: t("decidim.secure_elections.admin.questions.response_option.statement_label") %>
+      </div>
     </div>
     <%= o.hidden_field :id if answer.persisted? %>
     <%= o.hidden_field :deleted, value: false %>

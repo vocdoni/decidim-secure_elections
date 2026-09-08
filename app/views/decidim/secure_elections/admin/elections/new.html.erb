@@ -1,6 +1,9 @@
-<%# New election. Only the Basic info card is available before there is a
-    record — the schedule and results availability come once the record
-    exists. %>
+<%# New election. Renders the same three-card Main-tab layout as
+    `edit.html.erb`, plus the tabs menu upstream shows on this screen
+    (Main active, the other three disabled until the record exists).
+    `end_at` is required at save time (see `ElectionForm`), so the admin
+    can't submit a title-only draft and be dropped into a half-configured
+    election. %>
 <% add_decidim_page_title(t(".title")) %>
 
 <%= render partial: "decidim/secure_elections/admin/shared/configuration_warning" %>
@@ -9,7 +12,7 @@
   <h1 class="item_show__header-title"><%= t(".title") %></h1>
 </div>
 
-<%= cell "decidim/announcement", t(".help"), callout_class: "secondary" %>
+<%= render "decidim/secure_elections/admin/elections/tabs_menu" %>
 
 <div class="item__edit item__edit-1col">
   <div class="item__edit-form">
@@ -17,21 +20,10 @@
                          url: elections_path,
                          method: :post,
                          html: { id: "new-election-form", class: "form-defaults form new_election" }) do |f| %>
-      <div class="card form-basic" data-controller="accordion" data-component="accordion" id="accordion-basic" role="presentation">
-        <div class="card-divider">
-          <button type="button" class="card-divider-button" data-controls="panel-basic" data-open="true" role="button" aria-controls="panel-basic" aria-expanded="true">
-            <%= icon "arrow-right-s-line", class: "flex-none" %>
-            <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.basic_info") %></h2>
-          </button>
-        </div>
-        <div id="panel-basic" role="region" tabindex="-1" aria-hidden="false">
-          <%= render partial: "decidim/secure_elections/admin/elections/details_fields", locals: { form: f, election: nil } %>
-        </div>
-      </div>
+      <%= render partial: "decidim/secure_elections/admin/elections/form", locals: { form: f, election: nil } %>
 
       <div class="item__edit-sticky">
         <div class="item__edit-sticky-container">
-          <%= link_to t("decidim.secure_elections.admin.elections.cancel"), elections_path, class: "button button__sm button__transparent-secondary" %>
           <%= f.submit t("decidim.secure_elections.admin.elections.save_and_continue"), class: "button button__sm button__secondary" %>
         </div>
       </div>
