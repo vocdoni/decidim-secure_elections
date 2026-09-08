@@ -58,15 +58,32 @@ module Decidim
 
           Decidim::SecureElections::Admin::UpdateElectionCensus.call(@form, election) do
             on(:ok) do
-              flash[:notice] = I18n.t("census.authentication.success", scope: "decidim.secure_elections.admin")
-              redirect_to election_census_path(election)
+              respond_to do |format|
+                format.html do
+                  flash[:notice] = I18n.t("census.authentication.success", scope: "decidim.secure_elections.admin")
+                  redirect_to election_census_path(election)
+                end
+                # Auto-save from the census.js pack: the JSON body is not read,
+                # only its 200 status.
+                format.json { render json: { status: "ok" } }
+              end
             end
 
             on(:invalid) do
-              flash.now[:alert] = I18n.t("census.authentication.invalid", scope: "decidim.secure_elections.admin")
-              # The auth-config form is now inline on `show`, so re-render that.
-              @census_manifests = CENSUS_MANIFESTS
-              render action: "show", status: :unprocessable_content
+              respond_to do |format|
+                format.html do
+                  flash.now[:alert] = I18n.t("census.authentication.invalid", scope: "decidim.secure_elections.admin")
+                  # The auth-config form is now inline on `show`, so re-render that.
+                  @census_manifests = CENSUS_MANIFESTS
+                  render action: "show", status: :unprocessable_content
+                end
+                # `.errors.full_messages` is the same list the alert would show,
+                # rendered inline by the JS pack.
+                format.json do
+                  render json: { status: "invalid", errors: @form.errors.full_messages },
+                         status: :unprocessable_content
+                end
+              end
             end
           end
         end

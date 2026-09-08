@@ -207,6 +207,14 @@ en:
             add_people_help: Add people one at a time, upload a spreadsheet, or bring in participants you have already verified in Decidim.
             add_people_title: Add people to the census
             authentication_title: Voter authentication
+            autosave:
+              # Rendered next to the credentials form. The label rotates
+              # between these four as the census.js pack debounces changes and
+              # POSTs them back to the update action.
+              error: The last change could not be saved. Reload the page to see the details.
+              idle: Changes save automatically.
+              saved: Saved.
+              saving: Saving…
             census_ready: The census is configured and all entries are valid.
             clear: Empty the census
             clear_confirm:
