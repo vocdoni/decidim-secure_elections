@@ -113,10 +113,17 @@
   </div>
 <% end %>
 
+<%# The Save button used to carry a conditional `.hide` class that stayed
+    on unless `election.census_configured?`. That predicate turns true
+    only *after* a save that landed at least one credential or a second
+    factor — a chicken-and-egg for a fresh election, where the admin
+    ticks a checkbox and has no visible way to persist it. Server-side
+    validation still rejects an empty configuration, so removing the
+    class costs nothing in safety and gets rid of the block. %>
 <div class="item__edit-sticky">
   <div class="item__edit-sticky-container">
     <%= button_tag t(".save"),
                    form: "census-election-form",
-                   class: "button button__sm button__secondary#{" hide" unless election.census_configured?}" %>
+                   class: "button button__sm button__secondary" %>
   </div>
 </div>
