@@ -71,7 +71,32 @@ module Decidim
       initializer "decidim_secure_elections_admin.menu" do
         Decidim.menu :admin_secure_elections_menu do |menu|
           election = @election
-          next if election.blank?
+
+          # New-election form — no record to link the later tabs to yet, so
+          # render every tab except Main as a disabled span (Decidim's admin
+          # menu turns `"#"` into an unclickable one). The user sees the
+          # same four tabs upstream shows on `new`, and it is obvious what
+          # they get once Main is saved.
+          if election.blank?
+            menu.add_item :secure_elections_main,
+                          I18n.t("main", scope: "decidim.secure_elections.admin.menu"),
+                          "#",
+                          active: true,
+                          icon_name: "bill-line"
+            menu.add_item :secure_elections_questions,
+                          I18n.t("questions", scope: "decidim.secure_elections.admin.menu"),
+                          "#",
+                          icon_name: "question-answer-line"
+            menu.add_item :secure_elections_census,
+                          I18n.t("census", scope: "decidim.secure_elections.admin.menu"),
+                          "#",
+                          icon_name: "group-2-line"
+            menu.add_item :secure_elections_dashboard,
+                          I18n.t("dashboard", scope: "decidim.secure_elections.admin.menu"),
+                          "#",
+                          icon_name: "dashboard-line"
+            next
+          end
 
           proxy = Decidim::EngineRouter.admin_proxy(election.component)
 

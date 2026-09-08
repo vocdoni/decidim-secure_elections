@@ -1,9 +1,8 @@
 <%# New election. Renders the same three-card Main-tab layout as
-    `edit.html.erb`, so what an admin sees before there is a record and
-    what they see after saving one look identical — one form partial
-    with Basic info, Calendar, and Results availability. `end_at` is
-    required at save time (see `ElectionForm`), so the admin can't
-    submit a title-only draft and be dropped into a half-configured
+    `edit.html.erb`, plus the tabs menu upstream shows on this screen
+    (Main active, the other three disabled until the record exists).
+    `end_at` is required at save time (see `ElectionForm`), so the admin
+    can't submit a title-only draft and be dropped into a half-configured
     election. %>
 <% add_decidim_page_title(t(".title")) %>
 
@@ -13,7 +12,7 @@
   <h1 class="item_show__header-title"><%= t(".title") %></h1>
 </div>
 
-<%= cell "decidim/announcement", t(".help"), callout_class: "secondary" %>
+<%= render "decidim/secure_elections/admin/elections/tabs_menu" %>
 
 <div class="item__edit item__edit-1col">
   <div class="item__edit-form">
@@ -25,7 +24,6 @@
 
       <div class="item__edit-sticky">
         <div class="item__edit-sticky-container">
-          <%= link_to t("decidim.secure_elections.admin.elections.cancel"), elections_path, class: "button button__sm button__transparent-secondary" %>
           <%= f.submit t("decidim.secure_elections.admin.elections.save_and_continue"), class: "button button__sm button__secondary" %>
         </div>
       </div>
