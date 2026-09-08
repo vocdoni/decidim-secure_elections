@@ -1,6 +1,10 @@
-<%# New election. Only the Basic info card is available before there is a
-    record — the schedule and results availability come once the record
-    exists. %>
+<%# New election. Renders the same three-card Main-tab layout as
+    `edit.html.erb`, so what an admin sees before there is a record and
+    what they see after saving one look identical — one form partial
+    with Basic info, Calendar, and Results availability. `end_at` is
+    required at save time (see `ElectionForm`), so the admin can't
+    submit a title-only draft and be dropped into a half-configured
+    election. %>
 <% add_decidim_page_title(t(".title")) %>
 
 <%= render partial: "decidim/secure_elections/admin/shared/configuration_warning" %>
@@ -17,17 +21,7 @@
                          url: elections_path,
                          method: :post,
                          html: { id: "new-election-form", class: "form-defaults form new_election" }) do |f| %>
-      <div class="card form-basic" data-controller="accordion" data-component="accordion" id="accordion-basic" role="presentation">
-        <div class="card-divider">
-          <button type="button" class="card-divider-button" data-controls="panel-basic" data-open="true" role="button" aria-controls="panel-basic" aria-expanded="true">
-            <%= icon "arrow-right-s-line", class: "flex-none" %>
-            <h2 class="card-title"><%= t("decidim.secure_elections.admin.elections.form.basic_title") %></h2>
-          </button>
-        </div>
-        <div id="panel-basic" role="region" tabindex="-1" aria-hidden="false">
-          <%= render partial: "decidim/secure_elections/admin/elections/details_fields", locals: { form: f, election: nil } %>
-        </div>
-      </div>
+      <%= render partial: "decidim/secure_elections/admin/elections/form", locals: { form: f, election: nil } %>
 
       <div class="item__edit-sticky">
         <div class="item__edit-sticky-container">

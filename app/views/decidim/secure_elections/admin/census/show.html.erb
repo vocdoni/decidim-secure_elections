@@ -132,12 +132,21 @@
   </span>
 </div>
 
-<noscript>
-  <div class="item__edit-sticky">
-    <div class="item__edit-sticky-container">
+<%# The Census page has no actionable Save (auto-save handles it), but the
+    admin still needs a visible next step so the tab doesn't feel like a
+    dead end. The sticky bar now carries a "Continue" that lands them on
+    the Dashboard, matching the "Save and continue" affordance every other
+    tab has. `<noscript>` keeps a real Save reachable for admins without
+    the pack: without auto-save, the button is what persists edits. %>
+<div class="item__edit-sticky">
+  <div class="item__edit-sticky-container">
+    <noscript>
       <%= button_tag t(".save"),
                      form: "census-election-form",
-                     class: "button button__sm button__secondary" %>
-    </div>
+                     class: "button button__sm button__transparent-secondary" %>
+    </noscript>
+    <%= link_to t(".continue"),
+                election_dashboard_path(election),
+                class: "button button__sm button__secondary" %>
   </div>
-</noscript>
+</div>

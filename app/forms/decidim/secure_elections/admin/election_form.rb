@@ -50,12 +50,12 @@ module Decidim
         validates :title, translatable_presence: true
         validate :stream_uri_is_a_url
         validates :results_availability, inclusion: { in: Decidim::SecureElections::Election::RESULTS_AVAILABILITIES }
-        # `end_at` presence is NOT required at Main-tab save time — an
-        # admin creates a draft with a title and picks the schedule
-        # later, either as they type in the Calendar accordion or right
-        # before publishing. The Dashboard checklist and `SetupForm`
-        # both check `calendar_complete?` (end_at present) before letting
-        # the on-chain publish through.
+        # `end_at` is required at Main-tab save time so the admin cannot
+        # walk away from creation with a title-only draft that later
+        # blocks the publish checklist. The Dashboard checklist and
+        # `SetupForm` still re-check `calendar_complete?` at publish for
+        # elections whose end_at was cleared later.
+        validates :end_at, presence: true, if: :editable?
 
         # Both comparisons are hand-rolled rather than left to the `date:`
         # validator. Its message interpolates the raw restriction, which

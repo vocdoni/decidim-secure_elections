@@ -38,16 +38,22 @@
                         disabled: !ready || publishing,
                         data: { "vocdoni-confirm-irreversible": true } %>
 
+        <%# `button__secondary` (blue) keeps the button clearly visible at
+            rest, ready or not — the previous `alert` (red) faded to a
+            near-white pill when disabled and read as unclickable even to
+            the ready state. The action itself is irreversible, but the
+            checkbox above already carries that warning, so the button
+            only needs to signal "this is the primary action". %>
         <div class="mt-4">
           <% if ready && !publishing %>
             <%= f.submit t("decidim.secure_elections.admin.setup.show.publish_button"),
-                         class: "button button__sm alert",
+                         class: "button button__sm button__secondary",
                          data: { "vocdoni-publish": true } %>
             <p class="text-sm text-gray-2 mt-2" data-vocdoni-publish-hint hidden>
               <%= t("decidim.secure_elections.admin.setup.show.publish_needs_confirmation") %>
             </p>
           <% else %>
-            <button type="submit" class="button button__sm alert" disabled aria-disabled="true">
+            <button type="submit" class="button button__sm button__secondary" disabled aria-disabled="true">
               <%= t("decidim.secure_elections.admin.setup.show.publish_button") %>
             </button>
             <p class="text-sm text-gray-2 mt-2">

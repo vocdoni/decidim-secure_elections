@@ -262,7 +262,7 @@ en:
           manage_trash:
             title: Deleted elections
           new:
-            help: A title is all you need to start. The questions, the census and the schedule come next, one step at a time, and nothing is written to the blockchain until you publish it — which is a separate and irreversible step.
+            help: Fill in the basic details, pick when voting closes, and choose how results are shown. The questions and the census come next, one tab at a time, and nothing is written to the blockchain until you publish it — which is a separate and irreversible step.
             title: New election
           new_election: New election
           not_on_public_site: Not on public site
@@ -443,7 +443,7 @@ en:
             confirm_irreversible_label: I understand that publishing writes this election to a public blockchain and that it cannot be edited, deleted or undone afterwards.
             fix_it: Fix it
             in_progress: This election is being published on the blockchain. Refresh in a moment to see the result.
-            publish_button: Publish on the blockchain
+            publish_button: Publish
             publish_disabled: Complete every item in the checklist above before publishing.
             publish_needs_confirmation: Tick the acknowledgement above to enable this button.
       admin_log:

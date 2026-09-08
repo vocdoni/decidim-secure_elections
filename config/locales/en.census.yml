@@ -207,6 +207,7 @@ en:
             add_people_help: Add people one at a time, upload a spreadsheet, or bring in participants you have already verified in Decidim.
             add_people_title: Add people to the census
             authentication_title: Voter authentication
+            continue: Continue
             autosave:
               # Rendered next to the credentials form. The label rotates
               # between these four as the census.js pack debounces changes and
