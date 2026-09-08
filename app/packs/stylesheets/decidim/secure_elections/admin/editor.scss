@@ -1,3 +1,21 @@
+// The Publish card on the Dashboard.
+//
+// Browser UA rules paint any `button[disabled]` a flat grey, and that beats
+// Decidim's `.button__secondary` blue while the checkbox above is unticked
+// or the checklist above is incomplete. The button then reads as "nothing
+// here to click" rather than "click the checkbox first". Force the primary
+// colour and only dim it, so the button keeps saying what it is even while
+// it cannot be pressed.
+#js-vocdoni-setup {
+  .button__secondary:disabled {
+    background-color: var(--secondary);
+    color: white;
+    border-color: var(--secondary);
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
 // The admin side of the module.
 //
 // Almost everything on these screens is plain Decidim rendered inside
