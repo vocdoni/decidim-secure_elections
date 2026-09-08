@@ -51,10 +51,14 @@
       </div>
       <div id="panel-calendar" role="region" tabindex="-1" aria-hidden="false">
         <div class="row column">
-          <p class="help-text">
-            <%= t("decidim.secure_elections.admin.elections.form.calendar_description",
-                  timezone: "#{current_organization.time_zone} (#{l(Time.current.in_time_zone(current_organization.time_zone), format: :long)})") %>
-          </p>
+          <%# The Decidim announcement cell renders as a highlighted callout
+              (yellow with `callout_class: "warning"`) instead of a plain
+              paragraph, matching what upstream shows above the datetime
+              pickers. It swallows the whitespace we'd otherwise need. %>
+          <%= cell "decidim/announcement",
+                   t("decidim.secure_elections.admin.elections.form.calendar_description",
+                     timezone: "#{current_organization.time_zone} (#{l(Time.current.in_time_zone(current_organization.time_zone), format: :long)})"),
+                   callout_class: "warning" %>
         </div>
 
         <div class="row column">
@@ -91,14 +95,32 @@
       </div>
       <div id="panel-results" role="region" tabindex="-1" aria-hidden="false">
         <div class="row column">
-          <% Decidim::SecureElections::Election::RESULTS_AVAILABILITIES.each do |value| %>
-            <label class="flex items-start gap-2 mb-2">
-              <%= form.radio_button :results_availability, value, disabled: disabled, label: false %>
-              <span>
-                <strong><%= t(value, scope: "decidim.secure_elections.admin.elections.form.results_availability") %></strong>
-                <small class="block text-gray-2"><%= t("#{value}_help", scope: "decidim.secure_elections.admin.elections.form.results_availability") %></small>
+          <%# `.radio-buttons` / `.radio-button` / `.help-text` are the
+              Decidim admin classes that draw the outlined-circle radios and
+              the greyed help text below each option. Rolling our own with
+              flex + strong + small looked close but wasn't — the label
+              class ended up nested wrong, upstream's radios have a bigger
+              hit area, and the help-text colour comes from the shared
+              admin stylesheet. `collection_radio_buttons` also skips the
+              form-builder's auto-label that we had to fight with
+              `label: false` before. %>
+          <%= form.collection_radio_buttons :results_availability,
+                                            Decidim::SecureElections::Election::RESULTS_AVAILABILITIES.map { |value|
+                                              [value, t(value, scope: "decidim.secure_elections.admin.elections.form.results_availability")]
+                                            },
+                                            :first,
+                                            :last,
+                                            { include_hidden: false },
+                                            class: "radio-buttons" do |b| %>
+            <div class="radio-button">
+              <%= b.label do %>
+                <%= b.radio_button(disabled: disabled) %>
+                <%= b.text %>
+              <% end %>
+              <span class="help-text">
+                <%= t("#{b.value}_help", scope: "decidim.secure_elections.admin.elections.form.results_availability") %>
               </span>
-            </label>
+            </div>
           <% end %>
         </div>
       </div>
