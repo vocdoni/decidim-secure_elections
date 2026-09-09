@@ -53,7 +53,8 @@ module Decidim
       # Mirrored by `API_HOSTS` in `link_code.js`.
       API_HOSTS = {
         1 => "https://saas-api.vocdoni.net",
-        2 => "https://saas-api-stg.vocdoni.net"
+        2 => "https://saas-api-stg.vocdoni.net",
+        3 => "https://saas-api-dev.vocdoni.net"
       }.freeze
 
       # A Vocdoni process id is a Mongo ObjectID — ARCHITECTURE §1.

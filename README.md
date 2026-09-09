@@ -210,10 +210,10 @@ initializer.
 
 | Setting | ENV var | Credential | Required | Default | Purpose |
 |---|---|---|---|---|---|
-| `api_url` | `VOCDONI_API_URL` | — | **yes** | *none* | Base URL of the Vocdoni SaaS API. Staging: `https://saas-api-stg.vocdoni.net`. Production: `https://saas-api.vocdoni.net`. There is deliberately no default. |
+| `api_url` | `VOCDONI_API_URL` | — | **yes** | *none* | Base URL of the Vocdoni SaaS API. Development: `https://saas-api-dev.vocdoni.net`. Staging: `https://saas-api-stg.vocdoni.net`. Production: `https://saas-api.vocdoni.net`. There is deliberately no default. |
 | `api_key` | `VOCDONI_API_KEY` | `vocdoni.api_key` | **yes** | *none* | Integrator API key (`vsk_…`). Server-side only. Credentials take precedence over the environment. |
 | `org_address` | `VOCDONI_ORG_ADDRESS` | — | **yes** | *none* | Address (`0x…`) of the Vocdoni organization that owns the processes this installation creates. |
-| `explorer_url` | `VOCDONI_EXPLORER_URL` | — | no | derived from `api_url` | Public explorer a voter follows to check their receipt, and the target of the verification links in the results export. Derived from the API base so the two can never disagree: the production API implies `https://explorer.vote`, staging implies `https://stg.explorer.vote`. Set it only for a self-hosted network. |
+| `explorer_url` | `VOCDONI_EXPLORER_URL` | — | no | derived from `api_url` | Public explorer a voter follows to check their receipt, and the target of the verification links in the results export. Derived from the API base so the two can never disagree: the production API implies `https://explorer.vote`, staging implies `https://stg.explorer.vote`, development implies `https://dev.explorer.vote`. Set it only for a self-hosted network. |
 | `open_timeout` | `VOCDONI_OPEN_TIMEOUT` | — | no | `5` | Connect timeout, in seconds. |
 | `timeout` | `VOCDONI_TIMEOUT` | — | no | `30` | Read timeout, in seconds. |
 | `job_timeout` | `VOCDONI_JOB_TIMEOUT` | — | no | `120` | How long a background job waits for an async Vocdoni job (publish, status change) before giving up. |

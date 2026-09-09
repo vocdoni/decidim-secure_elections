@@ -91,10 +91,11 @@ module Decidim
 
       # The Vocdoni SaaS bases this module knows, and the explorer that goes
       # with each. `VotingPageUrl::API_HOSTS` and the voting page's own
-      # `API_HOSTS` carry the same two bases; this table adds the explorer.
+      # `API_HOSTS` carry the same three bases; this table adds the explorer.
       NETWORKS = {
         "https://saas-api.vocdoni.net" => "https://explorer.vote",
-        "https://saas-api-stg.vocdoni.net" => "https://stg.explorer.vote"
+        "https://saas-api-stg.vocdoni.net" => "https://stg.explorer.vote",
+        "https://saas-api-dev.vocdoni.net" => "https://dev.explorer.vote"
       }.freeze
 
       # Public explorer a voter is sent to in order to check their receipt.
