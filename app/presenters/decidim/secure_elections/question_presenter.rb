@@ -10,7 +10,7 @@ module Decidim
       def title(html_escape: false, all_locales: false)
         return unless question
 
-        super(question.title, html_escape, all_locales)
+        super(question.body, html_escape, all_locales)
       end
 
       def description(all_locales: false)

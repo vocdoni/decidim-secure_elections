@@ -46,7 +46,7 @@ module Decidim
           question = existing_question(election, question_form) || election.questions.build
 
           question.assign_attributes(
-            title: question_form.title,
+            body: question_form.body,
             description: question_form.description,
             # question_type is now per-question: each card carries its own select.
             question_type: question_form.question_type,
@@ -83,7 +83,7 @@ module Decidim
 
           kept = question_form.options.each_with_index.map do |answer_form, index|
             answer = existing_answer(question, answer_form) || question.answers.build
-            answer.title = answer_form.title
+            answer.body = answer_form.body
             answer.position = index
             answer.value = index
             answer.save!

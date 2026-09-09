@@ -27,11 +27,11 @@ module Decidim
               "0" => {
                 id: question.id,
                 uid: "q0",
-                title_en: "Do you agree?",
+                body_en: "Do you agree?",
                 description_en: "",
                 answers: {
-                  "0" => { id: options.first.id, uid: "q0-a0", title_en: "Yes" },
-                  "1" => { id: options.second.id, uid: "q0-a1", title_en: "No" }
+                  "0" => { id: options.first.id, uid: "q0-a0", body_en: "Yes" },
+                  "1" => { id: options.second.id, uid: "q0-a1", body_en: "No" }
                 }
               }
             }
@@ -75,7 +75,7 @@ module Decidim
             patch :update, params: params.merge(election: ballot_params)
 
             expect(response).to redirect_to(/census/)
-            expect(translated(question.reload.title)).to eq("Do you agree?")
+            expect(translated(question.reload.body)).to eq("Do you agree?")
           end
 
           context "when the form is invalid" do
@@ -92,11 +92,11 @@ module Decidim
           it "saves and answers with the ids the browser does not have yet" do
             ballot_params[:questions]["1"] = {
               uid: "q1",
-              title_en: "A brand new question",
+              body_en: "A brand new question",
               description_en: "",
               answers: {
-                "0" => { uid: "q1-a0", title_en: "Sure" },
-                "1" => { uid: "q1-a1", title_en: "Never" }
+                "0" => { uid: "q1-a0", body_en: "Sure" },
+                "1" => { uid: "q1-a1", body_en: "Never" }
               }
             }
 

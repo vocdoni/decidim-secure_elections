@@ -3,7 +3,7 @@
     <li class="vocdoni-questions__item">
       <h3 class="h6">
         <span class="sr-only"><%= t("decidim.secure_elections.elections.show.question_number", number: index + 1) %></span>
-        <%= translated_attribute(question.title) %>
+        <%= translated_attribute(question.body) %>
       </h3>
 
       <% if translated_attribute(question.description).present? %>
@@ -26,7 +26,7 @@
 
       <ul class="vocdoni-questions__answers">
         <% question.answers.each do |answer| %>
-          <li><%= translated_attribute(answer.title) %></li>
+          <li><%= translated_attribute(answer.body) %></li>
         <% end %>
       </ul>
     </li>

@@ -18,8 +18,8 @@ module Decidim
 
         let(:option_attributes) do
           {
-            "0" => { title_en: "Yes" },
-            "1" => { title_en: "No" }
+            "0" => { body_en: "Yes" },
+            "1" => { body_en: "No" }
           }
         end
 
@@ -27,7 +27,7 @@ module Decidim
           {
             "0" => {
               uid: "q0",
-              title_en: "Do you agree?",
+              body_en: "Do you agree?",
               description_en: "",
               answers: option_attributes
             }
@@ -51,7 +51,7 @@ module Decidim
 
         describe "questions" do
           context "when a question has a single option" do
-            before { attributes[:election][:questions]["0"][:answers] = { "0" => { title_en: "Yes" } } }
+            before { attributes[:election][:questions]["0"][:answers] = { "0" => { body_en: "Yes" } } }
 
             it "is refused: one option is not a choice" do
               expect(form).to be_invalid
@@ -64,8 +64,8 @@ module Decidim
           context "when one option is filled in and the other is left empty" do
             before do
               attributes[:election][:questions]["0"][:answers] = {
-                "0" => { title_en: "Yes" },
-                "1" => { title_en: "" }
+                "0" => { body_en: "Yes" },
+                "1" => { body_en: "" }
               }
             end
 
@@ -76,7 +76,7 @@ module Decidim
 
               blank_option = form.questions.first.answers.last
 
-              expect(blank_option.errors[:title_en]).to be_present
+              expect(blank_option.errors[:body_en]).to be_present
             end
 
             it "still says on the question what the ballot is missing" do
@@ -88,12 +88,12 @@ module Decidim
             it "keeps what the admin typed" do
               form.invalid?
 
-              expect(form.questions.first.answers.first.title["en"]).to eq("Yes")
+              expect(form.questions.first.answers.first.body["en"]).to eq("Yes")
             end
           end
 
           context "when an option was added and left empty" do
-            before { attributes[:election][:questions]["0"][:answers]["2"] = { title_en: "" } }
+            before { attributes[:election][:questions]["0"][:answers]["2"] = { body_en: "" } }
 
             it { is_expected.to be_valid }
 
@@ -112,9 +112,9 @@ module Decidim
             before do
               attributes[:election][:questions]["1"] = {
                 uid: "q1",
-                title_en: "",
+                body_en: "",
                 description_en: "",
-                answers: { "0" => { title_en: "" }, "1" => { title_en: "" } }
+                answers: { "0" => { body_en: "" }, "1" => { body_en: "" } }
               }
             end
 
@@ -130,7 +130,7 @@ module Decidim
           # anywhere on the page, so nothing said which of the fields in front
           # of the admin the flash was about.
           context "when every question is empty" do
-            before { attributes[:election][:questions]["0"] = { uid: "q0", title_en: "", description_en: "", answers: {} } }
+            before { attributes[:election][:questions]["0"] = { uid: "q0", body_en: "", description_en: "", answers: {} } }
 
             it { is_expected.to be_invalid }
 
@@ -143,12 +143,12 @@ module Decidim
             it "flags the first question so the page is not blank" do
               form.invalid?
 
-              expect(form.questions.first.errors[:title_en]).to be_present
+              expect(form.questions.first.errors[:body_en]).to be_present
             end
           end
 
-          context "when a question has options but no title" do
-            before { attributes[:election][:questions]["0"][:title_en] = "" }
+          context "when a question has options but no statement" do
+            before { attributes[:election][:questions]["0"][:body_en] = "" }
 
             it { is_expected.to be_invalid }
           end
@@ -160,9 +160,9 @@ module Decidim
           describe "options that say the same thing" do
             before do
               attributes[:election][:questions]["0"][:answers] = {
-                "0" => { title_en: "Audit" },
-                "1" => { title_en: "Audit" },
-                "2" => { title_en: "Budget" }
+                "0" => { body_en: "Audit" },
+                "1" => { body_en: "Audit" },
+                "2" => { body_en: "Budget" }
               }
             end
 
@@ -182,8 +182,8 @@ module Decidim
 
               answers = form.questions.first.answers
 
-              expect(answers[0].errors[:title_en]).to eq(["This option says the same as another one in this question."])
-              expect(answers[1].errors[:title_en]).to eq(["This option says the same as another one in this question."])
+              expect(answers[0].errors[:body_en]).to eq(["This option says the same as another one in this question."])
+              expect(answers[1].errors[:body_en]).to eq(["This option says the same as another one in this question."])
               expect(answers[2].errors).to be_empty
             end
           end
@@ -191,8 +191,8 @@ module Decidim
           context "when two options differ only in case and surrounding space" do
             before do
               attributes[:election][:questions]["0"][:answers] = {
-                "0" => { title_en: "Audit" },
-                "1" => { title_en: "  audit " }
+                "0" => { body_en: "Audit" },
+                "1" => { body_en: "  audit " }
               }
             end
 
@@ -205,9 +205,9 @@ module Decidim
             before do
               attributes[:election][:questions]["1"] = {
                 uid: "q1",
-                title_en: "Do you agree with the second thing?",
+                body_en: "Do you agree with the second thing?",
                 description_en: "",
-                answers: { "0" => { title_en: "Yes" }, "1" => { title_en: "No" } }
+                answers: { "0" => { body_en: "Yes" }, "1" => { body_en: "No" } }
               }
             end
 
@@ -219,10 +219,10 @@ module Decidim
           context "when several options are left empty" do
             before do
               attributes[:election][:questions]["0"][:answers] = {
-                "0" => { title_en: "Yes" },
-                "1" => { title_en: "No" },
-                "2" => { title_en: "" },
-                "3" => { title_en: "" }
+                "0" => { body_en: "Yes" },
+                "1" => { body_en: "No" },
+                "2" => { body_en: "" },
+                "3" => { body_en: "" }
               }
             end
 

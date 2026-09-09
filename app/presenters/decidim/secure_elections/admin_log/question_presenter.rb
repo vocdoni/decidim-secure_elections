@@ -18,7 +18,7 @@ module Decidim
 
         def diff_fields_mapping
           {
-            title: :i18n,
+            body: :i18n,
             description: :i18n,
             question_type: :string,
             max_choices: :integer,

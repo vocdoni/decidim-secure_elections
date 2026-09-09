@@ -30,11 +30,11 @@ module Decidim
               id: question.id,
               uid: "q0",
               question_type: "singlechoice",
-              title_en: "Do you agree?",
+              body_en: "Do you agree?",
               description_en: "",
               answers: {
-                "0" => { id: options.first.id, uid: "q0-a0", title_en: "Yes" },
-                "1" => { id: options.second.id, uid: "q0-a1", title_en: "No" }
+                "0" => { id: options.first.id, uid: "q0-a0", body_en: "Yes" },
+                "1" => { id: options.second.id, uid: "q0-a1", body_en: "No" }
               }
             }
           }
@@ -59,7 +59,7 @@ module Decidim
           election.reload
 
           expect(election.questions.size).to eq(1)
-          expect(election.questions.first.answers.map { |answer| translated(answer.title) }).to eq(%w(Yes No))
+          expect(election.questions.first.answers.map { |answer| translated(answer.body) }).to eq(%w(Yes No))
         end
 
         it "keeps the identity of the records that were already there" do
@@ -80,11 +80,11 @@ module Decidim
             question_attributes["1"] = {
               uid: "q1",
               question_type: "singlechoice",
-              title_en: "And this one?",
+              body_en: "And this one?",
               description_en: "",
               answers: {
-                "0" => { uid: "q1-a0", title_en: "Sure" },
-                "1" => { uid: "q1-a1", title_en: "Never" }
+                "0" => { uid: "q1-a0", body_en: "Sure" },
+                "1" => { uid: "q1-a1", body_en: "Never" }
               }
             }
           end
@@ -113,7 +113,7 @@ module Decidim
 
         context "when an option is added" do
           before do
-            question_attributes["0"][:answers]["2"] = { uid: "q0-a2", title_en: "Abstain" }
+            question_attributes["0"][:answers]["2"] = { uid: "q0-a2", body_en: "Abstain" }
           end
 
           it "gives it the next contiguous on-chain value" do
@@ -126,8 +126,8 @@ module Decidim
         context "when an option is removed" do
           before do
             question_attributes["0"][:answers] = {
-              "0" => { id: options.second.id, uid: "q0-a1", title_en: "No" },
-              "1" => { uid: "q0-a2", title_en: "Abstain" }
+              "0" => { id: options.second.id, uid: "q0-a1", body_en: "No" },
+              "1" => { uid: "q0-a2", body_en: "Abstain" }
             }
           end
 
@@ -136,15 +136,15 @@ module Decidim
             values = question.answers.reload
 
             expect(values.map(&:value)).to eq([0, 1])
-            expect(values.map { |answer| translated(answer.title) }).to eq(%w(No Abstain))
+            expect(values.map { |answer| translated(answer.body) }).to eq(%w(No Abstain))
           end
         end
 
         context "when the options are reordered" do
           before do
             question_attributes["0"][:answers] = {
-              "0" => { id: options.second.id, uid: "q0-a1", title_en: "No" },
-              "1" => { id: options.first.id, uid: "q0-a0", title_en: "Yes" }
+              "0" => { id: options.second.id, uid: "q0-a1", body_en: "No" },
+              "1" => { id: options.first.id, uid: "q0-a0", body_en: "Yes" }
             }
           end
 
@@ -207,7 +207,7 @@ module Decidim
 
         context "when a question has only one option" do
           before do
-            question_attributes["0"][:answers] = { "0" => { id: options.first.id, uid: "q0-a0", title_en: "Yes" } }
+            question_attributes["0"][:answers] = { "0" => { id: options.first.id, uid: "q0-a0", body_en: "Yes" } }
           end
 
           it "refuses: one option is not a choice" do

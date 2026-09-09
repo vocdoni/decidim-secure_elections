@@ -623,11 +623,14 @@ module Decidim
 
       def question_payload(question)
         payload = {
-          "title" => localize(question.title),
+          # The "title" key here is what Vocdoni's process API expects at
+          # the JSON level; our own model attribute is called `body`, mirroring
+          # upstream decidim-elections.
+          "title" => localize(question.body),
           # Lowercase: camelCase is rejected with code 40037.
           "type" => question.question_type,
           "choices" => question.answers.map do |answer|
-            { "title" => localize(answer.title), "value" => answer.value }
+            { "title" => localize(answer.body), "value" => answer.value }
           end
         }
 

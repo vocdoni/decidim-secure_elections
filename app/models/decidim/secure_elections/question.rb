@@ -33,9 +33,9 @@ module Decidim
                inverse_of: :question,
                dependent: :destroy
 
-      translatable_fields :title, :description
+      translatable_fields :body, :description
 
-      validates :title, presence: true
+      validates :body, presence: true
       validates :question_type, inclusion: { in: QUESTION_TYPES }
       validates :max_choices, :min_choices,
                 numericality: { only_integer: true, greater_than: 0 },

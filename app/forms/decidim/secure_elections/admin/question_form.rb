@@ -24,7 +24,7 @@ module Decidim
         # A ballot with a single option is not a choice.
         MINIMUM_OPTIONS = 2
 
-        translatable_attribute :title, String
+        translatable_attribute :body, String
         translatable_attribute :description, String
 
         # Client-side identity of the card, so that the autosave response can
@@ -38,7 +38,7 @@ module Decidim
         attribute :deleted, Boolean, default: false
 
         validates :question_type, inclusion: { in: Decidim::SecureElections::Question::QUESTION_TYPES }
-        validates :title, translatable_presence: true, unless: :unfilled?
+        validates :body, translatable_presence: true, unless: :unfilled?
         validates :min_choices,
                   numericality: { only_integer: true, greater_than: 0 },
                   allow_blank: true,
@@ -51,7 +51,7 @@ module Decidim
         validate :distinct_options, unless: :unfilled?
         validate :choice_bounds, unless: :unfilled?
 
-        # The question the editor starts with: a title, no description and the
+        # The question the editor starts with: a statement, no description and the
         # two empty options every ballot needs at a minimum.
         def self.blank_question
           new(answers: Array.new(MINIMUM_OPTIONS) { AnswerForm.new })
@@ -69,7 +69,7 @@ module Decidim
         # on save instead of being reported as invalid — clicking "Add
         # question" one time too many is not a mistake worth an error message.
         def unfilled?
-          title.values.all?(&:blank?) && description.values.all?(&:blank?) && options.empty?
+          body.values.all?(&:blank?) && description.values.all?(&:blank?) && options.empty?
         end
 
         # The options that will actually be persisted, in the order the admin
@@ -105,7 +105,7 @@ module Decidim
         # otherwise a page that is entirely empty answers an empty submit with
         # nothing but a flash.
         def flag_empty!
-          errors.add(:"title_#{title_locale_suffix}", :blank)
+          errors.add(:"body_#{body_locale_suffix}", :blank)
         end
 
         private
@@ -147,7 +147,7 @@ module Decidim
         # Only within one question: two questions may perfectly well both offer
         # "Yes".
         def distinct_options
-          grouped = options.group_by { |answer| comparable_title(answer) }
+          grouped = options.group_by { |answer| comparable_body(answer) }
           clashing = grouped.values.reject { |group| group.size < 2 }.flatten
 
           return if clashing.empty?
@@ -156,27 +156,27 @@ module Decidim
           clashing.each { |answer| flag_duplicate(answer) }
         end
 
-        # Blank titles are not compared: they are `enough_options`' business,
+        # Blank bodies are not compared: they are `enough_options`' business,
         # and reporting a pile of empty rows as duplicates of each other would
         # bury the message that actually helps.
-        def comparable_title(answer)
-          answer.title[default_locale_tag(answer)].to_s.strip.downcase.presence
+        def comparable_body(answer)
+          answer.body[default_locale_tag(answer)].to_s.strip.downcase.presence
         end
 
         # Reported against the translated attribute the field actually renders,
         # the same one `translatable_presence` writes to, so the error lands on
         # the input rather than in a summary nobody reads.
         def flag_blank(answer)
-          answer.errors.add(:"title_#{title_locale_suffix(answer)}", :blank)
+          answer.errors.add(:"body_#{body_locale_suffix(answer)}", :blank)
         end
 
         # The message is passed as a String rather than as an error type: the
-        # attribute carries the locale in its name (`title_en`, `title_ca`), so
+        # attribute carries the locale in its name (`body_en`, `body_ca`), so
         # a type would need one translation key per locale, and every locale but
         # English is Crowdin's. A String is the same message wherever it lands.
         def flag_duplicate(answer)
           answer.errors.add(
-            :"title_#{title_locale_suffix(answer)}",
+            :"body_#{body_locale_suffix(answer)}",
             I18n.t("decidim.secure_elections.admin.elections.editor.duplicate_option")
           )
         end
@@ -184,7 +184,7 @@ module Decidim
         # `TranslatablePresenceValidator`'s own rule, verbatim, including the
         # doubled underscore it uses for a hyphenated locale — the attribute
         # name has to be the one the field renders or the error is invisible.
-        def title_locale_suffix(form = self)
+        def body_locale_suffix(form = self)
           default_locale_tag(form).gsub("-", "__")
         end
 
