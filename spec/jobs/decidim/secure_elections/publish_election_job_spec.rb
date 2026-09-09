@@ -386,10 +386,14 @@ module Decidim
         it "refuses to go on when the memberbase rejected a voter" do
           stub_add_members(body: { "added" => 1, "errors" => ["line 2: duplicated memberNumber"] })
 
-          expect { job.perform(election.id) }.to raise_error(Decidim::SecureElections::ApiError, /rejected 1 of 2 voters/)
+          # Does not re-raise: the API answered `errors` in a 2xx, so retrying
+          # would push the same payloads and create fresh orphaned members
+          # upstream on every attempt.
+          expect { job.perform(election.id) }.not_to raise_error
 
           expect(create_group_request).not_to have_been_requested
           expect(election.reload.status).to eq("draft")
+          expect(election.last_error_message).to match(/rejected 1 of 2 voters/)
         end
       end
 

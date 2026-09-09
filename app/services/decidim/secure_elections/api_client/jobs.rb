@@ -63,7 +63,10 @@ module Decidim
             status = job["status"].to_s.downcase
 
             return job if status == COMPLETED_STATUS
-            raise Decidim::SecureElections::JobError.new(failure_message(job_id, job), body: job) if FAILED_STATUSES.include?(status)
+            # A job that reports a terminal failure status is an *answer*, not a
+            # network flap: retrying it would poll the same failed record and
+            # fail identically.
+            raise Decidim::SecureElections::JobError.new(failure_message(job_id, job), body: job, transient: false) if FAILED_STATUSES.include?(status)
 
             if monotonic_time >= deadline
               raise Decidim::SecureElections::JobError.new(

@@ -30,6 +30,16 @@ module Decidim
     class PublishElectionJob < ApplicationJob
       queue_as :vocdoni
 
+      # Transient failures only (network flap, 5xx, 429). A permanent rejection
+      # — a 4xx or a 2xx that reports `errors` in the body — is guaranteed to
+      # fail identically on retry and, when the failing call is `POST /members`
+      # (which is not idempotent on our side), every attempt creates fresh
+      # orphaned members upstream: production hit exactly this with a voter
+      # who had no identity fields, and each retry left two more zombie member
+      # ids in the memberbase before the third attempt gave up.
+      #
+      # {#perform}'s rescue swallows permanent errors after recording them, so
+      # only transient ones ever reach this retry.
       retry_on Decidim::SecureElections::ApiError, wait: :polynomially_longer, attempts: 3
 
       # Member fields of the Vocdoni memberbase, mapped onto the attributes of
@@ -40,7 +50,10 @@ module Decidim
 
       # Fields that can identify one member unambiguously, most specific first.
       # Used to map a local record onto the id the memberbase assigned to it.
-      MEMBER_IDENTITY_FIELDS = %w(memberNumber nationalId email phone).freeze
+      # Same list the model enforces on save (see
+      # {Decidim::SecureElections::CensusMember::IDENTITY_FIELDS}) so a member
+      # that reaches this job is one this job can push.
+      MEMBER_IDENTITY_FIELDS = Decidim::SecureElections::CensusMember::IDENTITY_FIELDS
 
       # `POST /organizations/{addr}/groups/{gid}/validate` reports which members
       # are unusable under `data`; every one of these lists holds member ids.
@@ -65,7 +78,10 @@ module Decidim
       rescue StandardError => e
         record_failure!(election, e, step: @step, details: api_error_details(e))
         reset_status_after_failure!
-        raise
+        # Permanent failures are recorded and dropped: raising would retry an
+        # error the API has already answered, which for `POST /members` means
+        # duplicating members upstream on every attempt.
+        raise if retryable?(e)
       end
 
       private
@@ -74,6 +90,16 @@ module Decidim
         return false if election.questions.exists?(vocdoni_upstream_id: nil)
 
         election.on_chain? && Decidim::SecureElections::Election::LIVE_STATUSES.include?(election.status)
+      end
+
+      # A non-{Decidim::SecureElections::ApiError} is treated as retryable so a
+      # transient bug (a NoMethodError from a race, an ActiveRecord deadlock)
+      # is still caught by the outer Sidekiq retry — it just does not get the
+      # narrow 3-attempt policy the API's transient failures get.
+      def retryable?(error)
+        return true unless error.is_a?(Decidim::SecureElections::ApiError)
+
+        error.transient?
       end
 
       # Where the election lands when something goes wrong.
@@ -161,9 +187,13 @@ module Decidim
         errors = Array(response["errors"]).map(&:to_s).compact_blank
         return if errors.empty?
 
+        # Marked non-transient: retrying would push the same payloads again and
+        # (on our production incident) create fresh duplicated members upstream
+        # rather than surface the same rejection.
         raise Decidim::SecureElections::ApiError.new(
           "The Vocdoni memberbase rejected #{errors.size} of #{pending.size} voters: #{errors.join("; ")}",
-          body: response
+          body: response,
+          transient: false
         )
       end
 
@@ -195,7 +225,9 @@ module Decidim
         ).to_h
 
         group_id = response["id"].presence
-        raise Decidim::SecureElections::ApiError.new("POST /organizations/{address}/groups returned no id", body: response) if group_id.blank?
+        # Non-transient: a 2xx with no id means the API's contract is broken;
+        # retrying create_group would build a second group upstream.
+        raise Decidim::SecureElections::ApiError.new("POST /organizations/{address}/groups returned no id", body: response, transient: false) if group_id.blank?
 
         election.update!(census_group_id: group_id)
       end
@@ -236,7 +268,7 @@ module Decidim
         @step = "create_census"
         created = client.census.create(org_address).to_h
         @census_id = created["id"].presence
-        raise Decidim::SecureElections::ApiError.new("POST /census returned no id", body: created) if @census_id.blank?
+        raise Decidim::SecureElections::ApiError.new("POST /census returned no id", body: created, transient: false) if @census_id.blank?
 
         @step = "publish_census"
         published = client.census.publish_group(
@@ -287,7 +319,10 @@ module Decidim
           id = upstream_member_id(record).presence || lookup_member_id(index, record)
 
           if id.blank?
-            raise Decidim::SecureElections::ApiError, "A voter of this census carries no member number, national id, email or phone, so the Vocdoni memberbase cannot identify them"
+            raise Decidim::SecureElections::ApiError.new(
+              "A voter of this census carries no member number, national id, email or phone, so the Vocdoni memberbase cannot identify them",
+              transient: false
+            )
           end
 
           remember_member_id!(record, id)
@@ -425,7 +460,11 @@ module Decidim
         response = client.elections.create(process_payload).to_h
         process_id = response["processId"].presence
 
-        raise Decidim::SecureElections::ApiError.new("POST /processes returned no processId", body: response) if process_id.blank?
+        # Non-transient: retrying would create a second process for the same
+        # election. If the first one *did* land on chain, we would have two
+        # process ids for the same Decidim election and no reliable way to
+        # tell which one the voters are supposed to sign against.
+        raise Decidim::SecureElections::ApiError.new("POST /processes returned no processId", body: response, transient: false) if process_id.blank?
 
         # Persisted immediately: from this instant the election is on chain and
         # must never be edited or recreated.
