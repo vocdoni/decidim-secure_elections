@@ -35,6 +35,18 @@ module Decidim
       # these; see {Decidim::SecureElections::Election::TWO_FA_METHODS}.
       TWO_FA_FIELDS = %w(email phone).freeze
 
+      # Fields the Vocdoni memberbase treats as unique identifiers, in the
+      # order it prefers for matching. A member without at least one of these
+      # cannot be authenticated at vote time and, worse, is treated by
+      # `POST /members` as a fresh record on every push: production hit exactly
+      # this with a voter carrying only name+surname, and each retry of the
+      # publish job left more zombie member ids in the memberbase before the
+      # dupe error surfaced.
+      #
+      # Kept in sync with `PublishElectionJob::MEMBER_IDENTITY_FIELDS` (that
+      # constant reads this one).
+      IDENTITY_FIELDS = %w(memberNumber nationalId email phone).freeze
+
       # Fields an election may authenticate on. Neither the 2FA-capable fields
       # nor `weight` belong here: the first two are a second factor rather than
       # a credential, and voting power identifies nobody.
@@ -185,10 +197,13 @@ module Decidim
         self.weight = 1 if weight.blank?
       end
 
-      # A row with nothing in it is not a person. It would also be silently
-      # dropped upstream, so it is refused here where the admin can see why.
+      # A row with no identifier is not a person the memberbase can match: it
+      # would be pushed as a fresh record on every retry (see
+      # {IDENTITY_FIELDS}) and rejected at auth time as `census participant not
+      # found`. Caught here so the admin sees "add an email or a member number"
+      # instead of a duplicate cascade after publish.
       def identifiable
-        return if EDITABLE_FIELDS.any? { |field| value_for(field).present? }
+        return if IDENTITY_FIELDS.any? { |field| value_for(field).present? }
 
         errors.add(:base, :blank_member)
       end

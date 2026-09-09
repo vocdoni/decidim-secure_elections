@@ -28,6 +28,13 @@ namespace :decidim_secure_elections do
     puts "explorer_url: #{Decidim::SecureElections.explorer_url}"
     puts "configured?:  #{Decidim::SecureElections.configured?}"
 
+    # A worker that is not listening on `:vocdoni` silently drops publish and
+    # sync jobs — the failure mode is invisible in the UI and looks like a
+    # hung publish. Reported before connectivity because it produces the same
+    # symptom and is cheaper to check.
+    queue_status = check_vocdoni_queue
+    puts "vocdoni queue: #{queue_status}"
+
     unless Decidim::SecureElections.configured?
       puts "\nNot fully configured — see .env.example."
       next
@@ -52,5 +59,28 @@ namespace :decidim_secure_elections do
     rescue StandardError => e
       puts "Credentials rejected: #{e.class}: #{e.message}"
     end
+  end
+
+  # Reports whether a Sidekiq worker is running that listens on the `vocdoni`
+  # queue. Sidekiq is queried through its own API rather than by parsing
+  # sidekiq.yml, because the answer that matters is what is *running*, not
+  # what is written on disk.
+  #
+  # Falls back to a soft note when Sidekiq is not the adapter: other adapters
+  # do not have the "queue must be listed to be consumed" pitfall this check
+  # exists for, so silence beats a false positive.
+  def check_vocdoni_queue
+    return "(skipped — ActiveJob adapter is #{ActiveJob::Base.queue_adapter_name})" unless ActiveJob::Base.queue_adapter_name == "sidekiq"
+
+    require "sidekiq/api"
+    queues = Sidekiq::ProcessSet.new.flat_map { |process| process["queues"] }.uniq
+    return "no Sidekiq processes are running — start the worker" if queues.empty?
+    return "OK (running on #{queues.count { |q| q == "vocdoni" }} process(es))" if queues.include?("vocdoni")
+
+    "MISSING — Sidekiq is running but no process listens on `vocdoni`. " \
+      "Add `- [vocdoni, 3]` to config/sidekiq.yml and restart the worker, " \
+      "or publish/sync jobs will queue forever."
+  rescue StandardError => e
+    "(check failed: #{e.class}: #{e.message})"
   end
 end

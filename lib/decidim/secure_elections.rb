@@ -91,10 +91,11 @@ module Decidim
 
       # The Vocdoni SaaS bases this module knows, and the explorer that goes
       # with each. `VotingPageUrl::API_HOSTS` and the voting page's own
-      # `API_HOSTS` carry the same two bases; this table adds the explorer.
+      # `API_HOSTS` carry the same three bases; this table adds the explorer.
       NETWORKS = {
         "https://saas-api.vocdoni.net" => "https://explorer.vote",
-        "https://saas-api-stg.vocdoni.net" => "https://stg.explorer.vote"
+        "https://saas-api-stg.vocdoni.net" => "https://stg.explorer.vote",
+        "https://saas-api-dev.vocdoni.net" => "https://dev.explorer.vote"
       }.freeze
 
       # Public explorer a voter is sent to in order to check their receipt.
@@ -166,13 +167,34 @@ module Decidim
 
     # Raised for any non-success response from the Vocdoni SaaS API.
     class ApiError < StandardError
+      # HTTP status codes worth another attempt on their own: a rate limit or a
+      # server-side hiccup that may clear up in a few seconds. Everything else
+      # (400, 401, 403, 404, 409, …) is an *answer* — retrying it is guaranteed
+      # to fail identically and, when the failing call is `POST /members`, will
+      # create fresh orphaned members upstream on every attempt.
+      TRANSIENT_STATUSES = [429, 500, 502, 503, 504].freeze
+
       attr_reader :status, :code, :body
 
-      def initialize(message, status: nil, code: nil, body: nil)
+      # @param transient [Boolean, nil] override the inferred verdict. Pass
+      #   `false` when the call succeeded at the HTTP level but the *body* is
+      #   a permanent rejection (a 2xx that reports `errors` in the payload).
+      def initialize(message, status: nil, code: nil, body: nil, transient: nil)
         @status = status
         @code = code
         @body = body
+        @transient = transient
         super(message)
+      end
+
+      # Whether the caller should try again. A missing status means the request
+      # never reached the server (timeout, connection failure) and is worth a
+      # retry; a 4xx is a rejection and is not; `transient:` on construction
+      # wins over both.
+      def transient?
+        return @transient unless @transient.nil?
+
+        status.nil? || TRANSIENT_STATUSES.include?(status)
       end
     end
 

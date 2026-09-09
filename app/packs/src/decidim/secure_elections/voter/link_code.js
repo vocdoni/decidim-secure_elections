@@ -60,7 +60,8 @@ const KNOWN_FLAGS = FLAG_INLINE_API | FLAG_LOCALE | FLAG_EXIT;
  */
 export const API_HOSTS = {
   1: "https://saas-api.vocdoni.net",
-  2: "https://saas-api-stg.vocdoni.net"
+  2: "https://saas-api-stg.vocdoni.net",
+  3: "https://saas-api-dev.vocdoni.net"
 };
 
 /** A Vocdoni process id is a Mongo ObjectID — 24 hex characters, 12 bytes. */
