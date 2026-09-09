@@ -330,6 +330,41 @@ module Decidim
         end
       end
 
+      # Regression: the SaaS doesn't populate `status` at the process root on a
+      # multi-question process — it lives per-question. Reading `process["status"]`
+      # alone made a manual-start election that landed PAUSED on chain report as
+      # "ready" locally, so the Dashboard said "Voting open" the moment it
+      # published. The rollup has to look at the questions.
+      describe "when the API omits status at the process root" do
+        let(:election) do
+          create(:vocdoni_election, :ready_to_publish,
+                 census_members_count: 0, census_group_id: group_id,
+                 manual_start: true, start_at: nil)
+        end
+
+        let(:paused_process) do
+          remote_process.merge(
+            "status" => nil,
+            "questions" => remote_process["questions"].map { |q| q.merge("status" => "PAUSED") }
+          )
+        end
+
+        before do
+          stub_census_sequence
+          stub_create_process
+          stub_read_process(draft_process, paused_process)
+          stub_publish_process
+          stub_job
+
+          job.perform(election.id)
+        end
+
+        it "reads the election status off the questions when they agree" do
+          expect(election.reload.status).to eq("paused")
+          expect(election.questions.pluck(:vocdoni_status).uniq).to eq(["paused"])
+        end
+      end
+
       describe "a two-factor census" do
         let(:election) { create(:vocdoni_election, :ready_to_publish, :two_factor, census_members_count: 0, census_group_id: group_id) }
 

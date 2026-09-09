@@ -502,11 +502,29 @@ module Decidim
         election.update!(
           vocdoni_chain_id: process["chainId"].presence,
           census_size: remote_census_size(process) || election.census_size,
-          status: Decidim::SecureElections::Election.normalize_status(process["status"]) || "ready",
+          status: election_status_from(process),
           results_cache: election.results_cache.to_h.except("error")
         )
 
         Decidim::SecureElections::SyncResultsJob.perform_later(election.id)
+      end
+
+      # Decides the election-level status column from the API's response. The
+      # process root only carries `status` on the legacy single-election shape;
+      # a multi-question process leaves it null and the truth lives on each
+      # question. Roll them up when they agree so a manual-start publish reads
+      # as "paused" instead of the "ready" fallback that used to bleed through.
+      def election_status_from(process)
+        Decidim::SecureElections::Election.normalize_status(process["status"]) ||
+          election_status_from_questions ||
+          "ready"
+      end
+
+      def election_status_from_questions
+        statuses = election.questions.reload.pluck(:vocdoni_status).compact_blank.uniq
+        return nil unless statuses.one?
+
+        Decidim::SecureElections::Election.normalize_status(statuses.first)
       end
 
       # ---------------------------------------------------------------------
