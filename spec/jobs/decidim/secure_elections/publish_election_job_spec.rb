@@ -276,6 +276,60 @@ module Decidim
         end
       end
 
+      # Regression: we used to send `paused: true` and `interruptible: true` for
+      # a manual-start election, but the SaaS accepts a string `initialStatus`
+      # instead (READY / PAUSED). The old boolean was silently ignored and the
+      # election went out READY, opening for voting the moment it landed.
+      describe "a manual-start process payload" do
+        let(:election) do
+          create(:vocdoni_election, :ready_to_publish,
+                 census_members_count: 0, census_group_id: group_id,
+                 manual_start: true, start_at: nil)
+        end
+
+        before do
+          stub_census_sequence
+          stub_process_sequence
+
+          job.perform(election.id)
+        end
+
+        it "publishes the election in the PAUSED initial status" do
+          expect(payload["initialStatus"]).to eq("PAUSED")
+        end
+
+        it "requests an interruptible process so the admin can pause it again" do
+          # The SaaS no longer forces `interruptible` on a paused publish
+          # (vocdoni/saas-backend#668), so this has to be sent explicitly.
+          expect(payload["interruptible"]).to eq(true)
+        end
+
+        it "omits startDate: a manual-start election opens on the admin's action" do
+          expect(payload).not_to have_key("startDate")
+        end
+      end
+
+      describe "an auto-start process payload" do
+        let(:election) do
+          create(:vocdoni_election, :ready_to_publish,
+                 census_members_count: 0, census_group_id: group_id,
+                 manual_start: false, start_at: Time.zone.parse("2100-01-01 10:00"))
+        end
+
+        before do
+          stub_census_sequence
+          stub_process_sequence
+
+          job.perform(election.id)
+        end
+
+        it "sends startDate and no initialStatus so the SaaS defaults to READY" do
+          expect(payload["startDate"]).to be_present
+          expect(payload).not_to have_key("initialStatus")
+          expect(payload).not_to have_key("interruptible")
+        end
+      end
+
       describe "a two-factor census" do
         let(:election) { create(:vocdoni_election, :ready_to_publish, :two_factor, census_members_count: 0, census_group_id: group_id) }
 

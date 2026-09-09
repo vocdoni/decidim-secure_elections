@@ -573,9 +573,15 @@ module Decidim
 
         # A manual-start election is created paused so that it only becomes
         # active when the admin presses "Start election" on the Dashboard.
-        # `interruptible` lets the process be paused again after it starts.
+        # The API accepts `""`, `"READY"` or `"PAUSED"` for `initialStatus`
+        # (vocdoni/saas-backend#668); a boolean `paused` we used to send is
+        # silently ignored, which is what let this bug slip through — the
+        # election was published `READY` and looked "Voting open" as soon as
+        # it landed on chain. `interruptible` still has to be requested
+        # explicitly: the SaaS no longer forces it on paused publishes, and
+        # without it the admin cannot pause the election again once started.
         if election.manual_start?
-          payload["paused"] = true
+          payload["initialStatus"] = "PAUSED"
           payload["interruptible"] = true
         end
 
