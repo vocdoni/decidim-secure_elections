@@ -37,6 +37,25 @@ module Decidim
           expect(empty).not_to be_valid
         end
 
+        # Regression: production had two voters carrying only name+surname; each
+        # retry of the publish job pushed them as fresh records upstream and left
+        # zombie member ids behind. The memberbase can only match on
+        # `IDENTITY_FIELDS`, so a name-only row must not be saved.
+        it "refuses a row with only a name and surname" do
+          named = build(:vocdoni_census_member, election:, name: "Ada", surname: "Lovelace",
+                                                email: nil, phone: nil, member_number: nil, national_id: nil)
+
+          expect(named).not_to be_valid
+          expect(named.errors[:base]).to include(a_string_matching(/member number|national id|email|phone/i))
+        end
+
+        it "accepts a row with just an email" do
+          email_only = build(:vocdoni_census_member, election:, name: nil, surname: nil,
+                                                     email: "ada@example.org", member_number: nil)
+
+          expect(email_only).to be_valid
+        end
+
         it "refuses an unusable email" do
           member.email = "not-an-email"
 

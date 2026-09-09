@@ -56,7 +56,7 @@ en:
           # per attribute, so one line covers every column.
           attributes:
             base:
-              blank_member: This row is empty. Fill it in or remove it.
+              blank_member: needs at least one of member number, national id, email or phone — a name alone cannot be used to identify a voter.
             email:
               invalid: does not look like an email address
           blank: is needed, because this election identifies voters by it
@@ -68,7 +68,7 @@ en:
         decidim/secure_elections/census_member:
           attributes:
             base:
-              blank_member: A census entry needs at least one value.
+              blank_member: needs at least one identifier — member number, national id, email or phone. A name alone cannot be authenticated.
   decidim:
     secure_elections:
       admin:
