@@ -90,7 +90,7 @@ describe "Admin Dashboard tab" do
           item = find("li", text: questions_label)
           expect(item).to have_link(
             I18n.t("decidim.secure_elections.admin.setup.show.fix_it"),
-            href: election_path.edit_election_questions_path(election)
+            href: election_path.edit_questions_election_path(election)
           )
         end
       end

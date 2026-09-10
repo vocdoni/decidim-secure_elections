@@ -117,7 +117,7 @@ module Decidim
         # @return [String]
         def secure_elections_step_path(election, step)
           case step.to_sym
-          when :questions then edit_election_questions_path(election)
+          when :questions then edit_questions_election_path(election)
           when :census then election_census_path(election)
           # `:publish` and `:monitor` both fold into the Dashboard tab now,
           # so any step key that used to point at either lands there.

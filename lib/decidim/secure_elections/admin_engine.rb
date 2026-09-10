@@ -32,14 +32,18 @@ module Decidim
             put :unpublish
             patch :soft_delete
             patch :restore
+
+            # Questions tab. Questions and their options edited together on
+            # one screen — adding an option costs no page load. URL shape
+            # (edit_questions / update_questions on the elections member)
+            # mirrors upstream decidim-elections so the same paths point at
+            # the same admin screens; autosave is fork-specific but follows
+            # the same naming convention so it reads as one family.
+            get   "edit_questions",     to: "questions#edit"
+            patch "update_questions",   to: "questions#update"
+            patch "autosave_questions", to: "questions#autosave"
           end
           get :manage_trash, on: :collection
-
-          # Questions tab. Questions and their options edited together on
-          # one screen — adding an option costs no page load.
-          resource :questions, only: [:edit, :update], controller: "questions" do
-            patch :autosave
-          end
 
           # Census tab. `show` is the hub, `edit`/`update` is voter
           # authentication, the rest is the list of people. No route here
@@ -87,8 +91,8 @@ module Decidim
 
           menu.add_item :secure_elections_questions,
                         I18n.t("questions", scope: "decidim.secure_elections.admin.menu"),
-                        @election&.step_reachable?(:questions) ? proxy&.edit_election_questions_path(@election) : "#",
-                        active: @election.present? && is_active_link?(proxy&.edit_election_questions_path(@election)),
+                        @election&.step_reachable?(:questions) ? proxy&.edit_questions_election_path(@election) : "#",
+                        active: @election.present? && is_active_link?(proxy&.edit_questions_election_path(@election)),
                         icon_name: "question-answer-line"
 
           menu.add_item :secure_elections_census,

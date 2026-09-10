@@ -52,7 +52,7 @@ module Decidim
               flash[:notice] = I18n.t("elections.create.success", scope: "decidim.secure_elections.admin")
               # Straight on to the ballot editor, where the admin adds
               # questions before publishing the election.
-              redirect_to edit_election_questions_path(election)
+              redirect_to edit_questions_election_path(election)
             end
 
             on(:invalid) do
