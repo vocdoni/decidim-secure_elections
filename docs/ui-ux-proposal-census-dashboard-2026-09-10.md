@@ -3,6 +3,16 @@
 _Author: senior UI/UX pass, 2026-09-10._
 _North star: `decidim.vocdoni.io` should be visually and interactionally indistinguishable from `try.decidim.org` (upstream `decidim-elections`), so that a future merge of `secure_elections` back into upstream is a code cleanup rather than a re-design._
 
+> **Status (2026-09-10):** Phases 1, 2 and 3 have shipped on branch
+> `refactor/dashboard-census-alignment` (commits `8398a5f`, `2cee87c`,
+> `52ff321`, `a249605`, `f4a7416`, `eb3fe01`, `81c1fa4`, `1ce20ea`). Also
+> shipped as follow-ups: URL alignment for the Questions tab (Quick win #6),
+> orphan-template + i18n cleanup after the Census/Dashboard splits, and the
+> raw-error banner tucked behind a disclosure. Phase 4 (folding
+> `secure_elections` back into upstream `decidim-elections`) is out of
+> scope for this branch — the diffs it needs are much smaller now, but the
+> code-alignment work itself is another undertaking.
+
 ---
 
 ## 1. What I compared and how
