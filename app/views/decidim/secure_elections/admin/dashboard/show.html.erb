@@ -2,11 +2,12 @@
   The Dashboard tab — single page that branches on the election's on-chain
   state.
 
-  Pre-publish: completeness checklist, read-only summary cards and the sticky
-  confirm_irreversible + "Publish on the blockchain" form.
+  Pre-publish: completeness checklist + the confirm_irreversible + "Publish on
+  the blockchain" form. The other three tabs (Main / Questions / Census) already
+  show the underlying content, so we do not repeat it as summary cards here.
 
-  On-chain (or publishing): status card, calendar (with optional "Start
-  election"), results and the live-refresh monitor markup.
+  On-chain (or publishing): status + calendar side-by-side, results and the
+  live-refresh monitor markup.
 
   The on-chain half is the monitor.show.html.erb view, moved here and given
   the same tab frame. The packs and JS data attributes that drive the live
@@ -19,21 +20,15 @@
 
 <% if election.editable? %>
   <%# ------------------------------------------------------------------
-      Unpublished: checklist + summary cards + publish action card at
-      the bottom. The publish card used to be pinned in a sticky sidebar,
-      but the sidebar's dark background clashed with the checkbox label
-      and disabled-button styling; a normal in-body card reads better
-      and does not need the extra styling shims.
+      Unpublished: checklist + publish action card. We used to also render
+      About / Questions / Census summary cards here, but they duplicated
+      what the sibling tabs already show and pushed the primary action —
+      Publish — below the fold; dropping them keeps the readiness question
+      ("what's missing?") next to its answer ("Publish").
   -------------------------------------------------------------------- %>
   <div class="item__edit item__edit-1col">
     <div class="item__edit-form">
       <%= render partial: "decidim/secure_elections/admin/dashboard/checklist",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/main",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/questions",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/census",
                  locals: { election: } %>
       <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
                  locals: { election:, form: @form } %>
@@ -60,14 +55,38 @@
 
   <div class="item__edit item__edit-1col">
     <div class="item__edit-form 2xl:mr-80">
-      <%= render partial: "decidim/secure_elections/admin/dashboard/status",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/calendar",
-                 locals: { election: } %>
+      <%# Upstream renders "Election status" + "Calendar" as two side-by-side
+          cards at the top of the live Dashboard. We match that shape here;
+          each partial owns exactly one card, and this flex row composes them. %>
+      <div class="flex flex-col md:flex-row gap-4 w-full mb-6">
+        <div class="flex-1">
+          <%= render partial: "decidim/secure_elections/admin/dashboard/status",
+                     locals: { election: } %>
+        </div>
+        <div class="flex-1">
+          <%= render partial: "decidim/secure_elections/admin/dashboard/calendar",
+                     locals: { election: } %>
+        </div>
+      </div>
+
       <%= render partial: "decidim/secure_elections/admin/dashboard/results",
                  locals: { election:, questions: } %>
 
       <% if allowed_to? :update_status, :monitor, election: election %>
+        <%#
+          Upstream's live Dashboard has a single primary "End election" in the
+          sticky footer. We follow that hierarchy inline: "End election" as the
+          only headline action, everything else (Pause / Resume / Cancel) as a
+          smaller row of secondary buttons underneath, so the primary reads at
+          a glance and the destructive Cancel stays reachable but demoted.
+        %>
+        <%
+          allowed = Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES
+          # The button that matches the current state would be a no-op — hide
+          # it entirely instead of rendering it disabled, matching upstream's
+          # "only actions you can actually take" approach.
+          secondary_actions = allowed - ["ended", election.status]
+        %>
         <div class="card mb-6">
           <div class="card-divider">
             <h2 class="card-title"><%= t("decidim.secure_elections.admin.monitor.show.controls_title") %></h2>
@@ -76,18 +95,29 @@
             <div class="row column">
               <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
 
-              <div class="flex flex-wrap gap-2">
-                <% Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES.each do |s| %>
-                  <%= button_to status_election_dashboard_path(election),
-                                method: :put,
-                                params: { question_status: { status: s } },
-                                data: vocdoni_status_confirm_data(s),
-                                class: "button button__xs #{s == "canceled" ? "alert" : "button__secondary"}",
-                                disabled: election.status == s do %>
-                    <%= t(s, scope: "decidim.secure_elections.status_actions") %>
+              <%= button_to status_election_dashboard_path(election),
+                            method: :put,
+                            params: { question_status: { status: "ended" } },
+                            data: vocdoni_status_confirm_data("ended"),
+                            class: "button button__sm button__secondary",
+                            disabled: election.status == "ended" do %>
+                <%= t("ended", scope: "decidim.secure_elections.status_actions") %>
+              <% end %>
+
+              <% if secondary_actions.any? %>
+                <div class="flex flex-wrap items-center gap-2 mt-4">
+                  <span class="text-sm text-gray-2"><%= t("decidim.secure_elections.admin.monitor.show.more_actions") %></span>
+                  <% secondary_actions.each do |s| %>
+                    <%= button_to status_election_dashboard_path(election),
+                                  method: :put,
+                                  params: { question_status: { status: s } },
+                                  data: vocdoni_status_confirm_data(s),
+                                  class: "button button__xs #{s == "canceled" ? "alert" : "button__transparent-secondary"}" do %>
+                      <%= t(s, scope: "decidim.secure_elections.status_actions") %>
+                    <% end %>
                   <% end %>
-                <% end %>
-              </div>
+                </div>
+              <% end %>
             </div>
           </div>
         </div>

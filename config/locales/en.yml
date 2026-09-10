@@ -330,6 +330,7 @@ en:
             incomplete_body: The publication job stopped before it could finish, so voting cannot start yet. No votes have been recorded. Click Resume publication to continue where it stopped.
             incomplete_title: Publication was interrupted
             last_synced: Last refreshed %{time}.
+            more_actions: 'More actions:'
             never_synced: Results have never been refreshed.
             no_results_yet: No results have been read from the blockchain yet.
             refresh: Refresh
