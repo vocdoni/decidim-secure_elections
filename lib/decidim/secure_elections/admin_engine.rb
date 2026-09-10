@@ -45,11 +45,11 @@ module Decidim
           end
           get :manage_trash, on: :collection
 
-          # Census tab. `show` is the hub, `edit`/`update` is voter
-          # authentication, the rest is the list of people. No route here
-          # takes, or could take, a Vocdoni identifier: Decidim owns the
-          # census and an administrator never sees an upstream id.
-          resource :census, only: [:show, :edit, :update], controller: "census"
+          # Census tab. `show` is the hub, `update` writes the voter
+          # authentication back, the rest is the list of people. No route
+          # here takes, or could take, a Vocdoni identifier: Decidim owns
+          # the census and an administrator never sees an upstream id.
+          resource :census, only: [:show, :update], controller: "census"
 
           get "census/members", to: "census#members", as: :census_members
           patch "census/members", to: "census#update_members", as: :census_update_members

@@ -18,8 +18,8 @@ module Decidim
       # * `show`     — voter-authentication configuration: manifest selector +
       #                inline auth-config form (credentials, 2FA, security).
       #                Roster management lives on `members` — see below.
-      # * `edit`/`update` — voter authentication (credentials, 2FA, summary).
-      #                Still reachable but no longer linked; `show` absorbs it.
+      # * `update`   — persists the voter-authentication form. "Save and
+      #                continue" lands on the Dashboard afterwards.
       # * `members`/`update_members` — the editable table, plus the import and
       #                verifications-import panels and the "empty the census"
       #                action. Reached from a "Manage people (N)" link on `show`.
@@ -39,19 +39,12 @@ module Decidim
         CENSUS_MANIFESTS = ["internal_users"].freeze
 
         helper_method :census_members, :incomplete_members, :reported_missing_members,
-                      :available_handlers, :verifications_form, :import_form, :template_fields,
-                      :preview_users
+                      :available_handlers, :verifications_form, :import_form, :template_fields
 
         def show
           enforce_permission_to(:read, :census, election:)
 
           @census_manifests = CENSUS_MANIFESTS
-          @form = census_form
-        end
-
-        def edit
-          enforce_permission_to(:read, :census, election:)
-
           @form = census_form
         end
 
@@ -214,13 +207,6 @@ module Decidim
         # the import actions fall back to when they have to re-render `show`.
         def census_form
           form(Decidim::SecureElections::Admin::CensusForm).from_model(election, election:)
-        end
-
-        # First five members for the preview partial. Memoised so the same
-        # query is not run twice when the page renders (once for `present?`,
-        # once for the rows).
-        def preview_users(current_election)
-          @preview_users ||= current_election.census_members.first(5)
         end
 
         def census_members

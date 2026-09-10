@@ -180,11 +180,6 @@ en:
         dashboard:
           calendar:
             title: Calendar
-          questions:
-            and_more:
-              one: and 1 more
-              other: "and %{count} more"
-            none: This election has no questions yet.
           show:
             title: Dashboard
           start:
