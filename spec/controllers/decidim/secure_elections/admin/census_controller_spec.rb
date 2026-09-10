@@ -147,20 +147,19 @@ module Decidim
               import
 
               expect(response).to have_http_status(:unprocessable_content)
-              expect(response).to render_template(:show)
+              expect(response).to render_template(:members)
               expect(flash.now[:alert]).to include("Row 2")
               expect(election.census_members.count).to eq(0)
             end
 
             # `Decidim::Command` runs the callbacks with `instance_eval`, so a
             # form built inside one would be set on the command and never reach
-            # the template. Building it up front is what makes `show`
+            # the template. Building it up front is what makes `members`
             # renderable at all.
-            it "still has the authentication form the template needs" do
+            it "still has the members form the template needs" do
               import
 
-              expect(assigns(:form)).to be_a(Decidim::SecureElections::Admin::CensusForm)
-              expect(assigns(:form).credentials).to eq(["memberNumber"])
+              expect(assigns(:form)).to be_a(Decidim::SecureElections::Admin::CensusMembersForm)
             end
           end
 
@@ -175,7 +174,7 @@ module Decidim
               import
 
               expect(response).to have_http_status(:unprocessable_content)
-              expect(response).to render_template(:show)
+              expect(response).to render_template(:members)
               expect(flash.now[:alert]).to include("The example row that comes with the template was not imported")
               expect(election.census_members.count).to eq(0)
             end
@@ -220,7 +219,7 @@ module Decidim
               import(file: "")
 
               expect(response).to have_http_status(:unprocessable_content)
-              expect(response).to render_template(:show)
+              expect(response).to render_template(:members)
               expect(flash.now[:alert]).to be_present
             end
           end
@@ -254,7 +253,7 @@ module Decidim
               expect { import }.not_to raise_error
 
               expect(response).to have_http_status(:unprocessable_content)
-              expect(response).to render_template(:show)
+              expect(response).to render_template(:members)
               expect(flash.now[:alert]).to match(/could not be read as text/i)
               expect(election.census_members.count).to eq(0)
             end
@@ -286,7 +285,7 @@ module Decidim
                  params: params.merge(census_verifications: { authorization_handler: "nonexistent", replace: "0" })
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(response).to render_template(:show)
+            expect(response).to render_template(:members)
             expect(flash.now[:alert]).to be_present
             expect(assigns(:form)).to be_a(Decidim::SecureElections::Admin::CensusForm)
           end

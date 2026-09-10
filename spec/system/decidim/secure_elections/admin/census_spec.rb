@@ -2,18 +2,20 @@
 
 require "spec_helper"
 
-# The Census tab: manifest selector + inline auth-config form + 5-row preview.
+# The Census tab: manifest selector + flat auth-config form + "Manage
+# people (N)" link out to the members editor. Matches upstream
+# decidim-elections' Census tab shape (one manifest, one form, one save).
 #
-# Adopts upstream decidim-elections' shape: a manifest <select> at the top
-# switches between per-manifest inline form partials; the current vd flow
-# ("internal users" — configure credentials and 2FA, manage members directly)
-# becomes the `internal_users` partial.
+# Roster management (People card, Add-people section, Empty census) lives
+# on `/census/members` — see census_members_spec.rb.
 #
-# DOM contract (per task brief §4):
+# DOM contract (per task brief §4 + QW5):
 #   #census-manifest-selector  — <select> with at least "internal_users" option
 #   #census-election-form      — the inline auth-config form
-#   .card-section.census-form  — wrapper around form + preview
-#   .item__edit-sticky         — sticky Save button linked to #census-election-form
+#   #js-census-authentication  — the flat wrapper (Credentials + Two-factor
+#                                fieldsets + weighted checkbox + security meter)
+#   .card-section.census-form  — wrapper around the form
+#   .item__edit-sticky         — sticky "Save and continue" button
 describe "Admin Census tab" do
   include_context "when managing a component as an admin"
 
@@ -49,88 +51,49 @@ describe "Admin Census tab" do
     expect(page).to have_css(".card-section.census-form #census-election-form")
   end
 
-  it "shows the credentials section inside the form" do
+  it "shows the flat authentication wrapper inside the form" do
     within "#census-election-form" do
       expect(page).to have_css("#js-census-authentication")
     end
   end
 
+  it "renders Credentials and Two-factor as fieldsets, not numbered cards" do
+    within "#js-census-authentication" do
+      expect(page).to have_css("fieldset legend", text: /credentials/i)
+      expect(page).to have_css("fieldset legend", text: /two-factor/i)
+      # No "1./2./3." numbering anywhere.
+      expect(page).to have_no_text(/^\s*1\.\s*/)
+    end
+  end
+
   # ── Sticky Save ───────────────────────────────────────────────────────────
 
-  it "renders the sticky Save button linked to the census form" do
-    # The button has Foundation's `.hide` (display: none) when the census
-    # is not yet configured; Capybara's default is `visible: :visible`,
-    # which filters that out. Assert on the DOM regardless of visibility.
-    expect(page).to have_css(".item__edit-sticky button[form='census-election-form']", visible: :all)
+  it "renders the sticky Save and continue button linked to the census form" do
+    expect(page).to have_css(".item__edit-sticky button[form='census-election-form']", text: /save and continue/i)
   end
 
-  it "hides the Save button when authentication is not yet configured" do
-    # New election with no census auth fields → button has the 'hide' class
-    expect(page).to have_css(".item__edit-sticky button.hide[form='census-election-form']", visible: :all)
+  # ── "Manage people (N)" link ──────────────────────────────────────────────
+
+  it "renders a link to the members editor with the current people count" do
+    expect(page).to have_link(/manage people/i, href: election_path.election_census_members_path(election))
   end
 
-  context "when census authentication is configured" do
-    let!(:election) do
-      create(:vocdoni_election, :with_questions, :with_census, component:, skip_injection: true)
-    end
+  # ── Preview + People management no longer live here ──────────────────────
 
-    before do
-      visit election_path.election_census_path(election)
-    end
-
-    it "shows the Save button without the hide class" do
-      expect(page).to have_no_css(".item__edit-sticky button.hide[form='census-election-form']", visible: :all)
-      expect(page).to have_css(".item__edit-sticky button[form='census-election-form']")
+  it "does not render an inline preview table on the Census tab" do
+    # The 5-row preview + People card were moved to /census/members in QW5.
+    within ".card-section.census-form" do
+      expect(page).to have_no_css(".table-list")
     end
   end
 
-  # ── Preview partial ───────────────────────────────────────────────────────
-
-  context "when there are no census members" do
-    it "does not render the preview table" do
-      # Preview only renders when preview_users is present
-      within ".card-section.census-form" do
-        expect(page).to have_no_css(".table-list")
-      end
-    end
+  it "does not render the Import panel on the Census tab" do
+    expect(page).to have_no_css("#js-census-import")
   end
 
-  context "when the census has members" do
-    let!(:election) do
-      create(:vocdoni_election, :with_questions, :with_census,
-             census_members_count: 3, component:, skip_injection: true)
-    end
-
-    before do
-      visit election_path.election_census_path(election)
-    end
-
-    it "shows the preview table inside the census-form section" do
-      within ".card-section.census-form" do
-        expect(page).to have_css(".table-list")
-      end
-    end
-
-    it "shows at most five rows in the preview" do
-      within ".card-section.census-form .table-list tbody" do
-        expect(all("tr").length).to be <= 5
-      end
-    end
-
-    it "shows the census size line below the preview table" do
-      within ".card-section.census-form" do
-        expect(page).to have_text(/people in the census/i)
-      end
-    end
+  it "does not render the Verifications panel on the Census tab" do
+    expect(page).to have_no_css("#js-census-verifications")
   end
-
-  # ── Census complete announcement ─────────────────────────────────────────
-
-  # The success callout renders only when Election#census_complete? holds,
-  # which needs the census to be configured AND populated. The `:with_census`
-  # trait only configures auth fields; the members table is populated by a
-  # separate seed step that would make this test brittle without adding
-  # much coverage. The `census_complete?` predicate itself is unit-tested.
 
   # ── Tab strip ─────────────────────────────────────────────────────────────
 
@@ -143,21 +106,21 @@ describe "Admin Census tab" do
 
   # ── Save persists authentication settings ────────────────────────────────
 
-  it "saves the selected credentials and redirects back to census" do
+  it "saves the selected credentials and redirects (census incomplete → stays)" do
     # The form starts empty — tick the "Member number" credential and save.
     # memberNumber maps to "Member number" via CensusMember.field_label.
     within "#census-election-form #js-census-authentication" do
       check "Member number", allow_label_click: true
     end
 
-    # The sticky Save button carries `.hide` (display:none) at load and
-    # census.js drops it once auth is configured. In Chrome-based drivers
-    # a click on a display:none element raises "element not interactable"
-    # regardless of the Capybara `visible: :all` filter, so submit the
-    # form directly.
+    # Submit the form directly rather than clicking the button, so a
+    # display: none rule on the sticky bar (from other packs) doesn't
+    # trip up Capybara's interactability check.
     find_by_id("census-election-form").native.submit
 
-    # A successful save redirects back to census#show.
+    # The census still has no members → census_complete? false → the
+    # controller keeps us on census#show. When the census is fully
+    # complete `next_step_path` redirects to the Dashboard instead.
     expect(page).to have_current_path(election_path.election_census_path(election))
 
     election.reload

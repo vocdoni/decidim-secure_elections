@@ -224,6 +224,10 @@ en:
             configure_authentication: Configure
             edit_authentication: Edit
             edit_people: Edit the list
+            manage_people:
+              one: Manage people (1)
+              other: Manage people (%{count})
+            save_and_continue: Save and continue
             incomplete_body: "Those people cannot be identified as configured, so they would not be able to vote: %{details}."
             incomplete_title:
               one: 1 person is missing something they need in order to vote

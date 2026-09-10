@@ -32,6 +32,16 @@
            callout_class: "warning" %>
 <% end %>
 
+<% if incomplete_members.any? %>
+  <%= cell "decidim/announcement",
+           { title: t("decidim.secure_elections.admin.census.show.incomplete_title", count: incomplete_members.size),
+             body: t("decidim.secure_elections.admin.census.show.incomplete_body",
+                     details: election.census_members_missing_by_field
+                                      .map { |field, count| t("decidim.secure_elections.admin.census.show.missing_field", count:, field: Decidim::SecureElections::CensusMember.field_label(field)) }
+                                      .to_sentence) },
+           callout_class: "alert" %>
+<% end %>
+
 <%= decidim_form_for(@form, url: election_census_update_members_path(election), method: :patch,
                      html: { id: "js-census-members-form", class: "form-defaults form edit_census_members" }) do |form| %>
 
@@ -125,6 +135,16 @@
         </template>
       <% end %>
     </div>
+
+    <% if allowed_to?(:update, :census, election:) && census_members.any? %>
+      <div class="card-section border-t">
+        <%= link_to t("decidim.secure_elections.admin.census.show.clear"),
+                    election_census_clear_path(election),
+                    method: :delete,
+                    class: "button button__xs button__transparent-secondary",
+                    data: { confirm: t("decidim.secure_elections.admin.census.show.clear_confirm", count: census_members.size) } %>
+      </div>
+    <% end %>
   </div>
 
   <div class="item__edit-sticky">
@@ -135,6 +155,27 @@
         <%= link_to t("decidim.secure_elections.admin.census.members.back"), election_census_path(election), class: "button button__sm button__transparent-secondary" %>
         <%= form.submit t("decidim.secure_elections.admin.census.members.save"), class: "button button__sm button__secondary" %>
       <% end %>
+    </div>
+  </div>
+<% end %>
+
+<%# Bulk-add: pull from a CSV or from Decidim's own verifications. Both used to
+    live on the Census tab next to the manifest config, which turned that tab
+    into a two-job screen (configure + fill roster). Here they belong to the
+    roster manager, next to the by-hand table above. %>
+<% if allowed_to?(:update, :census, election:) %>
+  <div class="card mt-4">
+    <div class="card-divider">
+      <h2 class="card-title">
+        <span class="text-black font-bold"><%= t("decidim.secure_elections.admin.census.show.add_people_title") %></span>
+      </h2>
+    </div>
+
+    <div class="card-section">
+      <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.census.show.add_people_help") %></p>
+
+      <%= render partial: "import", locals: { election:, form: import_form } %>
+      <%= render partial: "verifications", locals: { election:, form: verifications_form, handlers: available_handlers } %>
     </div>
   </div>
 <% end %>
