@@ -265,6 +265,7 @@ en:
             one: 1 option
             other: "%{count} options"
           preview: Preview
+          publish_on_blockchain: Publish on blockchain…
           # The reversible Decidim-visibility action, named after what it does.
           # The word "publish" belongs to step 5 of the wizard alone — the
           # irreversible on-chain one — and must not appear here.
@@ -393,6 +394,8 @@ en:
           title: "Voting links"
           url_label: "Link to the election page"
           who_can_vote: "Only people on the census can vote. Everyone else can see the election but cannot open a ballot."
+        publish_confirmation:
+          title: Publish on blockchain
         questions:
           edit:
             title: Questions

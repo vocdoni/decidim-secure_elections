@@ -58,9 +58,16 @@ module Decidim
           post "census/verifications", to: "census#import_from_verifications", as: :census_verifications
           delete "census/clear", to: "census#clear", as: :census_clear
 
-          # Dashboard tab: pre-publish checklist + publish action (unpublished),
-          # or live status + results + monitor controls (published/on-chain).
+          # Dashboard tab: live status + results + monitor controls (only
+          # rendered when the election is on-chain). Pre-publish, the tab
+          # is a disabled span in the admin menu and hitting the URL
+          # redirects to the publish-confirmation page.
           resource :dashboard, only: [:show], controller: "dashboard" do
+            # The confirmation page carrying the completeness checklist +
+            # the irreversibility checkbox + the Publish button. Reached
+            # from the row-level Actions dropdown on the elections list.
+            # The form on the page POSTs to the sibling `publish` action.
+            get :publish_confirmation
             post :publish
             delete :unpublish
             post :start
@@ -103,7 +110,12 @@ module Decidim
 
           menu.add_item :secure_elections_dashboard,
                         I18n.t("dashboard", scope: "decidim.secure_elections.admin.menu"),
-                        @election ? proxy&.election_dashboard_path(@election) : "#",
+                        # Pre-publish the Dashboard is a disabled span, matching
+                        # upstream decidim-elections' rule that the live-monitor
+                        # tab only lights up once the election is on chain. The
+                        # completeness view lives on the publish-confirmation
+                        # page, reached from the row-level Actions dropdown.
+                        @election&.on_chain? || @election&.publishing? ? proxy&.election_dashboard_path(@election) : "#",
                         active: @election.present? && is_active_link?(proxy&.election_dashboard_path(@election)),
                         icon_name: "dashboard-line"
         end
