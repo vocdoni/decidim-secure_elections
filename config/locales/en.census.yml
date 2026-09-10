@@ -91,7 +91,7 @@ en:
               recommend_body: For better security, we recommend picking at least two credentials.
               recommend_title: Security recommendation
             count: "%{selected} of %{max} credentials selected"
-            help: Choose what a voter has to type to prove they are on the census. Pick up to %{count} — more than that adds nothing and only makes voting harder. If you plan to identify voters by email or phone alone, leave this empty and turn on two-factor verification below.
+            help: If you want to identify voters by email or phone alone, select none here and enable two-factor verification below.
             legend: Required credentials
             title: Credentials
           import:
@@ -227,6 +227,7 @@ en:
             manage_people:
               one: Manage people (1)
               other: Manage people (%{count})
+            manage_people_confirm_if_dirty: You have unsaved changes to the voter authentication. Leave this page and lose them?
             save_and_continue: Save and continue
             incomplete_body: "Those people cannot be identified as configured, so they would not be able to vote: %{details}."
             incomplete_title:

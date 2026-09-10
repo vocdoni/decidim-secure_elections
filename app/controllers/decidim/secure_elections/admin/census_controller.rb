@@ -246,13 +246,14 @@ module Decidim
           end
         end
 
-        # "Save and continue" on the census form lands here. Advances to the
-        # Dashboard when the census is complete, otherwise stays on the census.
+        # "Save and continue" on the census form lands on the Dashboard,
+        # always. The Dashboard's checklist card is what says what is still
+        # missing (census members, questions, dates) with fix-it links back
+        # into each tab — so an admin who saves an incomplete census does
+        # not silently stay on the same page wondering whether the click did
+        # anything; they land on the readiness view that spells it out.
         def next_step_path
-          election.reload
-          return election_dashboard_path(election) if election.census_complete?
-
-          election_census_path(election)
+          election_dashboard_path(election)
         end
 
         def blank_member_form

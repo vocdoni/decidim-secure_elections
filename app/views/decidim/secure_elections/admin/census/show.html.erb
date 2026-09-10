@@ -53,7 +53,15 @@
     to click through. %>
 <% if allowed_to?(:update, :census, election:) %>
   <div class="mt-6">
-    <%= link_to election_census_members_path(election), class: "flex items-center gap-2 text-secondary" do %>
+    <%#
+      The dirty-form guard on this link (see `setupDirtyGuard` in census.js)
+      catches the case an admin ticks a credential, then jumps here to fill
+      the roster, and loses the tick. The message travels on the link so
+      translation stays in the ERB.
+    %>
+    <%= link_to election_census_members_path(election),
+                class: "flex items-center gap-2 text-secondary",
+                data: { "confirm-if-dirty": t(".manage_people_confirm_if_dirty") } do %>
       <%= icon "group-2-line", class: "!w-4 !h-4", aria_hidden: true %>
       <span><%= t(".manage_people", count: census_members.size) %></span>
       <%= icon "arrow-right-line", class: "!w-4 !h-4", aria_hidden: true %>
