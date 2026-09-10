@@ -66,9 +66,13 @@
             <%= t("decidim.secure_elections.admin.elections.dashboard") %>
           <% end %>
         </li>
-      <% elsif allowed_to? :create, :setup, election: election %>
+      <% elsif allowed_to? :read, :setup, election: election %>
         <%# On-chain Publish — opens the confirmation page (checklist +
-            irreversibility + Publish button), never a one-click write. %>
+            irreversibility + Publish button), never a one-click write.
+            Visibility follows `:read`, not `:create`, so an admin can
+            reach the checklist even when the election is not yet ready
+            to publish and see what's still missing. `:create` gates the
+            actual Publish button on that page. %>
         <li class="dropdown__item">
           <%= link_to publish_confirmation_election_dashboard_path(election),
                       class: "dropdown__button" do %>

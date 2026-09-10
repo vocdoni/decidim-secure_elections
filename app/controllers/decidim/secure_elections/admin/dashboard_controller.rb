@@ -61,7 +61,11 @@ module Decidim
         # to the live Dashboard so `/publish_confirmation` never renders a
         # stale checklist next to an already-published election.
         def publish_confirmation
-          enforce_permission_to(:create, :setup, election:)
+          # `:read` — an admin can reach the checklist to see what is still
+          # missing even when the election is not ready to publish yet. The
+          # actual Publish button in `_publish.html.erb` guards its own
+          # `:create :setup` check on top.
+          enforce_permission_to(:read, :setup, election:)
 
           if election.on_chain? || election.publishing?
             redirect_to election_dashboard_path(election)
