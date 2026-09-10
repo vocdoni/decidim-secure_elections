@@ -13,7 +13,7 @@ module Decidim
 
         include Decidim::TranslatableAttributes
 
-        translatable_attribute :title, String
+        translatable_attribute :body, String
 
         # Client-side identity of the row. The editor adds and removes options
         # without a page reload, so a brand new option has no `id` yet; the
@@ -32,10 +32,10 @@ module Decidim
         # saved with fewer than two real options. An option filled in *some*
         # languages but not the organization's own is still an error, which is
         # what `translatable_presence` checks.
-        validates :title, translatable_presence: true, unless: :unfilled?
+        validates :body, translatable_presence: true, unless: :unfilled?
 
         def unfilled?
-          title.values.all?(&:blank?)
+          body.values.all?(&:blank?)
         end
       end
     end

@@ -126,7 +126,7 @@ unless FactoryBot::Internal.factories.registered?(:vocdoni_component)
         answers_count { 2 }
       end
 
-      title { generate_localized_title(:vocdoni_question_title, skip_injection:) }
+      body { generate_localized_title(:vocdoni_question_body, skip_injection:) }
       description { generate_localized_description(:vocdoni_question_description, skip_injection:) }
       question_type { "singlechoice" }
       position { 0 }
@@ -157,7 +157,7 @@ unless FactoryBot::Internal.factories.registered?(:vocdoni_component)
         skip_injection { false }
       end
 
-      title { generate_localized_title(:vocdoni_answer_title, skip_injection:) }
+      body { generate_localized_title(:vocdoni_answer_body, skip_injection:) }
       value { 0 }
       position { 0 }
       question { create(:vocdoni_question, skip_injection:) }

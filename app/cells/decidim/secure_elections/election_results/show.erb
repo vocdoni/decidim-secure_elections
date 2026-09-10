@@ -20,7 +20,7 @@
 
   <% questions.each do |question| %>
     <section class="vocdoni-results__question" data-results-question="<%= question.id %>">
-      <h3 class="h5"><%= translated_attribute(question.title) %></h3>
+      <h3 class="h5"><%= translated_attribute(question.body) %></h3>
 
       <% if secret?(question) %>
         <p class="text-gray-2">
@@ -31,14 +31,14 @@
         <ul class="list-none m-0 p-0 space-y-3">
           <% question.answers.each do |answer| %>
             <li class="vocdoni-results__answer" data-results-answer="<%= answer.id %>">
-              <p class="font-semibold"><%= translated_attribute(answer.title) %></p>
+              <p class="font-semibold"><%= translated_attribute(answer.body) %></p>
               <div class="flex items-center justify-between gap-3">
                 <div class="vocdoni-results__bar"
                      role="progressbar"
                      aria-valuemin="0"
                      aria-valuemax="100"
                      aria-valuenow="<%= answer.votes_percent.round %>"
-                     aria-label="<%= t("decidim.secure_elections.elections.results.share_for", answer: translated_attribute(answer.title)) %>">
+                     aria-label="<%= t("decidim.secure_elections.elections.results.share_for", answer: translated_attribute(answer.body)) %>">
                   <span class="vocdoni-results__bar-fill" style="width: <%= answer.votes_percent.round(2) %>%" data-answer-bar></span>
                 </div>
                 <div class="vocdoni-results__figures">

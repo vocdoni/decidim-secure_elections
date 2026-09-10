@@ -3,7 +3,7 @@ en:
   activemodel:
     attributes:
       answer:
-        title: Answer
+        body: Answer
       census:
         census_auth_fields: Authentication fields
         census_group_id: Member group ID
@@ -21,12 +21,12 @@ en:
         title: Title
       question:
         answers: Options
+        body: Question
         description: Description
         max_choices: Maximum number of choices
         min_choices: Minimum number of choices
         question_type: Question type
         secret_until_the_end: Keep the ballots encrypted until the election ends
-        title: Question
       question_status:
         status: Status
       setup:

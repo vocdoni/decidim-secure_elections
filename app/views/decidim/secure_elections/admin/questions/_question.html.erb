@@ -30,19 +30,24 @@
           <span>
             <%= icon "draggable", class: "dragger hover:cursor-grab" %>
             <%# createEditableForm() sets up a LiveTextUpdateComponent per
-                question card, keyed on `.question-title-statement`. The
-                component's `_run()` reads `.length` off the text, so an
-                undefined `data-placeholder` crashes the whole editor setup
-                and every downstream handler (add/remove response option,
-                add question) with it. Ship the class + placeholder even
-                though our field is `[title]` rather than upstream's
-                `[body]` — the input selector never matches so no live sync
-                happens here, but the crash is what actually mattered. %>
+                question card, keyed on `.question-title-statement`. It
+                binds on `input[name$="[body_{locale}]"]` — hard-coded in
+                decidim-forms — which is exactly the field name our
+                `translatable_attribute :body` produces, so live updates
+                as the admin types are handled upstream. The `_run()`
+                also reads `.length` off the text, so an undefined
+                `data-placeholder` would crash the whole editor setup
+                (and every downstream handler with it); both `data-locale`
+                and `data-placeholder` are required. The span is
+                pre-populated with the truncated title so the collapsed
+                header reads correctly on first paint, before JS runs. %>
+            <% question_title_placeholder = t("decidim.secure_elections.admin.questions.question.title_placeholder", default: "New question") %>
+            <% question_title_text = translated_attribute(question.body).presence %>
             <span class="question-title-statement"
-                  data-locale="en"
+                  data-locale="<%= I18n.locale %>"
                   data-max-length="50"
                   data-omission="…"
-                  data-placeholder="<%= t("decidim.secure_elections.admin.questions.question.title_placeholder", default: "New question") %>"></span>
+                  data-placeholder="<%= question_title_placeholder %>"><%= truncate(question_title_text.to_s, length: 50, omission: "…") %></span>
           </span>
           <span class="ml-auto flex flex-row-reverse items-center gap-2">
             <button type="button"
@@ -64,7 +69,7 @@
 
       <div id="panel-<%= card_id %>-question-card" class="mt-4 card-section collapsible">
         <div class="row column">
-          <%= q.translated :text_field, :title,
+          <%= q.translated :text_field, :body,
                            label: t("decidim.secure_elections.admin.questions.question.statement_label") %>
         </div>
 

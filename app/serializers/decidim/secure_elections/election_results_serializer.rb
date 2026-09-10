@@ -21,7 +21,7 @@ module Decidim
     #
     # Questions and answers are serialized as position-keyed hashes rather than
     # arrays because `Decidim::Exporters::CSV` flattens a nested hash into
-    # `questions/1/title/en` columns but collapses an array into a single
+    # `questions/1/body/en` columns but collapses an array into a single
     # unusable cell.
     class ElectionResultsSerializer < Decidim::Exporters::Serializer
       # @param election [Decidim::SecureElections::Election]
@@ -91,7 +91,7 @@ module Decidim
         {
           id: question.id,
           position: index + 1,
-          title: question.title,
+          body: question.body,
           description: question.description,
           question_type: question.question_type,
           secret_until_the_end: question.secret_until_the_end,
@@ -120,7 +120,7 @@ module Decidim
           id: answer.id,
           # The 0-based integer actually encoded in the ballot.
           value: answer.value,
-          title: answer.title,
+          body: answer.body,
           votes_count: answer.votes_count.to_i,
           votes_percent: answer.votes_percent.round(2)
         }

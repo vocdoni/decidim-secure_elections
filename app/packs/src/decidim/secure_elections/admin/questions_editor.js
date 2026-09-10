@@ -26,63 +26,14 @@
  * when both events do fire.
  */
 
-// Mirror what the current question title looks like into the collapsed
-// card header. Upstream's LiveTextUpdateComponent reads the
-// preview's data-attributes then binds to `input[name$="[body_{locale}]"]`
-// — that regex is baked into decidim-forms, and our field is `[title]`
-// instead of `[body]`, so upstream's binding matches nothing and the
-// preview stays stuck on the placeholder. Wire the same update loop
-// ourselves against our field naming, with a delegated input listener
-// on the questions list so it also catches cards `createEditableForm`
-// clones in for Add question.
-const paintTitlePreview = (card) => {
-  const preview = card.querySelector(".question-title-statement");
-  if (!preview) {
-    return;
-  }
-  const locale = preview.dataset.locale || "en";
-  const input = card.querySelector(`input[name$="[title][${locale}]"]`);
-  if (!input) {
-    return;
-  }
-  const placeholder = preview.dataset.placeholder || "";
-  const maxLength = parseInt(preview.dataset.maxLength, 10) || 0;
-  const omission = preview.dataset.omission || "…";
-  let text = input.value || placeholder;
-  if (maxLength > 0 && text.length > maxLength) {
-    text = `${text.substring(0, maxLength - omission.length)}${omission}`;
-  }
-  preview.textContent = text;
-};
-
-const wireTitlePreviews = () => {
-  const list = document.getElementById("questionnaire-questions-list");
-  if (!list) {
-    return;
-  }
-  list.querySelectorAll(".card.questionnaire-question").forEach(paintTitlePreview);
-  list.addEventListener("input", (event) => {
-    const card = event.target.closest(".card.questionnaire-question");
-    if (card) {
-      paintTitlePreview(card);
-    }
-  });
-  // Paint newly-cloned cards the moment createEditableForm inserts them.
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType !== Node.ELEMENT_NODE) {
-          return;
-        }
-        if (node.matches?.(".card.questionnaire-question")) {
-          paintTitlePreview(node);
-        }
-        node.querySelectorAll?.(".card.questionnaire-question").forEach(paintTitlePreview);
-      });
-    }
-  });
-  observer.observe(list, { childList: true, subtree: false });
-};
+// Live sync of the collapsed card header — the `.question-title-statement`
+// span — is handled by upstream's LiveTextUpdateComponent, which
+// createEditableForm() sets up per card. It binds on
+// `input[name$="[body_{locale}]"]`, matching exactly the input names
+// `translatable_attribute :body` produces on our QuestionForm, so the
+// header updates as the admin types without any glue on our side. The
+// server-rendered span already carries the truncated title, so first
+// paint reads correctly even before JS runs.
 
 // createEditableForm wires two upstream FieldDependentInputsComponent
 // instances per question card: one that shows the response-options
@@ -178,7 +129,6 @@ const bootstrap = () => {
   }
   container.dataset.bootstrapped = "true";
   createEditableForm();
-  wireTitlePreviews();
   wireQuestionTypeVisibility();
 };
 

@@ -43,7 +43,7 @@ describe "Explore elections" do
       expect(page).to have_css("h1", text: translated(election.title))
       expect(page).to have_css(".vocdoni-status", text: "Voting open")
       expect(page).to have_text("Questions")
-      expect(page).to have_text(translated(election.questions.first.title))
+      expect(page).to have_text(translated(election.questions.first.body))
     end
 
     # The link is built by `VotingPageUrl`, points at a file served by the

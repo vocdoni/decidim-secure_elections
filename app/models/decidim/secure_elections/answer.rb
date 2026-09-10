@@ -19,9 +19,9 @@ module Decidim
 
       has_one :election, through: :question
 
-      translatable_fields :title
+      translatable_fields :body
 
-      validates :title, presence: true
+      validates :body, presence: true
       validates :value, presence: true,
                         numericality: { only_integer: true, greater_than_or_equal_to: 0 },
                         uniqueness: { scope: :decidim_vocdoni_question_id }
