@@ -27,8 +27,20 @@
   <%= cell "decidim/announcement", reason, callout_class: "warning" %>
 <% end %>
 
+<%#
+  Background jobs (publish, status change, result sync) can fail with a
+  long raw error from the Vocdoni SaaS. Rendering that dump full-width
+  used to swallow the top of every admin screen. Keep the alert signal
+  visible, tuck the raw text behind a disclosure — an admin still finds
+  what they need for support, without every visit greeting them with a
+  wall of hex identifiers.
+%>
 <% if election.last_error_message.present? %>
   <%= cell "decidim/announcement",
-           { title: t("decidim.secure_elections.admin.errors.last_job_failure"), body: election.last_error_message },
+           t("decidim.secure_elections.admin.errors.last_job_failure"),
            callout_class: "alert" %>
+  <details class="mb-6 -mt-4">
+    <summary class="text-sm text-gray-2 cursor-pointer"><%= t("decidim.secure_elections.admin.errors.last_job_failure_details") %></summary>
+    <pre class="text-xs bg-background p-3 mt-2 rounded overflow-x-auto whitespace-pre-wrap break-words"><%= election.last_error_message %></pre>
+  </details>
 <% end %>

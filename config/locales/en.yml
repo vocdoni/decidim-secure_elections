@@ -284,7 +284,8 @@ en:
           view: View secure election
           view_deleted: View deleted elections
         errors:
-          last_job_failure: 'The last background operation failed:'
+          last_job_failure: The last background job left an error.
+          last_job_failure_details: Show error details
           not_configured_body: The Vocdoni API URL, API key and organization address must be configured before an election can be published on the blockchain. Ask your system administrator to set them.
           not_configured_title: This installation is not connected to Vocdoni
         menu:
