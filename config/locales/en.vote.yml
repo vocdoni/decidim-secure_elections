@@ -1,217 +1,218 @@
 en:
   decidim:
-    secure_elections:
-      census:
-        fields:
-          birthDate: Date of birth
-          email: Email address
-          memberNumber: Membership number
-          name: First name
-          nationalId: National ID
-          phone: Phone number
-          surname: Surname
-      elections:
-        index:
-          count:
-            one: 1 election
-            other: "%{count} elections"
-          empty: There are no elections yet.
-        question_types:
-          multichoice: Choose several options
-          singlechoice: Choose one option
-        results:
-          final: Final result
-          last_updated: Last updated %{time}
-          not_synced_yet: The tally has not been read from the voting network yet.
-          provisional: Provisional count
-          secret_until_the_end: Votes for this question stay encrypted until the election ends.
-          share_for: "Share of votes for %{answer}"
-          title: Results
-          total: "Total:"
-          votes_count:
-            one: 1 vote
-            other: "%{count} votes"
-        show:
-          calendar: "From %{start_date} to %{end_date}"
-          census_fields: "To vote you will be asked for: %{fields}."
-          census_size:
-            one: 1 person can vote in this election.
-            other: "%{count} people can vote in this election."
-          how_it_works_body: Your ballot is encrypted and signed in your browser and sent straight to the Vocdoni voting network. This website never sees how you voted.
-          how_it_works_title: How this election works
-          max_choices:
-            one: pick up to 1 option
-            other: "pick up to %{count} options"
-          no_end_date: no closing date
-          on_publication: publication
-          question_number: "Question %{number}:"
-          questions_title: Questions
-          receipt_button: Check my vote receipt
-          secret_until_the_end: secret until the end
-          stream_title: Watch this election live
-          vote_button: Vote
-          voting_closed:
-            canceled: This election was canceled, so it is not accepting votes.
-            draft: This election has not been set up for voting yet.
-            ended: Voting has ended for this election.
-            paused: Voting is paused. Check back later.
-            publishing: This election is being registered on the voting network. Voting will open shortly.
-            results: Voting has ended and the results are published below.
-            scheduled: Voting has not started yet.
-        states:
-          canceled: Canceled
-          draft: Draft
-          ended: Ended
-          ongoing: Voting open
-          paused: Paused
-          publishing: Publishing
-          results: Results published
-          scheduled: Scheduled
-      votes:
-        page:
-          auth:
-            body: To open your ballot we need to check that you are on the census for this election. These details are sent to the voting network, never stored by this website.
-            channel:
-              email: Email
-              phone: Text message
-            channel_legend: How should we send it?
-            channel_required: Choose where you want your code sent.
-            contact:
-              email: Email address
-              phone: Mobile number
-            legend: Census details
-            privacy_note: Your identity is used only to prove you may vote. It is never linked to your ballot.
-            required: Please fill in every field before continuing.
-            submit: Continue
-            title: Identify yourself
-            twofa_help:
-              email: Use the email address the organisers of this election hold for you — contact them if you are not sure which one that is. We only use it to send your code.
-              phone: Use the mobile number the organisers of this election hold for you — contact them if you are not sure which one that is. We only use it to send your code.
-            twofa_legend: Where should we send your code?
-          ballot:
-            already_recorded:
-              body: You are only being asked the questions you have left. The receipts for the votes already recorded are shown with the rest at the end.
-              list_label: "Already recorded:"
-              title: Part of your ballot is already recorded
-            back: Previous question
-            counter: "Question %{current} of %{total}"
-            next: Next
-            pick_many: "Pick between %{min} and %{max} options."
-            pick_one: Pick one option.
-            review: Review my ballot
-            secret: Your answer to this question stays encrypted until the election ends.
-            title: "Ballot for %{title}"
-          blocked:
-            already_voted:
-              body: You have already voted in this election. Each person can vote once, so there is nothing left for you to cast.
-              title: You have already voted
-            back: Back to the election
-            not_in_census:
-              body: The details you entered are not on the census for this election. Check them and try again, or contact the organisers if you believe you should be able to vote.
-              title: You are not on the census for this election
-            not_open:
-              body: There is no question open for you to vote on right now. Voting may not have started yet, or it may already have closed.
-              title: Voting is not open
-          cancel: Cancel
-          closed_notice: Voting is not open for this election right now. You can still identify yourself to check the receipt for a vote you have already cast.
-          error:
-            retry: Try again
-            title: Something went wrong
-          errors:
-            auth_cooldown: "Too many attempts. Please wait %{seconds} seconds and try again."
-            auth_rejected: We could not verify those details. Check them and try again.
-            ballot_unsupported: This question uses a ballot format this page does not understand. Please contact the organisers.
-            keys_unavailable: This question is encrypted until the end and its encryption keys are not published yet. Your vote was not cast — please try again in a few minutes.
-            network: We could not reach the voting network. Check your connection and try again.
-            otp_expired: That code is no longer usable. Please identify yourself again to get a new one.
-            otp_rejected: That code does not match. Check it and enter it again, or ask for a new one.
-            otp_resend_failed: We could not send you a new code. Please wait a moment and try again.
-            process_unavailable: This election could not be loaded from the voting network right now.
-            relay_rejected: The voting network rejected this vote. It has not been counted.
-            relay_unconfirmed: We lost contact while your vote was being sent. It may still have been counted — do not vote again until you have checked.
-            sign_rejected: The census would not authorise this vote. It may already have been cast from another device.
-            unknown: Something unexpected went wrong. Your vote was not cast.
-          exit: Back to the election
-          loading:
-            body: We are reading this election from the voting network.
-            title: Preparing your ballot
-          noscript: Your ballot is encrypted and signed in your browser, so this page needs JavaScript to work. Please enable JavaScript and reload it.
-          otp:
-            body_email: We have emailed you a one-time code. Enter it below to confirm it is you.
-            body_phone: We have sent you a one-time code by text message. Enter it below to confirm it is you.
-            hint: You can paste the code straight from the message.
-            label: One-time code
-            required: Enter the code we sent you.
-            resend: Send me a new code
-            resend_ready: You can now ask for a new code.
-            resend_wait: "You can ask for a new code in %{seconds} seconds."
-            resent: A new code is on its way.
-            restart: Start again
-            restart_body: Used the wrong address or number?
-            submit: Confirm
-            title: Confirm the code we sent you
-          page_title: Vote
-          progress:
-            auth: Identify
-            ballot: Choose
-            label: Voting steps
-            receipt: Receipt
-            review: Review
-          receipt:
-            already_voted: You had already voted in this election. These are the receipts for the votes we found.
-            body: Each receipt below proves a vote was recorded on the voting network. It does not reveal what you voted.
-            copied: Receipt code copied to your clipboard.
-            copy: Copy
-            copy_label: "Copy the receipt code for %{question}"
-            copy_manual: The receipt code is selected, ready for you to copy.
-            empty: We could not find any vote recorded for you in this election.
+    elections:
+      vocdoni:
+        census:
+          fields:
+            birthDate: Date of birth
+            email: Email address
+            memberNumber: Membership number
+            name: First name
+            nationalId: National ID
+            phone: Phone number
+            surname: Surname
+        elections:
+          index:
+            count:
+              one: 1 election
+              other: "%{count} elections"
+            empty: There are no elections yet.
+          question_types:
+            multichoice: Choose several options
+            singlechoice: Choose one option
+          results:
+            final: Final result
+            last_updated: Last updated %{time}
+            not_synced_yet: The tally has not been read from the voting network yet.
+            provisional: Provisional count
+            secret_until_the_end: Votes for this question stay encrypted until the election ends.
+            share_for: "Share of votes for %{answer}"
+            title: Results
+            total: "Total:"
+            votes_count:
+              one: 1 vote
+              other: "%{count} votes"
+          show:
+            calendar: "From %{start_date} to %{end_date}"
+            census_fields: "To vote you will be asked for: %{fields}."
+            census_size:
+              one: 1 person can vote in this election.
+              other: "%{count} people can vote in this election."
+            how_it_works_body: Your ballot is encrypted and signed in your browser and sent straight to the Vocdoni voting network. This website never sees how you voted.
+            how_it_works_title: How this election works
+            max_choices:
+              one: pick up to 1 option
+              other: "pick up to %{count} options"
+            no_end_date: no closing date
+            on_publication: publication
+            question_number: "Question %{number}:"
+            questions_title: Questions
+            receipt_button: Check my vote receipt
+            secret_until_the_end: secret until the end
+            stream_title: Watch this election live
+            vote_button: Vote
+            voting_closed:
+              canceled: This election was canceled, so it is not accepting votes.
+              draft: This election has not been set up for voting yet.
+              ended: Voting has ended for this election.
+              paused: Voting is paused. Check back later.
+              publishing: This election is being registered on the voting network. Voting will open shortly.
+              results: Voting has ended and the results are published below.
+              scheduled: Voting has not started yet.
+          states:
+            canceled: Canceled
+            draft: Draft
+            ended: Ended
+            ongoing: Voting open
+            paused: Paused
+            publishing: Publishing
+            results: Results published
+            scheduled: Scheduled
+        votes:
+          page:
+            auth:
+              body: To open your ballot we need to check that you are on the census for this election. These details are sent to the voting network, never stored by this website.
+              channel:
+                email: Email
+                phone: Text message
+              channel_legend: How should we send it?
+              channel_required: Choose where you want your code sent.
+              contact:
+                email: Email address
+                phone: Mobile number
+              legend: Census details
+              privacy_note: Your identity is used only to prove you may vote. It is never linked to your ballot.
+              required: Please fill in every field before continuing.
+              submit: Continue
+              title: Identify yourself
+              twofa_help:
+                email: Use the email address the organisers of this election hold for you — contact them if you are not sure which one that is. We only use it to send your code.
+                phone: Use the mobile number the organisers of this election hold for you — contact them if you are not sure which one that is. We only use it to send your code.
+              twofa_legend: Where should we send your code?
+            ballot:
+              already_recorded:
+                body: You are only being asked the questions you have left. The receipts for the votes already recorded are shown with the rest at the end.
+                list_label: "Already recorded:"
+                title: Part of your ballot is already recorded
+              back: Previous question
+              counter: "Question %{current} of %{total}"
+              next: Next
+              pick_many: "Pick between %{min} and %{max} options."
+              pick_one: Pick one option.
+              review: Review my ballot
+              secret: Your answer to this question stays encrypted until the election ends.
+              title: "Ballot for %{title}"
+            blocked:
+              already_voted:
+                body: You have already voted in this election. Each person can vote once, so there is nothing left for you to cast.
+                title: You have already voted
+              back: Back to the election
+              not_in_census:
+                body: The details you entered are not on the census for this election. Check them and try again, or contact the organisers if you believe you should be able to vote.
+                title: You are not on the census for this election
+              not_open:
+                body: There is no question open for you to vote on right now. Voting may not have started yet, or it may already have closed.
+                title: Voting is not open
+            cancel: Cancel
+            closed_notice: Voting is not open for this election right now. You can still identify yourself to check the receipt for a vote you have already cast.
+            error:
+              retry: Try again
+              title: Something went wrong
+            errors:
+              auth_cooldown: "Too many attempts. Please wait %{seconds} seconds and try again."
+              auth_rejected: We could not verify those details. Check them and try again.
+              ballot_unsupported: This question uses a ballot format this page does not understand. Please contact the organisers.
+              keys_unavailable: This question is encrypted until the end and its encryption keys are not published yet. Your vote was not cast — please try again in a few minutes.
+              network: We could not reach the voting network. Check your connection and try again.
+              otp_expired: That code is no longer usable. Please identify yourself again to get a new one.
+              otp_rejected: That code does not match. Check it and enter it again, or ask for a new one.
+              otp_resend_failed: We could not send you a new code. Please wait a moment and try again.
+              process_unavailable: This election could not be loaded from the voting network right now.
+              relay_rejected: The voting network rejected this vote. It has not been counted.
+              relay_unconfirmed: We lost contact while your vote was being sent. It may still have been counted — do not vote again until you have checked.
+              sign_rejected: The census would not authorise this vote. It may already have been cast from another device.
+              unknown: Something unexpected went wrong. Your vote was not cast.
             exit: Back to the election
-            nullifier_label: Receipt code
-            open: Check my receipt
-            recorded_title: Your vote was recorded
-            return_note: You can see these receipts again at any time by coming back to this election and identifying yourself.
-            title: Your vote receipt
-          review:
-            back: Change my answers
-            body: Nothing has been sent yet. Check your answers and cast your vote when you are ready.
-            body_partial: The answers below have not been sent yet. Check them and cast your vote when you are ready.
-            cast: Cast my vote
-            edit: Change
-            edit_label: "Change my answer to %{question}"
-            not_answered: Not answered
-            title: Review your ballot
-          status:
-            authenticating: Checking your details…
-            casting: "Casting your vote for %{question}…"
-            checking: Checking what you can vote on…
-            confirming: Waiting for the voting network to confirm…
-            done: Done.
-            loading: Loading the election…
-            preparing: Preparing the ballot…
-            relaying: Sending your vote…
-            sending_code: Sending you a new code…
-            signing: Signing your vote…
-            waiting_keys: Waiting for the encryption keys to be published…
-          submit:
-            confirmed_missing: Not recorded. You can try again.
-            done: Recorded
-            failed: Not recorded
-            in_flight: Sending your vote. This can take a few seconds per question — please keep this page open.
-            in_progress: Sending…
-            pending: Waiting
-            recheck: Check whether my vote was recorded
-            rechecking: Asking the voting network…
-            retry: Try the failed questions again
-            summary_failed: Some of your votes could not be cast. Nothing was recorded for them, so you can safely try again.
-            summary_unconfirmed: We lost contact while sending some of your votes. They may still have been recorded — check before trying again, so you do not send them twice.
-            title: Casting your vote
-            unconfirmed: Not confirmed
-          theme:
-            label: Dark theme
-          unavailable: This page could not start. Please reload it, and contact the organisers if it keeps happening.
-          validation:
-            max_choices: "Pick at most %{max} options."
-            min_choices: "Pick at least %{min} options."
-            required: Pick one option to continue.
-        errors:
-          not_on_chain: This election has not been published to the voting network yet, so there is no ballot to open.
+            loading:
+              body: We are reading this election from the voting network.
+              title: Preparing your ballot
+            noscript: Your ballot is encrypted and signed in your browser, so this page needs JavaScript to work. Please enable JavaScript and reload it.
+            otp:
+              body_email: We have emailed you a one-time code. Enter it below to confirm it is you.
+              body_phone: We have sent you a one-time code by text message. Enter it below to confirm it is you.
+              hint: You can paste the code straight from the message.
+              label: One-time code
+              required: Enter the code we sent you.
+              resend: Send me a new code
+              resend_ready: You can now ask for a new code.
+              resend_wait: "You can ask for a new code in %{seconds} seconds."
+              resent: A new code is on its way.
+              restart: Start again
+              restart_body: Used the wrong address or number?
+              submit: Confirm
+              title: Confirm the code we sent you
+            page_title: Vote
+            progress:
+              auth: Identify
+              ballot: Choose
+              label: Voting steps
+              receipt: Receipt
+              review: Review
+            receipt:
+              already_voted: You had already voted in this election. These are the receipts for the votes we found.
+              body: Each receipt below proves a vote was recorded on the voting network. It does not reveal what you voted.
+              copied: Receipt code copied to your clipboard.
+              copy: Copy
+              copy_label: "Copy the receipt code for %{question}"
+              copy_manual: The receipt code is selected, ready for you to copy.
+              empty: We could not find any vote recorded for you in this election.
+              exit: Back to the election
+              nullifier_label: Receipt code
+              open: Check my receipt
+              recorded_title: Your vote was recorded
+              return_note: You can see these receipts again at any time by coming back to this election and identifying yourself.
+              title: Your vote receipt
+            review:
+              back: Change my answers
+              body: Nothing has been sent yet. Check your answers and cast your vote when you are ready.
+              body_partial: The answers below have not been sent yet. Check them and cast your vote when you are ready.
+              cast: Cast my vote
+              edit: Change
+              edit_label: "Change my answer to %{question}"
+              not_answered: Not answered
+              title: Review your ballot
+            status:
+              authenticating: Checking your details…
+              casting: "Casting your vote for %{question}…"
+              checking: Checking what you can vote on…
+              confirming: Waiting for the voting network to confirm…
+              done: Done.
+              loading: Loading the election…
+              preparing: Preparing the ballot…
+              relaying: Sending your vote…
+              sending_code: Sending you a new code…
+              signing: Signing your vote…
+              waiting_keys: Waiting for the encryption keys to be published…
+            submit:
+              confirmed_missing: Not recorded. You can try again.
+              done: Recorded
+              failed: Not recorded
+              in_flight: Sending your vote. This can take a few seconds per question — please keep this page open.
+              in_progress: Sending…
+              pending: Waiting
+              recheck: Check whether my vote was recorded
+              rechecking: Asking the voting network…
+              retry: Try the failed questions again
+              summary_failed: Some of your votes could not be cast. Nothing was recorded for them, so you can safely try again.
+              summary_unconfirmed: We lost contact while sending some of your votes. They may still have been recorded — check before trying again, so you do not send them twice.
+              title: Casting your vote
+              unconfirmed: Not confirmed
+            theme:
+              label: Dark theme
+            unavailable: This page could not start. Please reload it, and contact the organisers if it keeps happening.
+            validation:
+              max_choices: "Pick at most %{max} options."
+              min_choices: "Pick at least %{min} options."
+              required: Pick one option to continue.
+          errors:
+            not_on_chain: This election has not been published to the voting network yet, so there is no ballot to open.

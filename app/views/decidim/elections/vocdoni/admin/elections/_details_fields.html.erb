@@ -1,0 +1,57 @@
+<%#
+  Basic info card. Locals: `form`, `election` (nil on create).
+
+  Title, an optional video and a description. Nothing more — an admin
+  must be able to bring an election into existence before they have
+  decided on the questions, the voters or the dates.
+%>
+<%
+  disabled = !form.object.editable?
+  election = local_assigns[:election]
+%>
+
+<%# Each field lives in its own `.row.column`, upstream-style: Foundation's
+    `.column` gives the horizontal padding that keeps labels and inputs off
+    the card edge, and every caller (main tab, new-election page) gets it
+    without an extra wrapper around the render call. %>
+<div class="row column">
+  <%# The language switcher core renders next to a translatable field has no
+      name of its own. See `ElectionsHelper#vocdoni_language_selector_label`;
+      it goes first so it is read before the control it names. %>
+  <%= vocdoni_language_selector_label("vocdoni-election-title-tabs",
+                                               t("activemodel.attributes.election.title")) %>
+  <%= form.translated :text_field,
+                      :title,
+                      tabs_id: "vocdoni-election-title-tabs",
+                      label: t("activemodel.attributes.election.title"),
+                      label_options: { class: "sr-only" },
+                      autofocus: true,
+                      disabled: disabled %>
+</div>
+
+<%# Shown on the public election page; never sent to Vocdoni. %>
+<div class="row column">
+  <details class="my-4" <%= "open" if form.object.stream_uri.present? %>>
+    <summary class="text-sm text-gray-2 cursor-pointer">
+      <%= t("decidim.elections.vocdoni.admin.elections.editor.stream_summary") %>
+    </summary>
+    <div class="mt-2">
+      <%= form.url_field :stream_uri,
+                         label: t("activemodel.attributes.election.stream_uri"),
+                         placeholder: "https://www.youtube.com/watch?v=…",
+                         help_text: t("decidim.elections.vocdoni.admin.elections.editor.stream_help"),
+                         disabled: disabled %>
+    </div>
+  </details>
+</div>
+
+<div class="row column">
+  <%= vocdoni_language_selector_label("vocdoni-election-description-tabs",
+                                               t("activemodel.attributes.election.description")) %>
+  <%= form.translated :editor,
+                      :description,
+                      tabs_id: "vocdoni-election-description-tabs",
+                      label: t("activemodel.attributes.election.description"),
+                      lines: 6,
+                      disabled: disabled %>
+</div>

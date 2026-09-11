@@ -27,14 +27,14 @@ ignore_unused:
   - decidim.resources.election.*
   - decidim.statistics.*
   - decidim.open_data.help.election_results.*
-  - decidim.events.secure_elections.*
-  - decidim.secure_elections.admin_log.*
+  - decidim.events.elections.vocdoni.*
+  - decidim.elections.vocdoni.admin_log.*
   - decidim.admin.filters.vocdoni.*
   - activemodel.attributes.*
   - activerecord.models.*
   # The voting page is a static page built by `npm run build:vote`; the whole
   # subtree is read by JavaScript, not by Ruby.
-  - decidim.secure_elections.votes.page.*
+  - decidim.elections.vocdoni.votes.page.*
 
 ignore_missing:
   - decidim.participatory_processes.scopes.global

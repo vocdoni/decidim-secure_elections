@@ -72,13 +72,13 @@ en:
               more_than_options: This question offers %{count} options, so nobody can be asked to pick more than %{count}. Lower this number, or add more options.
   activerecord:
     models:
-      decidim/secure_elections/answer:
+      decidim/elections/vocdoni/answer:
         one: Answer
         other: Answers
-      decidim/secure_elections/election:
+      decidim/elections/vocdoni/election:
         one: Election
         other: Elections
-      decidim/secure_elections/question:
+      decidim/elections/vocdoni/question:
         one: Question
         other: Questions
   decidim:
@@ -109,23 +109,24 @@ en:
           step:
             announcement: Announcement
     events:
-      secure_elections:
-        election_published:
-          button_text: Vote now
-          email_intro: |-
-            Hi,
-            The election "%{resource_title}" is open for voting in %{participatory_space_title}. Your ballot is encrypted and signed in your browser, and this website never sees how you voted.
-          email_outro: You have received this notification because you are following %{participatory_space_title}. You can stop receiving notifications following the previous link.
-          email_subject: Voting is open in "%{resource_title}"
-          notification_title: The <a href="%{resource_path}">%{resource_title}</a> election is open for voting in <a href="%{participatory_space_url}">%{participatory_space_title}</a>.
-        election_results_published:
-          button_text: See the results
-          email_intro: |-
-            Hi,
-            Voting has ended in "%{resource_title}" and the results are available. Every result can be checked independently on the Vocdoni explorer.
-          email_outro: You have received this notification because you are following %{participatory_space_title}. You can stop receiving notifications following the previous link.
-          email_subject: Results published for "%{resource_title}"
-          notification_title: The results of the <a href="%{resource_path}">%{resource_title}</a> election are published in <a href="%{participatory_space_url}">%{participatory_space_title}</a>.
+      elections:
+        vocdoni:
+          election_published:
+            button_text: Vote now
+            email_intro: |-
+              Hi,
+              The election "%{resource_title}" is open for voting in %{participatory_space_title}. Your ballot is encrypted and signed in your browser, and this website never sees how you voted.
+            email_outro: You have received this notification because you are following %{participatory_space_title}. You can stop receiving notifications following the previous link.
+            email_subject: Voting is open in "%{resource_title}"
+            notification_title: The <a href="%{resource_path}">%{resource_title}</a> election is open for voting in <a href="%{participatory_space_url}">%{participatory_space_title}</a>.
+          election_results_published:
+            button_text: See the results
+            email_intro: |-
+              Hi,
+              Voting has ended in "%{resource_title}" and the results are available. Every result can be checked independently on the Vocdoni explorer.
+            email_outro: You have received this notification because you are following %{participatory_space_title}. You can stop receiving notifications following the previous link.
+            email_subject: Results published for "%{resource_title}"
+            notification_title: The results of the <a href="%{resource_path}">%{resource_title}</a> election are published in <a href="%{participatory_space_url}">%{participatory_space_title}</a>.
     open_data:
       help:
         # One line per top-level key of `ElectionResultsSerializer`, which is
@@ -167,362 +168,363 @@ en:
         election:
           end_at: Enter when voting stops. It has to be a date and time in the future.
           start_at: Enter when voting starts. It has to be a date and time in the future.
-    secure_elections:
-      admin:
-        autosave:
-          locked: This step can no longer be edited. Reload the page to see where the election stands.
-          on_chain: This election is now on the blockchain, so it can no longer be edited. Reload the page to see it as published.
-        census:
-          auth_only: No second factor
-          not_configured: Not configured
-          show:
-            title: Census
-        dashboard:
-          calendar:
-            title: Calendar
-          questions:
-            and_more:
-              one: and 1 more
-              other: "and %{count} more"
-            none: This election has no questions yet.
-          show:
-            title: Dashboard
-          start:
-            button: Start election
-            help: Voting opens on the blockchain straight away and cannot be paused again unless election controls allow it.
-            invalid: There was a problem starting the election.
-            success: The election has started. Voting is now open.
-        elections:
-          actions_title: Actions
-          cancel: Cancel
-          confirm_trash:
-            draft:
-              body: Nothing has been written to the blockchain for this election, so nothing is lost there. It is removed from this list and from the public site. Choose OK to move it to the trash — you can bring it back from "View deleted elections" — or Cancel to keep it here.
-              title: Move this election to the trash?
-            on_chain:
-              body: 'This election is on the blockchain and moving it to the trash does not remove it from there: the process, its questions and its results stay public on Vocdoni for ever. What goes is the Decidim side of it — participants can no longer reach the election page. Choose OK to move it to the trash — you can bring it back from "View deleted elections" — or Cancel to keep it here.'
-              title: Move this election to the trash?
-            voting_open:
-              body: 'Voting is open on the blockchain and this does not stop it: votes will keep being accepted and counted, and the result will stand. What it removes is the Decidim page participants use to open their ballot, so anyone who has not voted yet loses their way in. To stop the vote itself, end or cancel the election on the monitoring page first. Choose OK to move it to the trash anyway — you can bring it back from "View deleted elections" — or Cancel to leave it running.'
-              title: This election is open and taking votes
-          confirm_hide: Are you sure you want to hide this election from the public site? Participants lose the page they use to open their ballot, and if it is already running on the blockchain it will keep accepting votes.
-          create:
-            invalid: There was a problem creating the election.
-            success: Election created successfully.
-          dashboard: Dashboard
-          delete_disabled: A running election cannot be moved to the trash. Wait until it has ended.
-          deleted_election_info: Deleted elections are not shown in the list. You can view them by clicking the button below.
-          edit:
-            card_title: About this election
-            title: Details
-          edit_action: Edit election
-          # Main tab form strings. `form.*` mirrors decidim-elections
-          # upstream `decidim.elections.admin.elections.form.*` key-for-key,
-          # value-for-value, so re-syncing on a Decidim bump is a diff and
-          # not a rewrite. Field labels that upstream renders via the
-          # form-builder's implicit `activemodel.attributes.election.*`
-          # lookup (title, description, stream_uri) are resolved the same
-          # way here and do not need a key under `form.*`.
-          #
-          # Vocdoni-only additions live under `editor.*`, kept apart so the
-          # delta from upstream is explicit.
-          form:
-            basic_title: Basic info
-            calendar: Calendar
-            calendar_description: Check that the organization time zone is correct in the organization settings. The current configuration is %{timezone}.
-            end_at: End time
-            manual_start: Manual start
-            results_availability:
-              after_end: After elections end
-              after_end_help: publish results when the election is finished
-              real_time: Real time
-              real_time_help: automatically publish results during the election while voting
-              title: Results availability
-            start_at: Start time
-          editor:
-            # Rendered under the option input itself. `error_for` prints the
-            # message and nothing else, so it is a whole sentence rather than
-            # the fragment an ActiveModel message usually is.
-            duplicate_option: This option says the same as another one in this question.
-            # The per-field language switcher Decidim renders next to every
-            # translatable input. It is a plain unlabelled <select> in core, so
-            # the field it belongs to is named here instead.
-            language_selector_label: 'Translation language for: %{field}'
-            # Displayed on the elections index and the Dashboard when a start
-            # has not been set — mirrors what the wizard's Schedule step used
-            # to say. `started_on_publication` is the same idea past the fact.
-            started_on_publication: Started when published on the blockchain
-            starts_on_publication: Starts when published
-            stream_help: A public video the voters will see next to the ballot.
-            stream_summary: Attach video (optional)
-          hide_from_public_site: Hide from public site
-          index:
-            empty: There are no elections yet.
-            title: Elections
-          manage_trash:
-            title: Deleted elections
-          new:
-            help: Fill in the basic details, pick when voting closes, and choose how results are shown. The questions and the census come next, one tab at a time, and nothing is written to the blockchain until you publish it — which is a separate and irreversible step.
-            title: New election
-          new_election: New election
-          not_on_public_site: Not on public site
-          options_count:
-            one: 1 option
-            other: "%{count} options"
-          preview: Preview
-          # The reversible Decidim-visibility action, named after what it does.
-          # The word "publish" belongs to step 5 of the wizard alone — the
-          # irreversible on-chain one — and must not appear here.
-          publish:
-            invalid: There was a problem showing the election on the public site.
-            success: This election is now shown on the public site.
-            success_not_on_chain: This election is now shown on the public site. It cannot take votes until you publish it on the blockchain.
-          save_and_continue: Save and continue
-          show_on_public_site: Show on public site
-          show_on_public_site_disabled: Add at least one question before showing this election on the public site.
-          unpublish:
-            invalid: There was a problem hiding the election from the public site.
-            success: This election is no longer shown on the public site.
-          update:
-            invalid: There was a problem updating the election.
-            success: Election updated successfully.
-          view: View secure election
-          view_deleted: View deleted elections
-        errors:
-          last_job_failure: 'The last background operation failed:'
-          not_configured_body: The Vocdoni API URL, API key and organization address must be configured before an election can be published on the blockchain. Ask your system administrator to set them.
-          not_configured_title: This installation is not connected to Vocdoni
-        menu:
-          calendar: Schedule
-          census: Census
-          dashboard: Dashboard
-          details: Details
-          main: Main
-          monitor: Monitor
-          publish: Publish
-          questions: Questions
-        monitor:
-          answer: Answer
+    elections:
+      vocdoni:
+        admin:
+          autosave:
+            locked: This step can no longer be edited. Reload the page to see where the election stands.
+            on_chain: This election is now on the blockchain, so it can no longer be edited. Reload the page to see it as published.
+          census:
+            auth_only: No second factor
+            not_configured: Not configured
+            show:
+              title: Census
+          dashboard:
+            calendar:
+              title: Calendar
+            questions:
+              and_more:
+                one: and 1 more
+                other: "and %{count} more"
+              none: This election has no questions yet.
+            show:
+              title: Dashboard
+            start:
+              button: Start election
+              help: Voting opens on the blockchain straight away and cannot be paused again unless election controls allow it.
+              invalid: There was a problem starting the election.
+              success: The election has started. Voting is now open.
+          elections:
+            actions_title: Actions
+            cancel: Cancel
+            confirm_trash:
+              draft:
+                body: Nothing has been written to the blockchain for this election, so nothing is lost there. It is removed from this list and from the public site. Choose OK to move it to the trash — you can bring it back from "View deleted elections" — or Cancel to keep it here.
+                title: Move this election to the trash?
+              on_chain:
+                body: 'This election is on the blockchain and moving it to the trash does not remove it from there: the process, its questions and its results stay public on Vocdoni for ever. What goes is the Decidim side of it — participants can no longer reach the election page. Choose OK to move it to the trash — you can bring it back from "View deleted elections" — or Cancel to keep it here.'
+                title: Move this election to the trash?
+              voting_open:
+                body: 'Voting is open on the blockchain and this does not stop it: votes will keep being accepted and counted, and the result will stand. What it removes is the Decidim page participants use to open their ballot, so anyone who has not voted yet loses their way in. To stop the vote itself, end or cancel the election on the monitoring page first. Choose OK to move it to the trash anyway — you can bring it back from "View deleted elections" — or Cancel to leave it running.'
+                title: This election is open and taking votes
+            confirm_hide: Are you sure you want to hide this election from the public site? Participants lose the page they use to open their ballot, and if it is already running on the blockchain it will keep accepting votes.
+            create:
+              invalid: There was a problem creating the election.
+              success: Election created successfully.
+            dashboard: Dashboard
+            delete_disabled: A running election cannot be moved to the trash. Wait until it has ended.
+            deleted_election_info: Deleted elections are not shown in the list. You can view them by clicking the button below.
+            edit:
+              card_title: About this election
+              title: Details
+            edit_action: Edit election
+            # Main tab form strings. `form.*` mirrors decidim-elections
+            # upstream `decidim.elections.admin.elections.form.*` key-for-key,
+            # value-for-value, so re-syncing on a Decidim bump is a diff and
+            # not a rewrite. Field labels that upstream renders via the
+            # form-builder's implicit `activemodel.attributes.election.*`
+            # lookup (title, description, stream_uri) are resolved the same
+            # way here and do not need a key under `form.*`.
+            #
+            # Vocdoni-only additions live under `editor.*`, kept apart so the
+            # delta from upstream is explicit.
+            form:
+              basic_title: Basic info
+              calendar: Calendar
+              calendar_description: Check that the organization time zone is correct in the organization settings. The current configuration is %{timezone}.
+              end_at: End time
+              manual_start: Manual start
+              results_availability:
+                after_end: After elections end
+                after_end_help: publish results when the election is finished
+                real_time: Real time
+                real_time_help: automatically publish results during the election while voting
+                title: Results availability
+              start_at: Start time
+            editor:
+              # Rendered under the option input itself. `error_for` prints the
+              # message and nothing else, so it is a whole sentence rather than
+              # the fragment an ActiveModel message usually is.
+              duplicate_option: This option says the same as another one in this question.
+              # The per-field language switcher Decidim renders next to every
+              # translatable input. It is a plain unlabelled <select> in core, so
+              # the field it belongs to is named here instead.
+              language_selector_label: 'Translation language for: %{field}'
+              # Displayed on the elections index and the Dashboard when a start
+              # has not been set — mirrors what the wizard's Schedule step used
+              # to say. `started_on_publication` is the same idea past the fact.
+              started_on_publication: Started when published on the blockchain
+              starts_on_publication: Starts when published
+              stream_help: A public video the voters will see next to the ballot.
+              stream_summary: Attach video (optional)
+            hide_from_public_site: Hide from public site
+            index:
+              empty: There are no elections yet.
+              title: Elections
+            manage_trash:
+              title: Deleted elections
+            new:
+              help: Fill in the basic details, pick when voting closes, and choose how results are shown. The questions and the census come next, one tab at a time, and nothing is written to the blockchain until you publish it — which is a separate and irreversible step.
+              title: New election
+            new_election: New election
+            not_on_public_site: Not on public site
+            options_count:
+              one: 1 option
+              other: "%{count} options"
+            preview: Preview
+            # The reversible Decidim-visibility action, named after what it does.
+            # The word "publish" belongs to step 5 of the wizard alone — the
+            # irreversible on-chain one — and must not appear here.
+            publish:
+              invalid: There was a problem showing the election on the public site.
+              success: This election is now shown on the public site.
+              success_not_on_chain: This election is now shown on the public site. It cannot take votes until you publish it on the blockchain.
+            save_and_continue: Save and continue
+            show_on_public_site: Show on public site
+            show_on_public_site_disabled: Add at least one question before showing this election on the public site.
+            unpublish:
+              invalid: There was a problem hiding the election from the public site.
+              success: This election is no longer shown on the public site.
+            update:
+              invalid: There was a problem updating the election.
+              success: Election updated successfully.
+            view: View secure election
+            view_deleted: View deleted elections
           errors:
-            not_on_chain: This election is not on the blockchain yet.
-          percentage: Percentage
-          refresh:
-            invalid: This election is not on the blockchain yet.
-            publish: The interrupted publication is being resumed.
-            results: Results will be refreshed shortly.
-          results_caption: 'Results for the question: %{question}'
-          show:
-            confirm:
-              canceled:
-                body: Voting stops for everyone straight away and no more votes can ever be cast. This is written to the blockchain and cannot be undone. Choose OK to cancel the election, or Cancel to keep voting open.
-                title: Cancel this election?
-              ended:
-                body: Voting closes for everyone straight away and the count becomes final. This is written to the blockchain and cannot be undone. Choose OK to end the election, or Cancel to keep voting open.
-                title: End this election?
-              paused:
-                body: Nobody can cast a vote while voting is paused. You can resume it whenever you want. Choose OK to pause voting, or Cancel to leave voting open.
-                title: Pause voting?
-              ready:
-                body: Everyone on the census can cast their vote again. You can pause voting again later. Choose OK to resume voting, or Cancel to leave voting paused.
-                title: Resume voting?
-            controls_help: These controls change the state of every question of the election on the blockchain. The change is applied in the background and can take a moment to appear.
-            controls_title: Election controls
-            incomplete_body: The publication job stopped before it could finish, so voting cannot start yet. No votes have been recorded. Click Resume publication to continue where it stopped.
-            incomplete_title: Publication was interrupted
-            last_synced: Last refreshed %{time}.
-            never_synced: Results have never been refreshed.
-            no_results_yet: No results have been read from the blockchain yet.
-            refresh: Refresh
-            refresh_failed: The results could not be refreshed. Try again in a moment.
-            refresh_help: This page reads locally stored results, so it never slows down. Use refresh to fetch the latest tally from the blockchain.
-            refresh_slow: Still waiting for the blockchain. The figures below will be up to date the next time you refresh or reload.
-            refreshed: Results updated.
-            refreshing: Refreshing…
-            resume: Resume publication
-            results_title: Results
-            status_title: Status
-            technical_title: Technical details
-            turnout_title: Turnout
-            upstream_status: Status reported by Vocdoni
-          status:
-            invalid: There was a problem changing the status.
-            success: The status change has been requested and is being applied.
-          total: Total
-          turnout_unknown: Turnout unavailable
-          turnout_value: "%{percent} (%{votes} of %{census})"
-          upstream_id: 'Blockchain election ID:'
-          votes: Votes
-          votes_count:
-            one: 1 vote
-            other: "%{count} votes"
-        nav:
-          locked_on_chain: This election is on the blockchain and can no longer be edited.
-          progress: Step %{number} of %{total}. %{completed} completed.
-          reasons:
-            calendar_incomplete: Set the end date and time first. An election with no end can never be tallied.
-            census_incomplete: Complete the census first. It needs voter authentication, at least one person, and every person to have the fields authentication depends on.
-            details_incomplete: Give the election a title first.
-            locked_on_chain: This election is on the blockchain and can no longer be edited.
-            not_on_chain: This election is not on the blockchain yet.
-            questions_incomplete: Add at least one question with two options first.
-            unsaved: Save the election first.
-        public_link:
-          copy: "Copy link"
-          # The two links go to different places, and an organiser has to be
-          # able to tell which they are about to paste. Each is named after what
-          # it opens rather than after what it is called internally.
-          direct_body: "Goes straight to identifying and voting, with none of the surrounding context. This is the one to put in an email or on a printed card: it opens the ballot in one step."
-          direct_title: "Straight to the ballot"
-          direct_url_label: "Direct voting link"
-          not_reachable: "Participants cannot reach this election yet. Voting opens once all three of these are done."
-          open: "Open"
-          opens_new_tab: "(opens in a new tab)"
-          public_body: "Carries the whole election: what it is for, its questions, its dates and, once they are in, its results. Voters reach the ballot from a button on it."
-          public_title: "The election page"
-          ready: "Two links lead to this election. Both work — they land a voter in different places."
-          # Whether each step is done is otherwise carried by a tick or a cross
-          # and nothing else, so the three items read identically to a screen
-          # reader whatever their state.
-          step_done: "Done"
-          step_missing: "Not done yet"
-          # "Publish the component" stays Decidim's own word: it names a core
-          # action, on a core screen, that this link leads to. The election's
-          # own visibility is ours to name, and it is not called publishing.
-          step_component: "The component is published"
-          step_component_action: "Publish the component"
-          step_election: "The election is shown on the public site"
-          step_election_action: "Show it on the public site"
-          step_open: "Voting is open"
-          title: "Voting links"
-          url_label: "Link to the election page"
-          who_can_vote: "Only people on the census can vote. Everyone else can see the election but cannot open a ballot."
-        questions:
-          edit:
-            title: Questions
-          form:
-            add_question: Add question
-            collapse_all: Collapse all questions
-            expand_all: Expand all questions
-            save: Save questions
-          question:
-            add_response_option: Add response option
-            description_label: Description
-            max_choices_any: "(any number)"
-            max_choices_label: Maximum choices
-            question_type_label: Question type
-            remove: Remove
-            statement_label: Statement
-          response_option:
-            remove: Remove response option
-            statement_label: Statement
-            title: Response option
-          update:
-            invalid: There was a problem saving the questions.
-            success: Questions saved successfully.
-        setup:
-          checks:
-            calendar: The election has an end date.
-            census: The census identifies who may vote.
-            configuration: This installation is connected to Vocdoni.
-            details: The election has a title.
-            questions: Every question has at least two answers.
-          create:
-            invalid: The election was not published. Check the errors below.
-            success: The election is being published on the blockchain. This can take a moment.
-          errors:
-            already_on_chain: This election is already on the blockchain.
-            calendar_incomplete: The election needs an end date.
-            census_incomplete: The census is not configured. An election with no authentication field would identify nobody, so it cannot be published.
-            details_incomplete: The election needs a title.
-            not_configured: This installation is not connected to Vocdoni.
-            questions_incomplete: Every question needs at least two answers.
-          show:
-            check_missing: Missing
-            check_ok: Done
-            checklist_title: Before you publish
-            confirm_irreversible_label: I understand that publishing writes this election to a public blockchain and that it cannot be edited, deleted or undone afterwards.
-            fix_it: Fix it
-            in_progress: This election is being published on the blockchain. Refresh in a moment to see the result.
-            publish_button: Publish
-            publish_disabled: Complete every item in the checklist above before publishing.
-            publish_needs_confirmation: Tick the acknowledgement above to enable this button.
-      admin_log:
-        answer:
-          create: "%{user_name} added an answer to the %{resource_name} question"
-          delete: "%{user_name} deleted an answer of the %{resource_name} question"
-          update: "%{user_name} updated an answer of the %{resource_name} question"
-        election:
-          create: "%{user_name} created the %{resource_name} election in %{space_name}"
-          publish: "%{user_name} showed the %{resource_name} election in %{space_name} on the public site"
-          restore: "%{user_name} restored the %{resource_name} election in %{space_name}"
-          setup: "%{user_name} published the %{resource_name} election on the blockchain in %{space_name}"
-          soft_delete: "%{user_name} moved the %{resource_name} election in %{space_name} to the trash"
-          unpublish: "%{user_name} hid the %{resource_name} election in %{space_name} from the public site"
-          update: "%{user_name} updated the %{resource_name} election in %{space_name}"
-          update_calendar: "%{user_name} updated the schedule of the %{resource_name} election"
-          update_census: "%{user_name} updated the census of the %{resource_name} election"
-          update_status: "%{user_name} changed the status of the %{resource_name} election"
-        question:
-          create: "%{user_name} created the %{resource_name} question"
-          delete: "%{user_name} deleted the %{resource_name} question"
-          update: "%{user_name} updated the %{resource_name} question"
-          update_status: "%{user_name} changed the status of the %{resource_name} question"
-      auth_fields:
-        birthDate: Date of birth
-        email: Email
-        memberNumber: Member number
-        name: Name
-        nationalId: National ID
-        phone: Phone
-        surname: Surname
-      elections:
-        show:
-          # Voting that is already open is described by when it *closes*.
-          # "From publication to …" made the reader work out both whether it
-          # had started and what "publication" meant — a word about the
-          # administrator's workflow, not about voting.
-          calendar_open: Open now — voting closes %{end_date}
-          calendar_open_no_end: Open now
-      models:
-        answer:
-          fields:
-            title: Answer
-            value: Value
-        election:
-          fields:
+            last_job_failure: 'The last background operation failed:'
+            not_configured_body: The Vocdoni API URL, API key and organization address must be configured before an election can be published on the blockchain. Ask your system administrator to set them.
+            not_configured_title: This installation is not connected to Vocdoni
+          menu:
+            calendar: Schedule
             census: Census
-            census_group_id: Member group ID
-            census_size: Expected voters
-            end_at: End time
-            manual_start: Manual start
+            dashboard: Dashboard
+            details: Details
+            main: Main
+            monitor: Monitor
+            publish: Publish
             questions: Questions
-            start_at: Start time
-            status: Status
-            title: Title
-            vocdoni_chain_id: Chain ID
-            vocdoni_process_id: Process ID
-            votes_count: Votes
-        question:
-          fields:
-            answers: Answers
-            description: Description
-            position: "#"
-            question_type: Type
-            title: Question
-      question_types:
-        multichoice: Multiple option
-        singlechoice: Single option
-      status_actions:
-        canceled: Cancel election
-        ended: End election
-        paused: Pause voting
-        ready: Resume voting
-      statuses:
-        canceled: Canceled
-        draft: Draft
-        ended: Ended
-        ongoing: Ongoing
-        paused: Paused
-        publishing: Publishing
-        ready: Ready
-        results: Results published
+          monitor:
+            answer: Answer
+            errors:
+              not_on_chain: This election is not on the blockchain yet.
+            percentage: Percentage
+            refresh:
+              invalid: This election is not on the blockchain yet.
+              publish: The interrupted publication is being resumed.
+              results: Results will be refreshed shortly.
+            results_caption: 'Results for the question: %{question}'
+            show:
+              confirm:
+                canceled:
+                  body: Voting stops for everyone straight away and no more votes can ever be cast. This is written to the blockchain and cannot be undone. Choose OK to cancel the election, or Cancel to keep voting open.
+                  title: Cancel this election?
+                ended:
+                  body: Voting closes for everyone straight away and the count becomes final. This is written to the blockchain and cannot be undone. Choose OK to end the election, or Cancel to keep voting open.
+                  title: End this election?
+                paused:
+                  body: Nobody can cast a vote while voting is paused. You can resume it whenever you want. Choose OK to pause voting, or Cancel to leave voting open.
+                  title: Pause voting?
+                ready:
+                  body: Everyone on the census can cast their vote again. You can pause voting again later. Choose OK to resume voting, or Cancel to leave voting paused.
+                  title: Resume voting?
+              controls_help: These controls change the state of every question of the election on the blockchain. The change is applied in the background and can take a moment to appear.
+              controls_title: Election controls
+              incomplete_body: The publication job stopped before it could finish, so voting cannot start yet. No votes have been recorded. Click Resume publication to continue where it stopped.
+              incomplete_title: Publication was interrupted
+              last_synced: Last refreshed %{time}.
+              never_synced: Results have never been refreshed.
+              no_results_yet: No results have been read from the blockchain yet.
+              refresh: Refresh
+              refresh_failed: The results could not be refreshed. Try again in a moment.
+              refresh_help: This page reads locally stored results, so it never slows down. Use refresh to fetch the latest tally from the blockchain.
+              refresh_slow: Still waiting for the blockchain. The figures below will be up to date the next time you refresh or reload.
+              refreshed: Results updated.
+              refreshing: Refreshing…
+              resume: Resume publication
+              results_title: Results
+              status_title: Status
+              technical_title: Technical details
+              turnout_title: Turnout
+              upstream_status: Status reported by Vocdoni
+            status:
+              invalid: There was a problem changing the status.
+              success: The status change has been requested and is being applied.
+            total: Total
+            turnout_unknown: Turnout unavailable
+            turnout_value: "%{percent} (%{votes} of %{census})"
+            upstream_id: 'Blockchain election ID:'
+            votes: Votes
+            votes_count:
+              one: 1 vote
+              other: "%{count} votes"
+          nav:
+            locked_on_chain: This election is on the blockchain and can no longer be edited.
+            progress: Step %{number} of %{total}. %{completed} completed.
+            reasons:
+              calendar_incomplete: Set the end date and time first. An election with no end can never be tallied.
+              census_incomplete: Complete the census first. It needs voter authentication, at least one person, and every person to have the fields authentication depends on.
+              details_incomplete: Give the election a title first.
+              locked_on_chain: This election is on the blockchain and can no longer be edited.
+              not_on_chain: This election is not on the blockchain yet.
+              questions_incomplete: Add at least one question with two options first.
+              unsaved: Save the election first.
+          public_link:
+            copy: "Copy link"
+            # The two links go to different places, and an organiser has to be
+            # able to tell which they are about to paste. Each is named after what
+            # it opens rather than after what it is called internally.
+            direct_body: "Goes straight to identifying and voting, with none of the surrounding context. This is the one to put in an email or on a printed card: it opens the ballot in one step."
+            direct_title: "Straight to the ballot"
+            direct_url_label: "Direct voting link"
+            not_reachable: "Participants cannot reach this election yet. Voting opens once all three of these are done."
+            open: "Open"
+            opens_new_tab: "(opens in a new tab)"
+            public_body: "Carries the whole election: what it is for, its questions, its dates and, once they are in, its results. Voters reach the ballot from a button on it."
+            public_title: "The election page"
+            ready: "Two links lead to this election. Both work — they land a voter in different places."
+            # Whether each step is done is otherwise carried by a tick or a cross
+            # and nothing else, so the three items read identically to a screen
+            # reader whatever their state.
+            step_done: "Done"
+            step_missing: "Not done yet"
+            # "Publish the component" stays Decidim's own word: it names a core
+            # action, on a core screen, that this link leads to. The election's
+            # own visibility is ours to name, and it is not called publishing.
+            step_component: "The component is published"
+            step_component_action: "Publish the component"
+            step_election: "The election is shown on the public site"
+            step_election_action: "Show it on the public site"
+            step_open: "Voting is open"
+            title: "Voting links"
+            url_label: "Link to the election page"
+            who_can_vote: "Only people on the census can vote. Everyone else can see the election but cannot open a ballot."
+          questions:
+            edit:
+              title: Questions
+            form:
+              add_question: Add question
+              collapse_all: Collapse all questions
+              expand_all: Expand all questions
+              save: Save questions
+            question:
+              add_response_option: Add response option
+              description_label: Description
+              max_choices_any: "(any number)"
+              max_choices_label: Maximum choices
+              question_type_label: Question type
+              remove: Remove
+              statement_label: Statement
+            response_option:
+              remove: Remove response option
+              statement_label: Statement
+              title: Response option
+            update:
+              invalid: There was a problem saving the questions.
+              success: Questions saved successfully.
+          setup:
+            checks:
+              calendar: The election has an end date.
+              census: The census identifies who may vote.
+              configuration: This installation is connected to Vocdoni.
+              details: The election has a title.
+              questions: Every question has at least two answers.
+            create:
+              invalid: The election was not published. Check the errors below.
+              success: The election is being published on the blockchain. This can take a moment.
+            errors:
+              already_on_chain: This election is already on the blockchain.
+              calendar_incomplete: The election needs an end date.
+              census_incomplete: The census is not configured. An election with no authentication field would identify nobody, so it cannot be published.
+              details_incomplete: The election needs a title.
+              not_configured: This installation is not connected to Vocdoni.
+              questions_incomplete: Every question needs at least two answers.
+            show:
+              check_missing: Missing
+              check_ok: Done
+              checklist_title: Before you publish
+              confirm_irreversible_label: I understand that publishing writes this election to a public blockchain and that it cannot be edited, deleted or undone afterwards.
+              fix_it: Fix it
+              in_progress: This election is being published on the blockchain. Refresh in a moment to see the result.
+              publish_button: Publish
+              publish_disabled: Complete every item in the checklist above before publishing.
+              publish_needs_confirmation: Tick the acknowledgement above to enable this button.
+        admin_log:
+          answer:
+            create: "%{user_name} added an answer to the %{resource_name} question"
+            delete: "%{user_name} deleted an answer of the %{resource_name} question"
+            update: "%{user_name} updated an answer of the %{resource_name} question"
+          election:
+            create: "%{user_name} created the %{resource_name} election in %{space_name}"
+            publish: "%{user_name} showed the %{resource_name} election in %{space_name} on the public site"
+            restore: "%{user_name} restored the %{resource_name} election in %{space_name}"
+            setup: "%{user_name} published the %{resource_name} election on the blockchain in %{space_name}"
+            soft_delete: "%{user_name} moved the %{resource_name} election in %{space_name} to the trash"
+            unpublish: "%{user_name} hid the %{resource_name} election in %{space_name} from the public site"
+            update: "%{user_name} updated the %{resource_name} election in %{space_name}"
+            update_calendar: "%{user_name} updated the schedule of the %{resource_name} election"
+            update_census: "%{user_name} updated the census of the %{resource_name} election"
+            update_status: "%{user_name} changed the status of the %{resource_name} election"
+          question:
+            create: "%{user_name} created the %{resource_name} question"
+            delete: "%{user_name} deleted the %{resource_name} question"
+            update: "%{user_name} updated the %{resource_name} question"
+            update_status: "%{user_name} changed the status of the %{resource_name} question"
+        auth_fields:
+          birthDate: Date of birth
+          email: Email
+          memberNumber: Member number
+          name: Name
+          nationalId: National ID
+          phone: Phone
+          surname: Surname
+        elections:
+          show:
+            # Voting that is already open is described by when it *closes*.
+            # "From publication to …" made the reader work out both whether it
+            # had started and what "publication" meant — a word about the
+            # administrator's workflow, not about voting.
+            calendar_open: Open now — voting closes %{end_date}
+            calendar_open_no_end: Open now
+        models:
+          answer:
+            fields:
+              title: Answer
+              value: Value
+          election:
+            fields:
+              census: Census
+              census_group_id: Member group ID
+              census_size: Expected voters
+              end_at: End time
+              manual_start: Manual start
+              questions: Questions
+              start_at: Start time
+              status: Status
+              title: Title
+              vocdoni_chain_id: Chain ID
+              vocdoni_process_id: Process ID
+              votes_count: Votes
+          question:
+            fields:
+              answers: Answers
+              description: Description
+              position: "#"
+              question_type: Type
+              title: Question
+        question_types:
+          multichoice: Multiple option
+          singlechoice: Single option
+        status_actions:
+          canceled: Cancel election
+          ended: End election
+          paused: Pause voting
+          ready: Resume voting
+        statuses:
+          canceled: Canceled
+          draft: Draft
+          ended: Ended
+          ongoing: Ongoing
+          paused: Paused
+          publishing: Publishing
+          ready: Ready
+          results: Results published

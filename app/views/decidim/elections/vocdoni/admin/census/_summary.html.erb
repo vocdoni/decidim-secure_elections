@@ -1,0 +1,41 @@
+<%#
+  What a voter will be asked for — the app's "Authentication Configuration
+  Summary", read back from the election.
+%>
+<dl>
+  <dt class="h6"><%= t("decidim.elections.vocdoni.admin.census.summary.credentials") %></dt>
+  <dd class="mb-4">
+    <% if election.auth_fields.any? %>
+      <ul class="list-disc pl-6">
+        <% election.auth_fields.each do |field| %>
+          <li><%= Decidim::Elections::Vocdoni::CensusMember.field_label(field) %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <%= t("decidim.elections.vocdoni.admin.census.summary.no_credentials") %>
+    <% end %>
+  </dd>
+
+  <dt class="h6"><%= t("decidim.elections.vocdoni.admin.census.summary.two_factor") %></dt>
+  <dd class="mb-4">
+    <%= t(election.two_fa_method, scope: "decidim.elections.vocdoni.admin.census.two_factor.methods") %>
+    <% if election.two_fa? %>
+      <%# Consequential enough to repeat here: the contact value is part of the
+          voter's identity, not just where a code is delivered. %>
+      <p class="text-sm text-gray-2">
+        <%= t("decidim.elections.vocdoni.admin.census.summary.two_factor_note",
+              fields: election.two_fa_fields.map { |field| Decidim::Elections::Vocdoni::CensusMember.field_label(field) }.to_sentence) %>
+      </p>
+    <% end %>
+  </dd>
+
+  <dt class="h6"><%= t("decidim.elections.vocdoni.admin.census.summary.voting_power") %></dt>
+  <dd class="mb-4">
+    <%= t(election.weighted? ? "weighted" : "equal", scope: "decidim.elections.vocdoni.admin.census.summary.voting_power_values") %>
+  </dd>
+
+  <dt class="h6"><%= t("decidim.elections.vocdoni.admin.census.summary.security") %></dt>
+  <dd>
+    <%= render partial: "security_meter", locals: { level: election.security_level, id_prefix: "census-security-summary" } %>
+  </dd>
+</dl>

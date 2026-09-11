@@ -65,231 +65,232 @@ en:
   activerecord:
     errors:
       models:
-        decidim/secure_elections/census_member:
+        decidim/elections/vocdoni/census_member:
           attributes:
             base:
               blank_member: needs at least one identifier — member number, national id, email or phone. A name alone cannot be authenticated.
   decidim:
-    secure_elections:
-      admin:
-        census:
-          authentication:
-            back: Back to the census
-            invalid: There was a problem saving voter authentication.
-            save: Save voter authentication
-            success: Voter authentication saved successfully.
-            title: Voter authentication
-          clear:
-            invalid: The census could not be emptied.
-            success:
-              one: 1 person was removed from the census.
-              other: "%{count} people were removed from the census."
-          credentials:
-            advice:
-              good_body: Two or more credentials give a voter's identity a reasonable amount of proof.
-              good_title: Good security
-              recommend_body: For better security, we recommend picking at least two credentials.
-              recommend_title: Security recommendation
-            count: "%{selected} of %{max} credentials selected"
-            help: Choose what a voter has to type to prove they are on the census. Pick up to %{count} — more than that adds nothing and only makes voting harder. If you plan to identify voters by email or phone alone, leave this empty and turn on two-factor verification below.
-            legend: Required credentials
-            title: Credentials
-          import:
-            download_template: Download template
-            duplicate: "%{field} \"%{value}\" is already in the census"
-            failed_row: "Row %{number}: %{reason}."
-            failures:
-              one: "1 row was not imported. %{rows}"
-              other: "%{count} rows were not imported. %{rows}"
-            file_help: The file needs a header row. Columns it does not recognise are ignored, and rows that cannot be read are reported instead of stopping the import.
-            file_title: Upload a file
-            # Shown inside the upload dialog. `explanation` is its
-            # screen-reader description; the rest are the visible bullets, and
-            # `columns` and `required` are filled in from this election, which
-            # is the whole point of replacing Decidim's generic wording.
-            guidance:
-              columns: "Columns for this election: %{columns}."
-              explanation: What this file needs
-              format: A CSV file with a header row, saved as UTF-8.
-              required: "Every person needs a %{fields}."
-              rows: Columns it does not recognise are ignored, and any row it cannot read is reported back rather than stopping the import.
-              size: "Up to %{limit}, and up to %{rows} people in one file — far more than a census of this kind normally needs."
-            invalid: Nothing could be imported from that file.
-            invalid_value: "%{field} could not be read from \"%{value}\""
-            missing_required: "%{field} is required by this election and is missing"
-            more_failures:
-              one: 1 more row also failed.
-              other: "%{count} more rows also failed."
-            replace_confirm:
-              one: This will remove the 1 person currently in the census, and then import the file. Continue?
-              other: This will remove all %{count} people currently in the census, and then import the file. Continue?
-              zero: The census is empty, so there is nothing to remove. The file will be imported as it stands. Continue?
-            replace_confirm_title: Replace the current census?
-            replace_help: Leave this off to add the people in the file to the census you already have.
-            replace_label: Replace the current census
-            replaced:
-              one: 1 person who was in the census was removed.
-              other: "%{count} people who were in the census were removed."
-            # The template ships with one filled row so that the shape of each
-            # column is obvious. Uploaded back unedited it used to become a
-            # census member, and on a member-number-only election that made a
-            # credential printed in a public download into a vote anybody
-            # could cast. It is recognised and skipped now — and said out
-            # loud, because a row that vanishes without a word looks like a
-            # broken importer.
-            skipped_example:
-              one: The example row that comes with the template was not imported — it shows what each column expects, it is not a person. Replace it with real people, or delete it.
-              other: "%{count} rows identical to the template's example were not imported — the example shows what each column expects, it is not a person. Replace them with real people, or delete them."
-            submit: Import the file
-            success:
-              one: 1 person was added to the census.
-              other: "%{count} people were added to the census."
-            template_columns: Columns to include
-            template_help: Tick the columns you want, download the file, fill it in, and upload it below. The template starts from what this election needs.
-            template_title: Download an import template
-            title: Import a file
-          locked_on_chain: This election is already on the voting network, so its census can no longer be changed.
-          member_fields:
-            birthDate: Date of birth
-            email: Email
-            memberNumber: Member number
-            name: First name
-            nationalId: National ID
-            phone: Phone
-            surname: Last name
-            weight: Voting power
-          members:
-            add: Add a person
-            alternatives_help: With voter's choice, everybody needs at least one of %{fields}.
-            back: Back to the census
-            cell_label: "%{field}, row %{row}"
-            complete: Ready
-            help: Fill in one row per person. Only the fields this election needs are shown; the ones marked with an asterisk are required, because a voter who has no value for them cannot be identified.
-            missing: "Missing: %{fields}"
-            not_configured_body: Choose the credentials and two-factor verification first — until then there is no way to tell which columns this census needs.
-            not_configured_title: Voter authentication is not configured yet
-            # Both the column header and the visible label of the checkbox in
-            # each row; the `aria-label` below adds the row number so that the
-            # accessible name stays unique.
-            remove: Remove
-            remove_label: "Remove row %{row}"
-            required: Required
-            reported_missing: Rejected by the voting network
-            save: Save the census
-            status: Status
-            table_caption: People in the census, one row each
-            title: People in the census
-            unnamed: Unnamed
-            update:
-              invalid: Nothing was saved. Fix the problems flagged below, then save again.
-              success: Census saved successfully.
-            # Appears in the row the moment its "Remove" box is ticked. The row
-            # is dimmed and struck through too, but that is decoration — this
-            # is the part that does not depend on seeing a colour.
-            will_be_removed: Will be removed when you save
-          security:
-            levels:
-              mid: Mid
-              strong: Strong
-              weak: Weak
-            summaries:
-              mid: Mid-level guarantees — three credentials, but no second factor. Turning on two-factor verification would make this strong.
-              strong: Strong guarantees. Two-factor verification means a voter has to hold the contact you have on file, not just know a few details about somebody.
-              weak: Basic guarantees. Anybody who knows these details about a voter could vote in their place. Add more credentials, or turn on two-factor verification.
-          preview:
-            caption: First people in the census
-            identifier: Name or identifier
-            joined_at: Added
-            size:
-              one: 1 person in the census.
-              other: "%{count} people in the census."
-          show:
-            add_people_help: Add people one at a time, upload a spreadsheet, or bring in participants you have already verified in Decidim.
-            add_people_title: Add people to the census
-            authentication_title: Voter authentication
-            continue: Continue
-            autosave:
-              # Rendered next to the credentials form. The label rotates
-              # between these four as the census.js pack debounces changes and
-              # POSTs them back to the update action.
-              error: The last change could not be saved. Reload the page to see the details.
-              idle: Changes save automatically.
-              saved: Saved.
-              saving: Saving…
-            census_ready: The census is configured and all entries are valid.
-            clear: Empty the census
-            clear_confirm:
-              one: This will remove the 1 person in the census. Continue?
-              other: This will remove all %{count} people in the census. Continue?
-            configure_authentication: Configure
-            edit_authentication: Edit
-            edit_people: Edit the list
-            incomplete_body: "Those people cannot be identified as configured, so they would not be able to vote: %{details}."
-            incomplete_title:
-              one: 1 person is missing something they need in order to vote
-              other: "%{count} people are missing something they need in order to vote"
-            manifests:
-              internal_users: Internal users
-            missing_field:
-              one: 1 has no %{field}
-              other: "%{count} have no %{field}"
-            not_configured_body: Nobody can vote until you choose what a voter has to provide to prove they are on the census.
-            not_configured_title: Voter authentication is not configured
-            page_title: Census
-            people_count:
-              one: 1 person
-              other: "%{count} people"
-            people_empty: Nobody is in the census yet.
-            people_more:
-              one: 1 more person is in the census.
-              other: "%{count} more people are in the census."
-            people_title: People
-            reported_missing_body: "The voting network refused the census because these people are missing a required value: %{names}."
-            reported_missing_title:
-              one: 1 person was rejected by the voting network
-              other: "%{count} people were rejected by the voting network"
-            save: Save
-          summary:
-            credentials: Required credentials
-            no_credentials: None — voters are identified by the second factor alone.
-            security: Authentication guarantees
-            title: Summary
-            two_factor: Two-factor verification
-            two_factor_note: Everybody in the census needs a %{fields}. The voter has to supply it and it has to match, so it is part of their identity, not just where the code is sent.
-            voting_power: Voting power
-            voting_power_values:
-              equal: Every vote counts once
-              weighted: Votes are weighted by each person's voting power
-            weighted_help: Give each person in the census a voting power. Off means every vote counts once.
-            weighted_label: Weight votes by voting power
-          template:
-            no_columns: Pick at least one column before downloading the template.
-          two_factor:
-            contact_required_body: Everybody in the census needs the matching contact detail. A voter has to supply it at the time of voting and it has to match what you have on file, so anyone without one cannot vote.
-            contact_required_title: Two-factor verification makes the contact detail required
-            descriptions:
-              email: Voters receive a one-time code by email.
-              'off': Voters are identified by their credentials alone.
-              sms: Voters receive a one-time code by text message.
-              voter_choice: Voters choose whether to receive the code by email or by text message.
-            help: A second factor sends the voter a one-time code that they have to enter before their ballot opens.
-            legend: Verification method
-            methods:
-              email: Email verification
-              'off': No second factor
-              sms: SMS verification
-              voter_choice: Voter's choice
-            title: Two-factor verification
-          verifications:
-            choose: Choose a verification
-            help: Everybody who has been granted this verification joins the census, with the name and email on their Decidim account. Running it again adds only the people who are not in the census yet.
-            invalid: Nobody could be imported from that verification.
-            none_available: This organization has no verifications switched on, so there is nobody to import.
-            # The import panel's own hint says "the people in the file", which
-            # is right there and wrong here: there is no file in this flow.
-            replace_help: Leave this off to add the verified participants to the census you already have.
-            submit: Add verified participants
-            success:
-              one: 1 verified participant was added to the census.
-              other: "%{count} verified participants were added to the census."
-            title: Add participants verified in Decidim
+    elections:
+      vocdoni:
+        admin:
+          census:
+            authentication:
+              back: Back to the census
+              invalid: There was a problem saving voter authentication.
+              save: Save voter authentication
+              success: Voter authentication saved successfully.
+              title: Voter authentication
+            clear:
+              invalid: The census could not be emptied.
+              success:
+                one: 1 person was removed from the census.
+                other: "%{count} people were removed from the census."
+            credentials:
+              advice:
+                good_body: Two or more credentials give a voter's identity a reasonable amount of proof.
+                good_title: Good security
+                recommend_body: For better security, we recommend picking at least two credentials.
+                recommend_title: Security recommendation
+              count: "%{selected} of %{max} credentials selected"
+              help: Choose what a voter has to type to prove they are on the census. Pick up to %{count} — more than that adds nothing and only makes voting harder. If you plan to identify voters by email or phone alone, leave this empty and turn on two-factor verification below.
+              legend: Required credentials
+              title: Credentials
+            import:
+              download_template: Download template
+              duplicate: "%{field} \"%{value}\" is already in the census"
+              failed_row: "Row %{number}: %{reason}."
+              failures:
+                one: "1 row was not imported. %{rows}"
+                other: "%{count} rows were not imported. %{rows}"
+              file_help: The file needs a header row. Columns it does not recognise are ignored, and rows that cannot be read are reported instead of stopping the import.
+              file_title: Upload a file
+              # Shown inside the upload dialog. `explanation` is its
+              # screen-reader description; the rest are the visible bullets, and
+              # `columns` and `required` are filled in from this election, which
+              # is the whole point of replacing Decidim's generic wording.
+              guidance:
+                columns: "Columns for this election: %{columns}."
+                explanation: What this file needs
+                format: A CSV file with a header row, saved as UTF-8.
+                required: "Every person needs a %{fields}."
+                rows: Columns it does not recognise are ignored, and any row it cannot read is reported back rather than stopping the import.
+                size: "Up to %{limit}, and up to %{rows} people in one file — far more than a census of this kind normally needs."
+              invalid: Nothing could be imported from that file.
+              invalid_value: "%{field} could not be read from \"%{value}\""
+              missing_required: "%{field} is required by this election and is missing"
+              more_failures:
+                one: 1 more row also failed.
+                other: "%{count} more rows also failed."
+              replace_confirm:
+                one: This will remove the 1 person currently in the census, and then import the file. Continue?
+                other: This will remove all %{count} people currently in the census, and then import the file. Continue?
+                zero: The census is empty, so there is nothing to remove. The file will be imported as it stands. Continue?
+              replace_confirm_title: Replace the current census?
+              replace_help: Leave this off to add the people in the file to the census you already have.
+              replace_label: Replace the current census
+              replaced:
+                one: 1 person who was in the census was removed.
+                other: "%{count} people who were in the census were removed."
+              # The template ships with one filled row so that the shape of each
+              # column is obvious. Uploaded back unedited it used to become a
+              # census member, and on a member-number-only election that made a
+              # credential printed in a public download into a vote anybody
+              # could cast. It is recognised and skipped now — and said out
+              # loud, because a row that vanishes without a word looks like a
+              # broken importer.
+              skipped_example:
+                one: The example row that comes with the template was not imported — it shows what each column expects, it is not a person. Replace it with real people, or delete it.
+                other: "%{count} rows identical to the template's example were not imported — the example shows what each column expects, it is not a person. Replace them with real people, or delete them."
+              submit: Import the file
+              success:
+                one: 1 person was added to the census.
+                other: "%{count} people were added to the census."
+              template_columns: Columns to include
+              template_help: Tick the columns you want, download the file, fill it in, and upload it below. The template starts from what this election needs.
+              template_title: Download an import template
+              title: Import a file
+            locked_on_chain: This election is already on the voting network, so its census can no longer be changed.
+            member_fields:
+              birthDate: Date of birth
+              email: Email
+              memberNumber: Member number
+              name: First name
+              nationalId: National ID
+              phone: Phone
+              surname: Last name
+              weight: Voting power
+            members:
+              add: Add a person
+              alternatives_help: With voter's choice, everybody needs at least one of %{fields}.
+              back: Back to the census
+              cell_label: "%{field}, row %{row}"
+              complete: Ready
+              help: Fill in one row per person. Only the fields this election needs are shown; the ones marked with an asterisk are required, because a voter who has no value for them cannot be identified.
+              missing: "Missing: %{fields}"
+              not_configured_body: Choose the credentials and two-factor verification first — until then there is no way to tell which columns this census needs.
+              not_configured_title: Voter authentication is not configured yet
+              # Both the column header and the visible label of the checkbox in
+              # each row; the `aria-label` below adds the row number so that the
+              # accessible name stays unique.
+              remove: Remove
+              remove_label: "Remove row %{row}"
+              required: Required
+              reported_missing: Rejected by the voting network
+              save: Save the census
+              status: Status
+              table_caption: People in the census, one row each
+              title: People in the census
+              unnamed: Unnamed
+              update:
+                invalid: Nothing was saved. Fix the problems flagged below, then save again.
+                success: Census saved successfully.
+              # Appears in the row the moment its "Remove" box is ticked. The row
+              # is dimmed and struck through too, but that is decoration — this
+              # is the part that does not depend on seeing a colour.
+              will_be_removed: Will be removed when you save
+            security:
+              levels:
+                mid: Mid
+                strong: Strong
+                weak: Weak
+              summaries:
+                mid: Mid-level guarantees — three credentials, but no second factor. Turning on two-factor verification would make this strong.
+                strong: Strong guarantees. Two-factor verification means a voter has to hold the contact you have on file, not just know a few details about somebody.
+                weak: Basic guarantees. Anybody who knows these details about a voter could vote in their place. Add more credentials, or turn on two-factor verification.
+            preview:
+              caption: First people in the census
+              identifier: Name or identifier
+              joined_at: Added
+              size:
+                one: 1 person in the census.
+                other: "%{count} people in the census."
+            show:
+              add_people_help: Add people one at a time, upload a spreadsheet, or bring in participants you have already verified in Decidim.
+              add_people_title: Add people to the census
+              authentication_title: Voter authentication
+              continue: Continue
+              autosave:
+                # Rendered next to the credentials form. The label rotates
+                # between these four as the census.js pack debounces changes and
+                # POSTs them back to the update action.
+                error: The last change could not be saved. Reload the page to see the details.
+                idle: Changes save automatically.
+                saved: Saved.
+                saving: Saving…
+              census_ready: The census is configured and all entries are valid.
+              clear: Empty the census
+              clear_confirm:
+                one: This will remove the 1 person in the census. Continue?
+                other: This will remove all %{count} people in the census. Continue?
+              configure_authentication: Configure
+              edit_authentication: Edit
+              edit_people: Edit the list
+              incomplete_body: "Those people cannot be identified as configured, so they would not be able to vote: %{details}."
+              incomplete_title:
+                one: 1 person is missing something they need in order to vote
+                other: "%{count} people are missing something they need in order to vote"
+              manifests:
+                internal_users: Internal users
+              missing_field:
+                one: 1 has no %{field}
+                other: "%{count} have no %{field}"
+              not_configured_body: Nobody can vote until you choose what a voter has to provide to prove they are on the census.
+              not_configured_title: Voter authentication is not configured
+              page_title: Census
+              people_count:
+                one: 1 person
+                other: "%{count} people"
+              people_empty: Nobody is in the census yet.
+              people_more:
+                one: 1 more person is in the census.
+                other: "%{count} more people are in the census."
+              people_title: People
+              reported_missing_body: "The voting network refused the census because these people are missing a required value: %{names}."
+              reported_missing_title:
+                one: 1 person was rejected by the voting network
+                other: "%{count} people were rejected by the voting network"
+              save: Save
+            summary:
+              credentials: Required credentials
+              no_credentials: None — voters are identified by the second factor alone.
+              security: Authentication guarantees
+              title: Summary
+              two_factor: Two-factor verification
+              two_factor_note: Everybody in the census needs a %{fields}. The voter has to supply it and it has to match, so it is part of their identity, not just where the code is sent.
+              voting_power: Voting power
+              voting_power_values:
+                equal: Every vote counts once
+                weighted: Votes are weighted by each person's voting power
+              weighted_help: Give each person in the census a voting power. Off means every vote counts once.
+              weighted_label: Weight votes by voting power
+            template:
+              no_columns: Pick at least one column before downloading the template.
+            two_factor:
+              contact_required_body: Everybody in the census needs the matching contact detail. A voter has to supply it at the time of voting and it has to match what you have on file, so anyone without one cannot vote.
+              contact_required_title: Two-factor verification makes the contact detail required
+              descriptions:
+                email: Voters receive a one-time code by email.
+                'off': Voters are identified by their credentials alone.
+                sms: Voters receive a one-time code by text message.
+                voter_choice: Voters choose whether to receive the code by email or by text message.
+              help: A second factor sends the voter a one-time code that they have to enter before their ballot opens.
+              legend: Verification method
+              methods:
+                email: Email verification
+                'off': No second factor
+                sms: SMS verification
+                voter_choice: Voter's choice
+              title: Two-factor verification
+            verifications:
+              choose: Choose a verification
+              help: Everybody who has been granted this verification joins the census, with the name and email on their Decidim account. Running it again adds only the people who are not in the census yet.
+              invalid: Nobody could be imported from that verification.
+              none_available: This organization has no verifications switched on, so there is nobody to import.
+              # The import panel's own hint says "the people in the file", which
+              # is right there and wrong here: there is no file in this flow.
+              replace_help: Leave this off to add the verified participants to the census you already have.
+              submit: Add verified participants
+              success:
+                one: 1 verified participant was added to the census.
+                other: "%{count} verified participants were added to the census."
+              title: Add participants verified in Decidim

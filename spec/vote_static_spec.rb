@@ -11,7 +11,7 @@ require "spec_helper"
 # strings the JavaScript reads have to exist in the locale files the build
 # generated from `config/locales`.
 describe "the built voting page" do # rubocop:disable RSpec/DescribeClass -- the subject is a directory of build output, not a class
-  let(:engine_root) { Pathname.new(Decidim::SecureElections::Engine.root) }
+  let(:engine_root) { Pathname.new(Decidim::Elections::Vocdoni::Engine.root) }
   let(:vote_root) { engine_root.join("public/vocdoni") }
   let(:english) { JSON.parse(vote_root.join("locales/en.json").read) }
 
@@ -24,12 +24,12 @@ describe "the built voting page" do # rubocop:disable RSpec/DescribeClass -- the
   # `ActionDispatch::Static` serves whatever is under the engine's `public/`,
   # so this is the path an operator can rely on the moment the gem is installed.
   it "serves the page at the path the rest of the module links to" do
-    expect(Decidim::SecureElections::Engine::VOTE_PATH).to eq("/vocdoni/vote.html")
+    expect(Decidim::Elections::Vocdoni::Engine::VOTE_PATH).to eq("/vocdoni/vote.html")
     expect(vote_root.join("vote.html")).to exist
   end
 
   it "is packaged in the gem" do
-    files = Gem::Specification.load(engine_root.join("decidim-secure_elections.gemspec").to_s).files
+    files = Gem::Specification.load(engine_root.join("decidim-elections-vocdoni.gemspec").to_s).files
 
     expect(files).to include("public/vocdoni/vote.html", "public/vocdoni/vote.js")
   end
@@ -44,7 +44,7 @@ describe "the built voting page" do # rubocop:disable RSpec/DescribeClass -- the
     let(:faces) { %w(source-sans-pro-regular source-sans-pro-600 source-sans-pro-700) }
 
     it "ships every weight the stylesheet asks for, and packages them" do
-      files = Gem::Specification.load(engine_root.join("decidim-secure_elections.gemspec").to_s).files
+      files = Gem::Specification.load(engine_root.join("decidim-elections-vocdoni.gemspec").to_s).files
       css = vote_root.join("vote.css").read
 
       faces.each do |face|
@@ -95,9 +95,9 @@ describe "the built voting page" do # rubocop:disable RSpec/DescribeClass -- the
     subject(:html) { vote_root.join("booth.html").read }
 
     it "is still shipped, and still packaged" do
-      files = Gem::Specification.load(engine_root.join("decidim-secure_elections.gemspec").to_s).files
+      files = Gem::Specification.load(engine_root.join("decidim-elections-vocdoni.gemspec").to_s).files
 
-      expect(Decidim::SecureElections::Engine::LEGACY_VOTE_PATH).to eq("/vocdoni/booth.html")
+      expect(Decidim::Elections::Vocdoni::Engine::LEGACY_VOTE_PATH).to eq("/vocdoni/booth.html")
       expect(files).to include("public/vocdoni/booth.html")
     end
 
@@ -144,14 +144,14 @@ describe "the built voting page" do # rubocop:disable RSpec/DescribeClass -- the
     # voter meets an input labelled `memberNumber`.
     it "labels every census field the page can be asked for" do
       expect(english["fields"].keys).to include(
-        *Decidim::SecureElections::Election::AUTH_FIELDS,
-        *Decidim::SecureElections::Election::TWO_FA_FIELDS
+        *Decidim::Elections::Vocdoni::Election::AUTH_FIELDS,
+        *Decidim::Elections::Vocdoni::Election::TWO_FA_FIELDS
       )
     end
 
     it "was generated from config/locales rather than written by hand" do
-      expect(english["exit"]).to eq(I18n.t("decidim.secure_elections.votes.page.exit", locale: :en))
-      expect(english["question_number"]).to eq(I18n.t("decidim.secure_elections.elections.show.question_number", locale: :en))
+      expect(english["exit"]).to eq(I18n.t("decidim.elections.vocdoni.votes.page.exit", locale: :en))
+      expect(english["question_number"]).to eq(I18n.t("decidim.elections.vocdoni.elections.show.question_number", locale: :en))
     end
 
     # Every string a voter can meet used to call this a "voting booth". The word

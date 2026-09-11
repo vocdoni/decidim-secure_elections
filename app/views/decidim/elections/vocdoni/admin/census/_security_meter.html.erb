@@ -1,0 +1,53 @@
+<%#
+  WEAK / MID / STRONG, the Vocdoni app's meter
+  (`VoterAuthentication/SecurityLevel.tsx`) in Decidim's design system.
+
+  The rule is the app's, unchanged: two-factor wins outright, otherwise a full
+  set of three credentials is mid, and anything less is weak.
+
+  Both class lists are rendered onto every box so the browser can switch the
+  active one without knowing anything about the palette — the styling stays
+  here, where it can be seen.
+
+  Locals: `level` (String), `id_prefix` (scopes the ids so the meter can appear
+  twice on one page: live in the form, static in the summary).
+%>
+<%
+  levels = Decidim::Elections::Vocdoni::Election::SECURITY_LEVELS
+  prefix = local_assigns.fetch(:id_prefix, "census-security")
+  base = "flex-1 text-center py-1 px-2 rounded font-semibold"
+  active_classes = {
+    "weak" => "#{base} bg-alert text-white",
+    "mid" => "#{base} bg-warning text-black",
+    "strong" => "#{base} bg-success text-white"
+  }
+  inactive_class = "#{base} bg-background text-gray-2"
+%>
+
+<div class="mt-2" id="<%= prefix %>" data-security-level="<%= level %>">
+  <%# A list rather than three divs: a screen reader gets "3 items", and which
+      one applies is carried by aria-current, not by a colour. %>
+  <ul class="flex gap-2" role="list">
+    <% levels.each do |value| %>
+      <% active = value == level %>
+      <li class="<%= active ? active_classes[value] : inactive_class %>"
+          data-security-level-box="<%= value %>"
+          data-active-class="<%= active_classes[value] %>"
+          data-inactive-class="<%= inactive_class %>"
+          aria-current="<%= active %>">
+        <%= t(value, scope: "decidim.elections.vocdoni.admin.census.security.levels") %>
+      </li>
+    <% end %>
+  </ul>
+
+  <%# Every level's explanation is rendered; only the current one is shown, so
+      the browser never has to compose translated prose. %>
+  <% levels.each do |value| %>
+    <p class="text-sm text-gray-2 mt-2"
+       data-security-level-summary="<%= value %>"
+       role="status"
+       <%= "hidden" unless value == level %>>
+      <%= t(value, scope: "decidim.elections.vocdoni.admin.census.security.summaries") %>
+    </p>
+  <% end %>
+</div>

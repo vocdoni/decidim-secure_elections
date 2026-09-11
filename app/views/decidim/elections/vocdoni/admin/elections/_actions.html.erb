@@ -1,0 +1,156 @@
+<%#
+  The per-row action dropdown.
+
+  What is *not* here is as intentional as what is. There is no on-chain
+  Publish action — writing an election to the blockchain is irreversible,
+  and an irreversible action does not belong one click away from a table
+  row. That flow lives on the Dashboard, behind the checklist and the
+  `confirm_irreversible` acknowledgement. Decidim-elections upstream
+  ships Publish here with no confirmation at all, which is not a safety
+  story vd will copy.
+
+  What *is* here is the Decidim-visibility toggle ("Show / Hide on
+  public site"), which is reversible and never touches the chain — hence
+  the explicit renaming away from "Publish / Unpublish" (a word that in
+  this module belongs to on-chain publication, and reusing it here made
+  people read the row action as an on-chain write). Also here: a link
+  to the Dashboard, replacing the old direct Monitor link — the Dashboard
+  branches on `published?` and reaches the monitor for on-chain elections.
+%>
+<button type="button"
+        data-controller="dropdown"
+        data-target="actions-election-<%= election.id %>"
+        aria-label="<%= t("decidim.admin.actions.actions_label", resource: present(election).title(html_escape: true)) %>">
+  <%= icon "more-fill", class: "text-secondary" %>
+</button>
+
+<div class="inline-block relative">
+  <ul id="actions-election-<%= election.id %>" class="dropdown dropdown__action" aria-hidden="true">
+    <% if view == :deleted %>
+      <% if allowed_to? :restore, :election, trashable_deleted_resource: election %>
+        <li class="dropdown__item">
+          <%= link_to restore_election_path(election), method: :patch, class: "dropdown__button" do %>
+            <%= icon "refresh-line" %>
+            <%= t("actions.restore", scope: "decidim.admin") %>
+          <% end %>
+        </li>
+      <% end %>
+    <% else %>
+      <li class="dropdown__item">
+        <% if allowed_to? :update, :election, election: election %>
+          <%= link_to edit_election_path(election), class: "dropdown__button" do %>
+            <%= icon "pencil-line" %>
+            <%= t("decidim.elections.vocdoni.admin.elections.edit_action") %>
+          <% end %>
+        <% else %>
+          <%# Kept visible and explained rather than hidden: an on-chain election is frozen on purpose. %>
+          <div class="dropdown__button-disabled">
+            <%= with_tooltip t("decidim.elections.vocdoni.admin.nav.locked_on_chain"), class: :left do %>
+              <%= icon "lock-line", class: "text-gray" %>
+              <span><%= t("decidim.elections.vocdoni.admin.elections.edit_action") %></span>
+              <span class="sr-only"><%= t("decidim.elections.vocdoni.admin.nav.locked_on_chain") %></span>
+            <% end %>
+          </div>
+        <% end %>
+      </li>
+
+      <%# Dashboard, not monitor: the dashboard branches on `published?`
+          and reaches the live monitor for on-chain elections. Available
+          from every row, whether or not the election is on chain — an
+          unpublished election shows the completeness checklist + preview
+          there, and a published one shows the live monitor. %>
+      <li class="dropdown__item">
+        <%= link_to election_dashboard_path(election), class: "dropdown__button" do %>
+          <%= icon "dashboard-line" %>
+          <%= t("decidim.elections.vocdoni.admin.elections.dashboard") %>
+        <% end %>
+      </li>
+
+      <hr>
+
+      <%#
+        Decidim visibility, and nothing else: this pair shows and hides the
+        election's page on the public site. It is reversible, it never touches
+        the blockchain, and it cannot open a ballot.
+
+        It used to be called Publish / Unpublish, one click away from the
+        actions above and sharing its name with wizard step 5 — the
+        irreversible on-chain publication guarded by an acknowledgement and a
+        typed phrase. Both readings of that collision were wrong: "did I just
+        write to the chain?", or "my election is live" when it is a public page
+        that cannot yet take a vote. The word "publish" belongs to step 5 alone;
+        these two say what they do, and they say it symmetrically.
+      %>
+      <% if election.published? %>
+        <% if allowed_to? :unpublish, :election, election: election %>
+          <li class="dropdown__item">
+            <%= link_to unpublish_election_path(election),
+                        method: :put,
+                        data: { confirm: t("decidim.elections.vocdoni.admin.elections.confirm_hide") },
+                        class: "dropdown__button" do %>
+              <%= icon "eye-off-line" %>
+              <%= t("decidim.elections.vocdoni.admin.elections.hide_from_public_site") %>
+            <% end %>
+          </li>
+        <% end %>
+      <% elsif allowed_to? :publish, :election, election: election %>
+        <li class="dropdown__item">
+          <%= link_to publish_election_path(election), method: :put, class: "dropdown__button" do %>
+            <%= icon "eye-line" %>
+            <%= t("decidim.elections.vocdoni.admin.elections.show_on_public_site") %>
+          <% end %>
+        </li>
+      <% else %>
+        <li class="dropdown__item">
+          <div class="dropdown__button-disabled">
+            <%= with_tooltip t("decidim.elections.vocdoni.admin.elections.show_on_public_site_disabled"), class: :left do %>
+              <%= icon "eye-line", class: "text-gray" %>
+              <span><%= t("decidim.elections.vocdoni.admin.elections.show_on_public_site") %></span>
+              <span class="sr-only"><%= t("decidim.elections.vocdoni.admin.elections.show_on_public_site_disabled") %></span>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+
+      <li class="dropdown__item">
+        <%= dropdown_resource_permissions_link(election) %>
+      </li>
+
+      <hr>
+
+      <li class="dropdown__item">
+        <%= link_to resource_locator(election).path, class: "dropdown__button", target: :blank, data: { "external-link": false } do %>
+          <%= icon "eye-line" %>
+          <%= t("decidim.elections.vocdoni.admin.elections.preview") %>
+        <% end %>
+      </li>
+
+      <hr>
+
+      <% if allowed_to? :soft_delete, :election, trashable_deleted_resource: election %>
+        <li class="dropdown__item">
+          <%# The confirmation says what trashing actually does to *this*
+              election — in particular that it cannot stop a vote that is
+              already running on chain. See `vocdoni_trash_confirm_data`. %>
+          <%= link_to soft_delete_election_path(election),
+                      method: :patch,
+                      data: vocdoni_trash_confirm_data(election),
+                      class: "dropdown__button" do %>
+            <%= icon "delete-bin-line" %>
+            <%= t("actions.soft_delete", scope: "decidim.admin") %>
+          <% end %>
+        </li>
+      <% else %>
+        <li class="dropdown__item">
+          <div class="dropdown__button-disabled">
+            <%= with_tooltip t("decidim.elections.vocdoni.admin.elections.delete_disabled"), class: :left do %>
+              <%= icon "delete-bin-line", class: "text-gray" %>
+              <span><%= t("actions.soft_delete", scope: "decidim.admin") %></span>
+              <span class="sr-only"><%= t("decidim.elections.vocdoni.admin.elections.delete_disabled") %></span>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    <% end %>
+  </ul>
+</div>

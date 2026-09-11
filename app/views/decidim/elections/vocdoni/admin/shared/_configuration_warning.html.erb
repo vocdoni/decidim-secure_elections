@@ -1,0 +1,10 @@
+<%#
+  Shown when the module has no API credentials. It reports only *whether* the
+  settings are present — never their values (ARCHITECTURE §0.2).
+%>
+<% unless module_configured? %>
+  <%= cell "decidim/announcement",
+           { title: t("decidim.elections.vocdoni.admin.errors.not_configured_title"),
+             body: t("decidim.elections.vocdoni.admin.errors.not_configured_body") },
+           callout_class: "alert" %>
+<% end %>
