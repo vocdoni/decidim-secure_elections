@@ -9,3 +9,4 @@ en:
           form:
             results_availability:
               blockchain_backed: "Blockchain-backed (spike)"
+              blockchain_backed_help: "Results are anchored on the Vocdoni chain and revealed after the election ends. (Phase-4 spike placeholder.)"
