@@ -1,0 +1,21 @@
+<div class="row column font-semibold pb-4">
+  <%= t("decidim.elections.censuses.vocdoni_secure.credentials_title") %>
+</div>
+<div class="row column">
+  <p class="mb-2"><%= t("decidim.elections.censuses.vocdoni_secure.credentials_info") %></p>
+</div>
+<div class="mt-4 form__wrapper gap-1">
+  <% Decidim::Elections::Vocdoni::AdminForms::CensusForm::CREDENTIAL_FIELDS.each do |field| %>
+    <div class="row">
+      <%= label_tag "census_credential_fields_#{field}" do %>
+        <%= check_box_tag "census[credential_fields][#{field}]", "1", @form.credential_field?(field), id: "census_credential_fields_#{field}" %>
+        <%= t("decidim.elections.censuses.vocdoni_secure.credential_fields.#{field}") %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+<div class="mt-6">
+  <%= form.check_box :weighted_votes,
+                     label: t("decidim.elections.censuses.vocdoni_secure.weighted_votes"),
+                     help_text: t("decidim.elections.censuses.vocdoni_secure.weighted_votes_help") %>
+</div>

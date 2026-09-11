@@ -36,12 +36,13 @@ module Decidim
 
         initializer "phase_4_spike.register_census_manifest" do
           Decidim::Elections.census_registry.register(:vocdoni_secure) do |manifest|
-            # No admin_form for the spike — CensusManifest allows admin_form
-            # to be blank; the partial renders standalone with a message that
-            # names the (real) fields a Vocdoni backend would carry here.
-            manifest.admin_form_partial = "decidim/elections/vocdoni/phase_4_spike/admin_form"
+            manifest.admin_form = "Decidim::Elections::Vocdoni::AdminForms::CensusForm"
+            manifest.admin_form_partial = "decidim/elections/vocdoni/admin/censuses/vocdoni_secure_form"
+            manifest.after_update_command = "Decidim::Elections::Vocdoni::Admin::AfterUpdateCensus"
             manifest.user_query do |election|
-              # Spike-only: the "census" is every user in the org.
+              # Stage A: the census is every user in the org. Stage B/C replaces
+              # this with the actual roster (see admin_form for how the
+              # identifier fields are picked).
               Decidim::User.where(organization: election.organization)
             end
           end

@@ -3,10 +3,21 @@ en:
     elections:
       censuses:
         vocdoni_secure:
-          label: "Secure via Vocdoni (spike)"
+          label: "Secure via Vocdoni"
+          credentials_title: "Voter authentication"
+          credentials_info: "Pick which identifier fields voters authenticate with. Each ballot is signed and verified in the browser; the Decidim server never sees a vote."
+          credential_fields:
+            email: "Email address"
+            phone: "Phone number"
+            member_number: "Member number"
+            national_id: "National ID"
+            name: "Full name"
+            date_of_birth: "Date of birth"
+          weighted_votes: "Weighted votes"
+          weighted_votes_help: "Assign each voter a weight (default 1). Requires a per-voter weight column when the census is populated."
       admin:
         elections:
           form:
             results_availability:
-              blockchain_backed: "Blockchain-backed (spike)"
-              blockchain_backed_help: "Results are anchored on the Vocdoni chain and revealed after the election ends. (Phase-4 spike placeholder.)"
+              blockchain_backed: "Blockchain-backed"
+              blockchain_backed_help: "Results are anchored on the Vocdoni chain and revealed after the election ends."
