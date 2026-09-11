@@ -39,6 +39,8 @@ module Decidim
             manifest.admin_form = "Decidim::Elections::Vocdoni::AdminForms::CensusForm"
             manifest.admin_form_partial = "decidim/elections/vocdoni/admin/censuses/vocdoni_secure_form"
             manifest.after_update_command = "Decidim::Elections::Vocdoni::Admin::AfterUpdateCensus"
+            manifest.voter_form = "Decidim::Elections::Vocdoni::VoterForms::PassthroughForm"
+            manifest.voter_form_partial = "decidim/elections/vocdoni/booth/launcher"
             manifest.user_query do |election|
               # Stage A/B: the census is every registered user of the org,
               # capped at 20 for the spike so publish + memberbase upload

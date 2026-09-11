@@ -28,3 +28,10 @@ en:
         voting:
           results_availability:
             blockchain_backed: "Results anchored on the Vocdoni chain."
+      vocdoni:
+        booth:
+          launcher:
+            help_html: "Your ballot is signed and submitted in your browser. The Decidim server never sees a vote."
+            enter: "Open the voting booth"
+            chain_note_html: "Anchored on the Vocdoni chain <code>%{chain}</code>."
+            not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."

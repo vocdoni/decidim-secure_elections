@@ -1,0 +1,50 @@
+<%#
+  Voter-side landing rendered by upstream's `votes/new.html.erb` when the
+  election's census manifest is `vocdoni_secure`. The upstream view wraps this
+  partial inside a Decidim form — we leave that form empty (no fields) and
+  point the voter at the standalone booth SPA at `/vocdoni/vote.html`.
+
+  The SPA reads the API URL, process id and locale from its query string,
+  fetches the *public* process from the SaaS and drives the whole voting flow
+  client-side (auth against the CSP, ZK ballot signing, on-chain submission).
+  Nothing else is rendered here.
+
+  For a Vocdoni-backed election the sidecar `Vocdoni::Process` holds the
+  on-chain process id — read straight off `election.vocdoni_process` (has_one
+  installed by the phase_4_spike engine).
+%>
+<%
+  process = election.vocdoni_process
+  process_id = process&.vocdoni_process_id
+  api_url = Decidim::Elections::Vocdoni.api_url
+  exit_path = decidim_elections.election_path(election)
+%>
+
+<div class="row column mt-8">
+  <% if process_id.present? %>
+    <p class="mb-4">
+      <%= t("decidim.elections.vocdoni.booth.launcher.help_html",
+             default: "Your ballot is signed and submitted in your browser. The Decidim server never sees a vote.") %>
+    </p>
+    <%
+      booth_url = "/vocdoni/vote.html?api=#{CGI.escape(api_url)}&process=#{CGI.escape(process_id)}&locale=#{I18n.locale}&exit=#{CGI.escape(exit_path)}"
+    %>
+    <%= link_to booth_url,
+                target: "_top",
+                class: "button button__lg button__secondary",
+                data: { turbo: false } do %>
+      <%= t("decidim.elections.vocdoni.booth.launcher.enter",
+             default: "Open the voting booth") %>
+    <% end %>
+    <p class="mt-4 text-sm text-gray-600">
+      <%= t("decidim.elections.vocdoni.booth.launcher.chain_note_html",
+             default: "Anchored on the Vocdoni chain <code>%{chain}</code>.",
+             chain: process.chain_id.to_s.presence || "…").html_safe %>
+    </p>
+  <% else %>
+    <p class="mb-4">
+      <%= t("decidim.elections.vocdoni.booth.launcher.not_ready",
+             default: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments.") %>
+    </p>
+  <% end %>
+</div>
