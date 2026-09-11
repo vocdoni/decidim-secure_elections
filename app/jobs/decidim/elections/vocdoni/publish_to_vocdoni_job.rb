@@ -31,7 +31,12 @@ module Decidim
       # it reads and writes is the upstream Election plus the sidecar Process,
       # not a Vocdoni-owned Election model.
       class PublishToVocdoniJob < ApplicationJob
-        queue_as :vocdoni
+        # A stg-only queue so the "main" Sidekiq (which runs the legacy
+        # `PublishElectionJob` on the `:vocdoni` queue for
+        # decidim.vocdoni.io) never picks up a stg-spike job it does not
+        # know how to load. The stg Sidekiq is the only one listening on
+        # `:vocdoni_spike`, so there is no cross-contamination.
+        queue_as :vocdoni_spike
 
         # Only transient failures (network flap, 5xx, 429) are retried — a
         # permanent rejection (4xx or a 2xx with `errors` in the body) fails
@@ -45,6 +50,9 @@ module Decidim
         MAX_MEMBER_PAGES = 200
 
         def perform(election_id)
+          # ApplicationJob is Decidim's; it exposes `election` via
+          # `attr_reader :election` in the base class, but that reader is
+          # protected and shared. Rebind our local ivar here.
           @election = Decidim::Elections::Election.find_by(id: election_id)
           return if election.blank?
           return unless vocdoni_backed?
