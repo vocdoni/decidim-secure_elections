@@ -48,6 +48,21 @@ module Decidim
           end
         end
 
+        # Decorate upstream `Decidim::Elections::Election` with `has_one
+        # :vocdoni_process`, so `election.vocdoni_process` reads naturally
+        # everywhere. Runs on every code reload in development (`to_prepare`)
+        # and once in production, after Zeitwerk has loaded the upstream
+        # model. Idempotent — Rails allows `has_one` redeclaration.
+        initializer "phase_4_spike.extend_election_model" do |app|
+          app.config.to_prepare do
+            Decidim::Elections::Election.has_one :vocdoni_process,
+                                                 class_name: "Decidim::Elections::Vocdoni::Process",
+                                                 foreign_key: "decidim_election_id",
+                                                 dependent: :destroy,
+                                                 inverse_of: :election
+          end
+        end
+
         initializer "phase_4_spike.register_results_availability" do
           Decidim::Elections.register_results_availability(:blockchain_backed)
         end
