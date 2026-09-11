@@ -13,8 +13,7 @@ module Decidim
       # election without `confirmed=1` in the URL is redirected here first;
       # the "Yes, publish" button on this page re-issues the PUT with the
       # `confirmed=1` flag so the interceptor lets it through.
-      class PublishConfirmationController < Decidim::Admin::ApplicationController
-        include Decidim::Admin::Concerns::HasComponent
+      class PublishConfirmationController < Decidim::Elections::Admin::ApplicationController
         helper_method :election
 
         def show
@@ -26,7 +25,7 @@ module Decidim
         def election
           @election ||= Decidim::Elections::Election
                         .where(component: current_component)
-                        .find(params[:election_id])
+                        .find(params[:election_id] || params[:id])
         end
       end
     end
