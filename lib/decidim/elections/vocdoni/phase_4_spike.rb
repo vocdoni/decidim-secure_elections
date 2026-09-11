@@ -91,6 +91,34 @@ module Decidim
         # standard 5-arg `|name, started, finished, id, payload|` shape that
         # `instrument` uses. Getting this wrong raises `nil[:election]` on
         # every publish.
+        # Adds the `/elections/:id/confirm_publish` route under the same admin
+        # namespace as the upstream elections controller, so its URL sits next
+        # to `/elections/:id/publish` in the admin dashboard.
+        initializer "phase_4_spike.append_confirm_publish_route", after: :add_routing_paths do
+          Decidim::Elections::AdminEngine.routes.append do
+            resources :elections, only: [] do
+              member do
+                get :confirm_publish, controller: "/decidim/elections/vocdoni/publish_confirmation", action: :show
+              end
+            end
+          end
+        end
+
+        # Interceptor that stands between the admin's click on "Publish" and
+        # {Decidim::Elections::Admin::ElectionsController#publish} for a
+        # Vocdoni-backed election. When the URL does not carry `confirmed=1`,
+        # the admin is bounced to the confirmation page (checklist +
+        # irreversibility warning). The button on that page re-issues the PUT
+        # with `confirmed=1`, which lets the interceptor pass and the upstream
+        # controller do its work.
+        initializer "phase_4_spike.intercept_publish_confirmation" do |app|
+          app.config.to_prepare do
+            Decidim::Elections::Admin::ElectionsController.prepend(
+              Decidim::Elections::Vocdoni::PublishInterceptor
+            )
+          end
+        end
+
         initializer "phase_4_spike.subscribe_to_publish" do
           ActiveSupport::Notifications.subscribe("decidim.elections.admin.publish_election:after") do |_event_name, data|
             election = data[:election]

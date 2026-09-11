@@ -1,0 +1,55 @@
+<div class="card">
+  <div class="card-divider">
+    <h2 class="card-title">
+      <%= t("decidim.elections.vocdoni.publish_confirmation.title",
+             default: "Publish to the blockchain — irreversible") %>
+    </h2>
+  </div>
+
+  <div class="card-section">
+    <div class="row column">
+      <p class="mb-4">
+        <%= t("decidim.elections.vocdoni.publish_confirmation.warning_html",
+               default: "You are about to write this election to the Vocdoni chain. This is <strong>irreversible</strong>: the process, its questions and its census are anchored on-chain and cannot be edited, moved or removed once published.").html_safe %>
+      </p>
+
+      <div class="mb-4">
+        <h3 class="mb-2 font-semibold">
+          <%= t("decidim.elections.vocdoni.publish_confirmation.checklist_title",
+                 default: "Before you continue, confirm that:") %>
+        </h3>
+        <ul class="list-disc pl-6">
+          <li><%= t("decidim.elections.vocdoni.publish_confirmation.checklist.title", default: "the election title, description and dates are correct") %></li>
+          <li><%= t("decidim.elections.vocdoni.publish_confirmation.checklist.questions", default: "every question and its answer options are exactly what participants will vote on") %></li>
+          <li><%= t("decidim.elections.vocdoni.publish_confirmation.checklist.census", default: "the census is complete — everyone who should vote is in the roster") %></li>
+          <li><%= t("decidim.elections.vocdoni.publish_confirmation.checklist.identifiers", default: "the identifier fields voters authenticate with are the right ones for your organisation") %></li>
+        </ul>
+      </div>
+
+      <div class="election-summary mb-4">
+        <div><span class="font-semibold"><%= t("decidim.elections.vocdoni.publish_confirmation.election_title", default: "Election") %>:</span> <%= translated_attribute(election.title) %></div>
+        <div><span class="font-semibold"><%= t("decidim.elections.vocdoni.publish_confirmation.end_at", default: "End time") %>:</span> <%= election.end_at&.to_formatted_s(:long) %></div>
+        <div><span class="font-semibold"><%= t("decidim.elections.vocdoni.publish_confirmation.questions_count", default: "Questions") %>:</span> <%= election.questions.count %></div>
+        <div><span class="font-semibold"><%= t("decidim.elections.vocdoni.publish_confirmation.census_manifest", default: "Census") %>:</span> <%= election.census&.label %></div>
+        <% if election.census_settings.present? %>
+          <div><span class="font-semibold"><%= t("decidim.elections.vocdoni.publish_confirmation.credentials", default: "Voter credentials") %>:</span> <%= Array(election.census_settings["credential_fields"]).join(", ") %></div>
+        <% end %>
+      </div>
+
+      <div class="flex gap-2 mt-6">
+        <%= link_to Decidim::EngineRouter.admin_proxy(current_component).publish_election_path(election, confirmed: 1),
+                    method: :put,
+                    class: "button button__lg button__primary",
+                    data: { turbo: false } do %>
+          <%= t("decidim.elections.vocdoni.publish_confirmation.confirm",
+                 default: "Yes, publish to the blockchain") %>
+        <% end %>
+
+        <%= link_to Decidim::EngineRouter.admin_proxy(current_component).elections_path,
+                    class: "button button__lg button__secondary" do %>
+          <%= t("decidim.elections.vocdoni.publish_confirmation.cancel", default: "Cancel — I need to review something") %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
