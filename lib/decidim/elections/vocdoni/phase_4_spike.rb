@@ -76,9 +76,16 @@ module Decidim
         # the actual work happens in the Sidekiq job. Filters out elections
         # that are not Vocdoni-backed so a plain-CSV election published in the
         # same host does not enqueue anything.
+        # `Decidim::Command#with_events` publishes via
+        # `ActiveSupport::Notifications.publish(name, **event_arguments)`, not
+        # `.instrument`. Subscribers therefore receive a 2-arg block —
+        # `|event_name, data|` — where `data` is the kwargs hash, not the
+        # standard 5-arg `|name, started, finished, id, payload|` shape that
+        # `instrument` uses. Getting this wrong raises `nil[:election]` on
+        # every publish.
         initializer "phase_4_spike.subscribe_to_publish" do
-          ActiveSupport::Notifications.subscribe("decidim.elections.admin.publish_election:after") do |_name, _started, _finished, _id, payload|
-            election = payload[:election]
+          ActiveSupport::Notifications.subscribe("decidim.elections.admin.publish_election:after") do |_event_name, data|
+            election = data[:election]
             next if election.blank?
 
             Rails.logger.info "[phase-4-spike] publish_election:after fired for election ##{election.id} (manifest=#{election.census_manifest.inspect})"
