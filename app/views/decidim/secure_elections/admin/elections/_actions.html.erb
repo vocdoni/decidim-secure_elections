@@ -1,21 +1,23 @@
 <%#
   The per-row action dropdown.
 
-  What is *not* here is as intentional as what is. There is no on-chain
-  Publish action — writing an election to the blockchain is irreversible,
-  and an irreversible action does not belong one click away from a table
-  row. That flow lives on the Dashboard, behind the checklist and the
-  `confirm_irreversible` acknowledgement. Decidim-elections upstream
-  ships Publish here with no confirmation at all, which is not a safety
-  story vd will copy.
+  Now includes the on-chain Publish flow, but not as a one-click write.
+  Upstream decidim-elections' dropdown links straight to `#publish` with
+  no confirmation; we link to a **publish-confirmation page** instead
+  (`dashboard#publish_confirmation`), which renders the completeness
+  checklist and the `confirm_irreversible` checkbox before offering the
+  Publish button. The safety story from the old Dashboard-inline
+  approach is preserved — the confirmation lives on its own URL — and
+  the shape of the dropdown now matches upstream's, which is what makes
+  the eventual fold-in cheap.
 
-  What *is* here is the Decidim-visibility toggle ("Show / Hide on
-  public site"), which is reversible and never touches the chain — hence
-  the explicit renaming away from "Publish / Unpublish" (a word that in
+  Also here: the Decidim-visibility toggle ("Show / Hide on public
+  site"), which is reversible and never touches the chain — hence the
+  explicit renaming away from "Publish / Unpublish" (a word that in
   this module belongs to on-chain publication, and reusing it here made
-  people read the row action as an on-chain write). Also here: a link
-  to the Dashboard, replacing the old direct Monitor link — the Dashboard
-  branches on `published?` and reaches the monitor for on-chain elections.
+  people read the row action as an on-chain write). Also: a link to the
+  Dashboard — reachable only for on-chain elections, where it opens the
+  live monitor.
 %>
 <button type="button"
         data-controller="dropdown"
@@ -54,17 +56,31 @@
         <% end %>
       </li>
 
-      <%# Dashboard, not monitor: the dashboard branches on `published?`
-          and reaches the live monitor for on-chain elections. Available
-          from every row, whether or not the election is on chain — an
-          unpublished election shows the completeness checklist + preview
-          there, and a published one shows the live monitor. %>
-      <li class="dropdown__item">
-        <%= link_to election_dashboard_path(election), class: "dropdown__button" do %>
-          <%= icon "dashboard-line" %>
-          <%= t("decidim.secure_elections.admin.elections.dashboard") %>
-        <% end %>
-      </li>
+      <%# Dashboard = the live monitor. Only offered when the election is
+          on chain (or in the middle of publishing) — before that, the
+          publish-confirmation entry below is the way in. %>
+      <% if election.on_chain? || election.publishing? %>
+        <li class="dropdown__item">
+          <%= link_to election_dashboard_path(election), class: "dropdown__button" do %>
+            <%= icon "dashboard-line" %>
+            <%= t("decidim.secure_elections.admin.elections.dashboard") %>
+          <% end %>
+        </li>
+      <% elsif allowed_to? :read, :setup, election: election %>
+        <%# On-chain Publish — opens the confirmation page (checklist +
+            irreversibility + Publish button), never a one-click write.
+            Visibility follows `:read`, not `:create`, so an admin can
+            reach the checklist even when the election is not yet ready
+            to publish and see what's still missing. `:create` gates the
+            actual Publish button on that page. %>
+        <li class="dropdown__item">
+          <%= link_to publish_confirmation_election_dashboard_path(election),
+                      class: "dropdown__button" do %>
+            <%= icon "shield-check-line" %>
+            <%= t("decidim.secure_elections.admin.elections.publish_on_blockchain") %>
+          <% end %>
+        </li>
+      <% end %>
 
       <hr>
 

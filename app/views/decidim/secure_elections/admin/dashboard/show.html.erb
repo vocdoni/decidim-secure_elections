@@ -1,99 +1,110 @@
 <%#
-  The Dashboard tab — single page that branches on the election's on-chain
-  state.
+  The Dashboard tab — the live monitor for an on-chain election.
 
-  Pre-publish: completeness checklist, read-only summary cards and the sticky
-  confirm_irreversible + "Publish on the blockchain" form.
+  Pre-publish, `DashboardController#show` redirects to
+  `dashboard#publish_confirmation`, so this template only ever renders
+  once the election is on chain (or in the middle of publishing).
 
-  On-chain (or publishing): status card, calendar (with optional "Start
-  election"), results and the live-refresh monitor markup.
+  Layout mirrors upstream's live Dashboard: two side-by-side cards at
+  the top ("Election status" + "Calendar"), the per-question results
+  section below, and the on-chain controls at the bottom. Voting links
+  live in a separate card below the fold.
 
-  The on-chain half is the monitor.show.html.erb view, moved here and given
-  the same tab frame. The packs and JS data attributes that drive the live
-  refresh are preserved verbatim.
+  The Vocdoni-specific bits (turnout chip, technical-details disclosure,
+  the four state actions) are folded into that same shape rather than
+  broken out into their own cards, so an upstream reviewer sees a
+  Dashboard with the same skeleton as their own.
 %>
 <% add_decidim_page_title(t(".title")) %>
 
 <%= render partial: "decidim/secure_elections/admin/shared/election_header", locals: { election: } %>
 <%= render partial: "decidim/secure_elections/admin/elections/tabs_menu" %>
 
-<% if election.editable? %>
-  <%# ------------------------------------------------------------------
-      Unpublished: checklist + summary cards + publish action card at
-      the bottom. The publish card used to be pinned in a sticky sidebar,
-      but the sidebar's dark background clashed with the checkbox label
-      and disabled-button styling; a normal in-body card reads better
-      and does not need the extra styling shims.
-  -------------------------------------------------------------------- %>
-  <div class="item__edit item__edit-1col">
-    <div class="item__edit-form">
-      <%= render partial: "decidim/secure_elections/admin/dashboard/checklist",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/main",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/questions",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/census",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
-                 locals: { election:, form: @form } %>
-    </div>
-  </div>
-<% else %>
-  <%# ------------------------------------------------------------------
-      On-chain / publishing: status, calendar, results, monitor controls
-  -------------------------------------------------------------------- %>
-  <% if election.publishing? && !election.on_chain? %>
-    <%= cell "decidim/announcement",
-             { title: t("decidim.secure_elections.admin.monitor.show.incomplete_title"),
-               body: t("decidim.secure_elections.admin.monitor.show.incomplete_body") },
-             callout_class: "alert" %>
+<% if election.publishing? && !election.on_chain? %>
+  <%= cell "decidim/announcement",
+           { title: t("decidim.secure_elections.admin.monitor.show.incomplete_title"),
+             body: t("decidim.secure_elections.admin.monitor.show.incomplete_body") },
+           callout_class: "alert" %>
 
-    <% if allowed_to? :refresh, :monitor, election: election %>
-      <p class="mb-6">
-        <%= link_to t("decidim.secure_elections.admin.monitor.show.resume"),
-                    refresh_election_dashboard_path(election),
-                    class: "button button__sm button__secondary" %>
-      </p>
-    <% end %>
+  <% if allowed_to? :refresh, :monitor, election: election %>
+    <p class="mb-6">
+      <%= link_to t("decidim.secure_elections.admin.monitor.show.resume"),
+                  refresh_election_dashboard_path(election),
+                  class: "button button__sm button__secondary" %>
+    </p>
   <% end %>
+<% end %>
 
-  <div class="item__edit item__edit-1col">
-    <div class="item__edit-form 2xl:mr-80">
-      <%= render partial: "decidim/secure_elections/admin/dashboard/status",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/calendar",
-                 locals: { election: } %>
-      <%= render partial: "decidim/secure_elections/admin/dashboard/results",
-                 locals: { election:, questions: } %>
+<div class="item__edit item__edit-1col">
+  <div class="item__edit-form 2xl:mr-80">
+    <%# Upstream renders "Election status" + "Calendar" as two side-by-side
+        cards at the top of the live Dashboard. We match that shape here;
+        each partial owns exactly one card, and this flex row composes them. %>
+    <div class="flex flex-col md:flex-row gap-4 w-full mb-6">
+      <div class="flex-1">
+        <%= render partial: "decidim/secure_elections/admin/dashboard/status",
+                   locals: { election: } %>
+      </div>
+      <div class="flex-1">
+        <%= render partial: "decidim/secure_elections/admin/dashboard/calendar",
+                   locals: { election: } %>
+      </div>
+    </div>
 
-      <% if allowed_to? :update_status, :monitor, election: election %>
-        <div class="card mb-6">
-          <div class="card-divider">
-            <h2 class="card-title"><%= t("decidim.secure_elections.admin.monitor.show.controls_title") %></h2>
-          </div>
-          <div class="card-section">
-            <div class="row column">
-              <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
+    <%= render partial: "decidim/secure_elections/admin/dashboard/results",
+               locals: { election:, questions: } %>
 
-              <div class="flex flex-wrap gap-2">
-                <% Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES.each do |s| %>
+    <% if allowed_to? :update_status, :monitor, election: election %>
+      <%#
+        Upstream's live Dashboard has a single primary "End election" in the
+        sticky footer. We follow that hierarchy inline: "End election" as the
+        only headline action, everything else (Pause / Resume / Cancel) as a
+        smaller row of secondary buttons underneath, so the primary reads at
+        a glance and the destructive Cancel stays reachable but demoted.
+      %>
+      <%
+        allowed = Decidim::SecureElections::Admin::QuestionStatusForm::ALLOWED_STATUSES
+        # The button that matches the current state would be a no-op — hide
+        # it entirely instead of rendering it disabled, matching upstream's
+        # "only actions you can actually take" approach.
+        secondary_actions = allowed - ["ended", election.status]
+      %>
+      <div class="card mb-6">
+        <div class="card-divider">
+          <h2 class="card-title"><%= t("decidim.secure_elections.admin.monitor.show.controls_title") %></h2>
+        </div>
+        <div class="card-section">
+          <div class="row column">
+            <p class="text-sm text-gray-2 mb-4"><%= t("decidim.secure_elections.admin.monitor.show.controls_help") %></p>
+
+            <%= button_to status_election_dashboard_path(election),
+                          method: :put,
+                          params: { question_status: { status: "ended" } },
+                          data: vocdoni_status_confirm_data("ended"),
+                          class: "button button__sm button__secondary",
+                          disabled: election.status == "ended" do %>
+              <%= t("ended", scope: "decidim.secure_elections.status_actions") %>
+            <% end %>
+
+            <% if secondary_actions.any? %>
+              <div class="flex flex-wrap items-center gap-2 mt-4">
+                <span class="text-sm text-gray-2"><%= t("decidim.secure_elections.admin.monitor.show.more_actions") %></span>
+                <% secondary_actions.each do |s| %>
                   <%= button_to status_election_dashboard_path(election),
                                 method: :put,
                                 params: { question_status: { status: s } },
                                 data: vocdoni_status_confirm_data(s),
-                                class: "button button__xs #{s == "canceled" ? "alert" : "button__secondary"}",
-                                disabled: election.status == s do %>
+                                class: "button button__xs #{s == "canceled" ? "alert" : "button__transparent-secondary"}" do %>
                     <%= t(s, scope: "decidim.secure_elections.status_actions") %>
                   <% end %>
                 <% end %>
               </div>
-            </div>
+            <% end %>
           </div>
         </div>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
   </div>
-<% end %>
+</div>
 
 <%= render partial: "decidim/secure_elections/admin/shared/public_link", locals: { election: } %>

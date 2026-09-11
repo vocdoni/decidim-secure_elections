@@ -117,11 +117,14 @@ module Decidim
         # @return [String]
         def secure_elections_step_path(election, step)
           case step.to_sym
-          when :questions then edit_election_questions_path(election)
+          when :questions then edit_questions_election_path(election)
           when :census then election_census_path(election)
-          # `:publish` and `:monitor` both fold into the Dashboard tab now,
-          # so any step key that used to point at either lands there.
-          when :publish, :monitor then election_dashboard_path(election)
+          # `:publish` now points at the publish-confirmation page (the
+          # completeness checklist + irreversibility + Publish button, on
+          # its own URL — see Phase 3 of the UI/UX proposal). `:monitor`
+          # is the live Dashboard for on-chain elections.
+          when :publish then publish_confirmation_election_dashboard_path(election)
+          when :monitor then election_dashboard_path(election)
           # Everything else — `:details`, `:main`, `:calendar` (the
           # calendar step is folded into the Main tab), and any
           # unrecognised key — lands on the Main tab.

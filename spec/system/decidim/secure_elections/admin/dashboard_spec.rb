@@ -2,16 +2,18 @@
 
 require "spec_helper"
 
-# The Dashboard tab: a single page that branches on the election's on-chain
-# state. Pre-publish it is a completeness checklist + sticky publish form;
-# post-publish it becomes the live-refresh monitor view.
+# The Dashboard tab: the live monitor for an on-chain election.
+# Pre-publish, the URL redirects to `dashboard#publish_confirmation` —
+# the completeness checklist + irreversibility + Publish button now
+# live on their own page, reached from the row-level Actions dropdown.
 #
-# Five sub-cases drive the two halves:
-#   1. all checks passing → publish button present
-#   2. one check failing → error icon + fix-it link
+# Six sub-cases:
+#   1. all checks passing → publish button present on confirmation page
+#   2. one check failing → error icon + fix-it link on confirmation page
 #   3. tick checkbox and submit → PublishElectionJob enqueued
-#   4. manual-start + paused → "Start election" button present
-#   5. on-chain + ongoing → #js-vocdoni-monitor present
+#   4. hitting /dashboard pre-publish → 302 to /publish_confirmation
+#   5. manual-start + paused → "Start election" button present on-chain
+#   6. on-chain + ongoing → #js-vocdoni-monitor present
 describe "Admin Dashboard tab" do
   include_context "when managing a component as an admin"
 
@@ -26,17 +28,21 @@ describe "Admin Dashboard tab" do
     visit election_path.election_dashboard_path(election)
   end
 
+  def visit_publish_confirmation(election)
+    visit election_path.publish_confirmation_election_dashboard_path(election)
+  end
+
   # =====================================================================
-  # Unpublished half
+  # Publish confirmation page (formerly the pre-publish Dashboard body)
   # =====================================================================
 
-  describe "unpublished election" do
+  describe "publish confirmation" do
     context "when all completeness checks pass" do
       let!(:election) do
         create(:vocdoni_election, :ready_to_publish, component:, skip_injection: true)
       end
 
-      before { visit_dashboard(election) }
+      before { visit_publish_confirmation(election) }
 
       # Sub-case 1: checklist + publish form visible and operational.
       it "shows the publish setup form" do
@@ -74,7 +80,7 @@ describe "Admin Dashboard tab" do
         create(:vocdoni_election, :with_census, component:, skip_injection: true)
       end
 
-      before { visit_dashboard(election) }
+      before { visit_publish_confirmation(election) }
 
       it "shows an error icon on the questions row" do
         within ".card", text: I18n.t("decidim.secure_elections.admin.setup.show.checklist_title") do
@@ -90,7 +96,7 @@ describe "Admin Dashboard tab" do
           item = find("li", text: questions_label)
           expect(item).to have_link(
             I18n.t("decidim.secure_elections.admin.setup.show.fix_it"),
-            href: election_path.edit_election_questions_path(election)
+            href: election_path.edit_questions_election_path(election)
           )
         end
       end
@@ -115,7 +121,7 @@ describe "Admin Dashboard tab" do
           .to receive(:perform_later)
           .and_call_original
 
-        visit_dashboard(election)
+        visit_publish_confirmation(election)
 
         # Tick the irreversible checkbox.
         check I18n.t("decidim.secure_elections.admin.setup.show.confirm_irreversible_label")
@@ -131,14 +137,29 @@ describe "Admin Dashboard tab" do
           .with(election.id)
       end
     end
+
+    # Sub-case 4: pre-publish Dashboard URL → confirmation page.
+    context "when hitting /dashboard while the election is pre-publish" do
+      let!(:election) do
+        create(:vocdoni_election, :ready_to_publish, component:, skip_injection: true)
+      end
+
+      it "redirects to the publish-confirmation page" do
+        visit_dashboard(election)
+
+        expect(page).to have_current_path(
+          election_path.publish_confirmation_election_dashboard_path(election)
+        )
+      end
+    end
   end
 
   # =====================================================================
-  # Published / on-chain half
+  # Live monitor (on-chain / publishing)
   # =====================================================================
 
   describe "on-chain election" do
-    # Sub-case 4: manual start + paused → "Start election" visible.
+    # Sub-case 5: manual start + paused → "Start election" visible.
     context "when the election is manual-start and currently paused" do
       let!(:election) do
         create(
@@ -160,7 +181,7 @@ describe "Admin Dashboard tab" do
       end
     end
 
-    # Sub-case 5: ongoing election → monitor markup present.
+    # Sub-case 6: ongoing election → monitor markup present.
     context "when the election is ongoing" do
       let!(:election) do
         create(

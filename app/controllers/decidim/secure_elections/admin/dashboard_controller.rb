@@ -3,15 +3,17 @@
 module Decidim
   module SecureElections
     module Admin
-      # The Dashboard tab: a single page that branches on the election's
-      # on-chain state.
+      # The Dashboard tab: the live monitor for an on-chain election.
       #
-      # **Pre-publish (editable):** renders the completeness checklist, read-only
-      # summary cards for Main / Questions / Census, and the sticky
-      # confirm_irreversible + "Publish on the blockchain" form. The six
-      # SetupForm validators remain the server-side guard.
+      # Pre-publish, the tab is a disabled span in the admin menu — matching
+      # upstream decidim-elections, where the Dashboard only lights up after
+      # the election is on chain. The completeness checklist + irreversibility
+      # + publish action lives on a sibling `publish_confirmation` page,
+      # reached from the row-level Actions dropdown on the elections list.
+      # An admin who hits `/dashboard` pre-publish by URL is bounced to
+      # that page.
       #
-      # **Post-publish (on-chain or publishing):** renders the status card,
+      # Post-publish (on-chain or publishing): renders the status card,
       # calendar, and live-refresh results monitor — the view the old
       # MonitorController served, now unified here.
       #
@@ -25,18 +27,52 @@ module Decidim
         def show
           enforce_permission_to(:read, :setup, election:)
 
-          # Instantiate SetupForm whenever the election is still editable
-          # (draft OR publishing OR failed). `_publish.html.erb` reads
-          # `form.expected_phrase`/`form.errors` and handles the publishing
-          # state internally by disabling controls; skipping the assignment
-          # when `publishing?` produced a nil form that decidim_form_for
-          # rejected as "First argument … cannot be nil".
+          # Pre-publish, this URL has no monitor to render — send the admin
+          # to the publish-confirmation page instead. HTML only; the monitor
+          # pack polls `.json` and never lands on this branch.
+          if election.editable? && !election.publishing?
+            respond_to do |format|
+              format.html { redirect_to publish_confirmation_election_dashboard_path(election) }
+              format.json { render json: {}, status: :no_content }
+            end
+            return
+          end
+
+          # `_publish.html.erb` reads `form.expected_phrase` / `form.errors`
+          # when the election is still `publishing?` (interrupted publish),
+          # so build the form for that half. Skipping this assignment when
+          # `publishing?` produced a nil form that decidim_form_for rejected
+          # as "First argument … cannot be nil".
           @form = form(Decidim::SecureElections::Admin::SetupForm).instance(election:) if election.editable?
 
           respond_to do |format|
             format.html
             format.json { render json: monitor_payload }
           end
+        end
+
+        # The publish-confirmation page: the completeness checklist + the
+        # confirm-irreversible checkbox + the Publish button. Reached from
+        # the row-level Actions dropdown on the elections list (matches
+        # upstream decidim-elections' publish flow) and, transitionally,
+        # from admins who hit the Dashboard URL pre-publish.
+        #
+        # Once the election is on chain there is nothing to confirm — bounce
+        # to the live Dashboard so `/publish_confirmation` never renders a
+        # stale checklist next to an already-published election.
+        def publish_confirmation
+          # `:read` — an admin can reach the checklist to see what is still
+          # missing even when the election is not ready to publish yet. The
+          # actual Publish button in `_publish.html.erb` guards its own
+          # `:create :setup` check on top.
+          enforce_permission_to(:read, :setup, election:)
+
+          if election.on_chain? || election.publishing?
+            redirect_to election_dashboard_path(election)
+            return
+          end
+
+          @form = form(Decidim::SecureElections::Admin::SetupForm).instance(election:)
         end
 
         # Receives the SetupForm submission and enqueues the blockchain write.
@@ -76,7 +112,10 @@ module Decidim
             redirect_to election_dashboard_path(election)
           else
             flash.now[:alert] = I18n.t("setup.create.invalid", scope: "decidim.secure_elections.admin")
-            render action: "show", status: :unprocessable_content
+            # The publish form now lives on `publish_confirmation`, not
+            # `show` — re-render there so the checklist + irreversibility
+            # + Publish button come back with the error message attached.
+            render action: "publish_confirmation", status: :unprocessable_content
           end
         end
 

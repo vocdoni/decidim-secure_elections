@@ -180,11 +180,6 @@ en:
         dashboard:
           calendar:
             title: Calendar
-          questions:
-            and_more:
-              one: and 1 more
-              other: "and %{count} more"
-            none: This election has no questions yet.
           show:
             title: Dashboard
           start:
@@ -270,6 +265,7 @@ en:
             one: 1 option
             other: "%{count} options"
           preview: Preview
+          publish_on_blockchain: Publish on blockchain…
           # The reversible Decidim-visibility action, named after what it does.
           # The word "publish" belongs to step 5 of the wizard alone — the
           # irreversible on-chain one — and must not appear here.
@@ -289,7 +285,8 @@ en:
           view: View secure election
           view_deleted: View deleted elections
         errors:
-          last_job_failure: 'The last background operation failed:'
+          last_job_failure: The last background job left an error.
+          last_job_failure_details: Show error details
           not_configured_body: The Vocdoni API URL, API key and organization address must be configured before an election can be published on the blockchain. Ask your system administrator to set them.
           not_configured_title: This installation is not connected to Vocdoni
         menu:
@@ -330,6 +327,7 @@ en:
             incomplete_body: The publication job stopped before it could finish, so voting cannot start yet. No votes have been recorded. Click Resume publication to continue where it stopped.
             incomplete_title: Publication was interrupted
             last_synced: Last refreshed %{time}.
+            more_actions: 'More actions:'
             never_synced: Results have never been refreshed.
             no_results_yet: No results have been read from the blockchain yet.
             refresh: Refresh
@@ -396,6 +394,8 @@ en:
           title: "Voting links"
           url_label: "Link to the election page"
           who_can_vote: "Only people on the census can vote. Everyone else can see the election but cannot open a ballot."
+        publish_confirmation:
+          title: Publish on blockchain
         questions:
           edit:
             title: Questions

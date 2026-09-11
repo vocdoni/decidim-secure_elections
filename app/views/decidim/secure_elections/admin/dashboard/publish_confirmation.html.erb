@@ -1,0 +1,29 @@
+<%#
+  Publish-on-blockchain confirmation page.
+
+  This is the pre-publish checklist + the confirm-irreversible checkbox
+  + the Publish button, on their own dedicated URL rather than inside
+  the Dashboard tab. Upstream decidim-elections reaches Publish from the
+  row-level Actions dropdown; we match that shape here, with the
+  addition of the checklist + irreversibility guard, because writing to
+  the blockchain is irreversible and one row-click away is the wrong
+  distance for that.
+
+  Renders the same _checklist and _publish partials the pre-publish
+  Dashboard used to inline; nothing about the underlying `SetupForm`
+  contract changes — the checklist is still driven by
+  `Election#*_complete?` and Publish still POSTs to `dashboard#publish`.
+%>
+<% add_decidim_page_title(t("decidim.secure_elections.admin.publish_confirmation.title")) %>
+
+<%= render partial: "decidim/secure_elections/admin/shared/election_header", locals: { election: } %>
+<%= render partial: "decidim/secure_elections/admin/elections/tabs_menu" %>
+
+<div class="item__edit item__edit-1col">
+  <div class="item__edit-form">
+    <%= render partial: "decidim/secure_elections/admin/dashboard/checklist",
+               locals: { election: } %>
+    <%= render partial: "decidim/secure_elections/admin/dashboard/publish",
+               locals: { election:, form: @form } %>
+  </div>
+</div>

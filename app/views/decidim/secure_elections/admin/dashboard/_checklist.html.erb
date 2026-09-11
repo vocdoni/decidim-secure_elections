@@ -12,7 +12,7 @@
 <%
   checks = [
     [:details,       election.details_complete?,   edit_election_path(election)],
-    [:questions,     election.questions_complete?,  edit_election_questions_path(election)],
+    [:questions,     election.questions_complete?,  edit_questions_election_path(election)],
     [:census,        election.census_complete?,     election_census_path(election)],
     [:calendar,      election.calendar_complete?,   edit_election_path(election)],
     [:configuration, module_configured?,            nil]

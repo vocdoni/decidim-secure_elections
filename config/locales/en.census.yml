@@ -74,11 +74,8 @@ en:
       admin:
         census:
           authentication:
-            back: Back to the census
             invalid: There was a problem saving voter authentication.
-            save: Save voter authentication
             success: Voter authentication saved successfully.
-            title: Voter authentication
           clear:
             invalid: The census could not be emptied.
             success:
@@ -91,7 +88,7 @@ en:
               recommend_body: For better security, we recommend picking at least two credentials.
               recommend_title: Security recommendation
             count: "%{selected} of %{max} credentials selected"
-            help: Choose what a voter has to type to prove they are on the census. Pick up to %{count} — more than that adds nothing and only makes voting harder. If you plan to identify voters by email or phone alone, leave this empty and turn on two-factor verification below.
+            help: If you want to identify voters by email or phone alone, select none here and enable two-factor verification below.
             legend: Required credentials
             title: Credentials
           import:
@@ -204,62 +201,40 @@ en:
               one: 1 person in the census.
               other: "%{count} people in the census."
           show:
+            # `add_people_*`, `incomplete_*`, `missing_field`, `clear*` are
+            # referenced from `members.html.erb` explicitly (full path). They
+            # live under `show` because the Census tab used to render them;
+            # moving the keys to `members` would rot every git blame line
+            # without changing the copy — the members template just imports
+            # by full path.
             add_people_help: Add people one at a time, upload a spreadsheet, or bring in participants you have already verified in Decidim.
             add_people_title: Add people to the census
-            authentication_title: Voter authentication
-            continue: Continue
-            autosave:
-              # Rendered next to the credentials form. The label rotates
-              # between these four as the census.js pack debounces changes and
-              # POSTs them back to the update action.
-              error: The last change could not be saved. Reload the page to see the details.
-              idle: Changes save automatically.
-              saved: Saved.
-              saving: Saving…
             census_ready: The census is configured and all entries are valid.
             clear: Empty the census
             clear_confirm:
               one: This will remove the 1 person in the census. Continue?
               other: This will remove all %{count} people in the census. Continue?
-            configure_authentication: Configure
-            edit_authentication: Edit
-            edit_people: Edit the list
             incomplete_body: "Those people cannot be identified as configured, so they would not be able to vote: %{details}."
             incomplete_title:
               one: 1 person is missing something they need in order to vote
               other: "%{count} people are missing something they need in order to vote"
+            manage_people:
+              one: Manage people (1)
+              other: Manage people (%{count})
+            manage_people_confirm_if_dirty: You have unsaved changes to the voter authentication. Leave this page and lose them?
             manifests:
               internal_users: Internal users
             missing_field:
               one: 1 has no %{field}
               other: "%{count} have no %{field}"
-            not_configured_body: Nobody can vote until you choose what a voter has to provide to prove they are on the census.
-            not_configured_title: Voter authentication is not configured
             page_title: Census
-            people_count:
-              one: 1 person
-              other: "%{count} people"
-            people_empty: Nobody is in the census yet.
-            people_more:
-              one: 1 more person is in the census.
-              other: "%{count} more people are in the census."
-            people_title: People
             reported_missing_body: "The voting network refused the census because these people are missing a required value: %{names}."
             reported_missing_title:
               one: 1 person was rejected by the voting network
               other: "%{count} people were rejected by the voting network"
-            save: Save
+            save_and_continue: Save and continue
           summary:
-            credentials: Required credentials
-            no_credentials: None — voters are identified by the second factor alone.
             security: Authentication guarantees
-            title: Summary
-            two_factor: Two-factor verification
-            two_factor_note: Everybody in the census needs a %{fields}. The voter has to supply it and it has to match, so it is part of their identity, not just where the code is sent.
-            voting_power: Voting power
-            voting_power_values:
-              equal: Every vote counts once
-              weighted: Votes are weighted by each person's voting power
             weighted_help: Give each person in the census a voting power. Off means every vote counts once.
             weighted_label: Weight votes by voting power
           template:

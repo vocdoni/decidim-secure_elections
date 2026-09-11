@@ -15,15 +15,19 @@ module Decidim
       #
       # Actions
       # -------
-      # * `show`     — unified hub: manifest selector, inline auth-config form,
-      #                5-row preview, members management, import/verification.
-      # * `edit`/`update` — voter authentication (credentials, 2FA, summary).
-      #                Still reachable but no longer linked; `show` absorbs it.
-      # * `members`/`update_members` — the editable table.
+      # * `show`     — voter-authentication configuration: manifest selector +
+      #                inline auth-config form (credentials, 2FA, security).
+      #                Roster management lives on `members` — see below.
+      # * `update`   — persists the voter-authentication form. "Save and
+      #                continue" lands on the Dashboard afterwards.
+      # * `members`/`update_members` — the editable table, plus the import and
+      #                verifications-import panels and the "empty the census"
+      #                action. Reached from a "Manage people (N)" link on `show`.
       # * `template` — a CSV with exactly the columns this election needs.
-      # * `import`   — read a CSV back, per row.
-      # * `import_from_verifications` — pull in verified participants.
-      # * `clear`    — empty the census.
+      # * `import`   — read a CSV back, per row. On invalid re-renders `members`.
+      # * `import_from_verifications` — pull in verified participants. Same
+      #                render/redirect target as `import`.
+      # * `clear`    — empty the census. Redirects to `members`.
       class CensusController < Admin::ApplicationController
         # The census tab requires questions to be complete first; the guard
         # redirects and explains if they are not.
@@ -35,19 +39,12 @@ module Decidim
         CENSUS_MANIFESTS = ["internal_users"].freeze
 
         helper_method :census_members, :incomplete_members, :reported_missing_members,
-                      :available_handlers, :verifications_form, :import_form, :template_fields,
-                      :preview_users
+                      :available_handlers, :verifications_form, :import_form, :template_fields
 
         def show
           enforce_permission_to(:read, :census, election:)
 
           @census_manifests = CENSUS_MANIFESTS
-          @form = census_form
-        end
-
-        def edit
-          enforce_permission_to(:read, :census, election:)
-
           @form = census_form
         end
 
@@ -61,7 +58,11 @@ module Decidim
               respond_to do |format|
                 format.html do
                   flash[:notice] = I18n.t("census.authentication.success", scope: "decidim.secure_elections.admin")
-                  redirect_to election_census_path(election)
+                  # "Save and continue" from the census form: advance to the
+                  # Dashboard as soon as the census is reachable, otherwise
+                  # stay on the census. `wizard_step :census` on this
+                  # controller guarantees the election has questions.
+                  redirect_to next_step_path
                 end
                 # Auto-save from the census.js pack: the JSON body is not read,
                 # only its 200 status.
@@ -140,8 +141,11 @@ module Decidim
           # command and never reach the view, and `form(…)` would resolve to
           # the command's own private `attr_reader :form` — a zero-argument
           # method — rather than to `Decidim::FormFactory#form`.
-          @census_manifests = CENSUS_MANIFESTS
-          @form = census_form
+          #
+          # `members_form`, because since QW5 the import/verifications lives
+          # on the members page — the `:invalid` branch re-renders `members`,
+          # which needs `@form` to be a `CensusMembersForm`.
+          @form = members_form
 
           Decidim::SecureElections::Admin::ImportCensusMembers.call(@import_form, election, current_user) do
             on(:ok) do |result|
@@ -149,12 +153,12 @@ module Decidim
               # what came in, and what did not and why.
               flash[:notice] = import_success_message(result)
               flash[:alert] = failed_rows_message(result) if result.any_failures?
-              redirect_to election_census_path(election)
+              redirect_to election_census_members_path(election)
             end
 
             on(:invalid) do |result|
               flash.now[:alert] = import_failure_message(result)
-              render action: "show", status: :unprocessable_content
+              render action: "members", status: :unprocessable_content
             end
           end
         end
@@ -166,18 +170,17 @@ module Decidim
                                 .from_params(params, election:, current_organization:)
           # Same reason as in `import`: the branches below run against the
           # command, not against this controller.
-          @census_manifests = CENSUS_MANIFESTS
-          @form = census_form
+          @form = members_form
 
           Decidim::SecureElections::Admin::ImportCensusMembersFromVerifications.call(@verifications_form, election, current_user) do
             on(:ok) do |imported|
               flash[:notice] = I18n.t("census.verifications.success", scope: "decidim.secure_elections.admin", count: imported)
-              redirect_to election_census_path(election)
+              redirect_to election_census_members_path(election)
             end
 
             on(:invalid) do
               flash.now[:alert] = verifications_failure_message
-              render action: "show", status: :unprocessable_content
+              render action: "members", status: :unprocessable_content
             end
           end
         end
@@ -188,12 +191,12 @@ module Decidim
           Decidim::SecureElections::Admin::DestroyCensusMembers.call(election, current_user) do
             on(:ok) do |count|
               flash[:notice] = I18n.t("census.clear.success", scope: "decidim.secure_elections.admin", count:)
-              redirect_to election_census_path(election)
+              redirect_to election_census_members_path(election)
             end
 
             on(:invalid) do
               flash[:alert] = I18n.t("census.clear.invalid", scope: "decidim.secure_elections.admin")
-              redirect_to election_census_path(election)
+              redirect_to election_census_members_path(election)
             end
           end
         end
@@ -204,13 +207,6 @@ module Decidim
         # the import actions fall back to when they have to re-render `show`.
         def census_form
           form(Decidim::SecureElections::Admin::CensusForm).from_model(election, election:)
-        end
-
-        # First five members for the preview partial. Memoised so the same
-        # query is not run twice when the page renders (once for `present?`,
-        # once for the rows).
-        def preview_users(current_election)
-          @preview_users ||= current_election.census_members.first(5)
         end
 
         def census_members
@@ -234,6 +230,16 @@ module Decidim
           form(Decidim::SecureElections::Admin::CensusMembersForm).from_model(election, election:).tap do |built|
             built.members << blank_member_form
           end
+        end
+
+        # "Save and continue" on the census form lands on the Dashboard,
+        # always. The Dashboard's checklist card is what says what is still
+        # missing (census members, questions, dates) with fix-it links back
+        # into each tab — so an admin who saves an incomplete census does
+        # not silently stay on the same page wondering whether the click did
+        # anything; they land on the readiness view that spells it out.
+        def next_step_path
+          election_dashboard_path(election)
         end
 
         def blank_member_form
