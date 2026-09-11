@@ -27,6 +27,13 @@ module Decidim
       end
 
       def call
+        # Under PHASE_4_SPIKE the stg app boots on top of upstream
+        # decidim-elections; a `:vocdoni` component seed would build a
+        # `Decidim::SecureElections::Election` (this repo's schema) that
+        # the spike doesn't care about. Skip so the boot doesn't stumble
+        # on unrelated seed API drift.
+        return if ENV["PHASE_4_SPIKE"] == "1"
+
         component = create_component!
         total = number_of_records
 
