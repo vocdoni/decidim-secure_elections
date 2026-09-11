@@ -49,6 +49,23 @@ module Decidim
         # Defensive bound on the memberbase pagination walk.
         MAX_MEMBER_PAGES = 200
 
+        # Split of the credential fields the CensusForm exposes into what the
+        # Vocdoni SaaS calls authFields (proven by the census-authentication
+        # step) vs twoFaFields (proven by an OTP the CSP sends to the voter).
+        # Names on the right are the SaaS's own camelCase; the ones on the
+        # left are how our CensusForm names them.
+        AUTH_FIELD_MAP = {
+          "member_number" => "memberNumber",
+          "national_id"   => "nationalId",
+          "date_of_birth" => "birthDate",
+          "name"          => "name"
+        }.freeze
+
+        TWO_FA_FIELD_MAP = {
+          "email" => "email",
+          "phone" => "phone"
+        }.freeze
+
         def perform(election_id)
           # ApplicationJob is Decidim's; it exposes `election` via
           # `attr_reader :election` in the base class, but that reader is
@@ -154,7 +171,7 @@ module Decidim
             org_address,
             process.census_group_id,
             auth_fields: auth_fields.presence,
-            two_fa_fields: nil
+            two_fa_fields: two_fa_fields.presence
           )
         rescue Decidim::Elections::Vocdoni::ApiError => e
           # A 400 here is an actionable answer, not a fault — the census is
@@ -184,7 +201,7 @@ module Decidim
             census_id,
             process.census_group_id,
             auth_fields: auth_fields.presence,
-            two_fa_fields: nil,
+            two_fa_fields: two_fa_fields.presence,
             weighted: weighted?
           ).to_h
 
@@ -368,11 +385,13 @@ module Decidim
         end
 
         def census_payload
-          {
+          payload = {
             "authFields" => auth_fields,
             "groupId" => process.census_group_id,
             "weighted" => weighted?
           }
+          payload["twoFaFields"] = two_fa_fields if two_fa_fields.any?
+          payload
         end
 
         def question_payload(question)
@@ -403,8 +422,29 @@ module Decidim
         # Config
         # ---------------------------------------------------------------------
 
+        # The credential fields the admin ticked on the Census form, mapped
+        # onto what the SaaS API expects, split across authFields (the census
+        # authenticates on these) and twoFaFields (the CSP proves these via
+        # an OTP delivered to the voter).
+        #
+        # `memberNumber` is always in authFields whether the admin picked it
+        # or not, because the census still needs at least one authField and
+        # every roster row we push carries a stable member number
+        # (`Decidim::User#id`). This is the minimum the census needs to
+        # authenticate.
+        def credential_field_selection
+          Array(election.census_settings["credential_fields"]).map(&:to_s)
+        end
+
         def auth_fields
-          Array(election.census_settings["credential_fields"]).map(&:to_s).compact_blank
+          picked = credential_field_selection
+          fields = picked.filter_map { |f| AUTH_FIELD_MAP[f] }
+          fields << "memberNumber" unless fields.include?("memberNumber")
+          fields.uniq
+        end
+
+        def two_fa_fields
+          credential_field_selection.filter_map { |f| TWO_FA_FIELD_MAP[f] }
         end
 
         def weighted?
