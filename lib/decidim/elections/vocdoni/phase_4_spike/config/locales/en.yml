@@ -21,10 +21,10 @@ en:
             results_availability:
               blockchain_backed: "Blockchain-backed"
               blockchain_backed_help: "Results are anchored on the Vocdoni chain and revealed after the election ends."
-          dashboard:
-            status:
-              results_availability:
-                blockchain_backed: "Results anchored on the Vocdoni chain"
-          voting:
+        dashboard:
+          status:
             results_availability:
-              blockchain_backed: "Results anchored on the Vocdoni chain."
+              blockchain_backed: "Results anchored on the Vocdoni chain"
+        voting:
+          results_availability:
+            blockchain_backed: "Results anchored on the Vocdoni chain."
