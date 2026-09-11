@@ -90,11 +90,20 @@ module Decidim
           persist_process_metadata!
 
           process.update!(state: "published")
+
+          # Kick off the on-chain state monitor so the sidecar keeps mirroring
+          # the SaaS while voting is open. `SyncProcessJob` re-schedules itself
+          # while the process is still ongoing.
+          Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id)
         rescue Decidim::Elections::Vocdoni::ApiError => e
           process.record_failure!(redact(e.message), step: @step)
+          # If a process id was already saved, the SaaS may still confirm it
+          # asynchronously — keep the monitor polling.
+          Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?
           raise if e.transient?
         rescue StandardError => e
           process.record_failure!(redact(e.message), step: @step)
+          Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?
           raise
         end
 
