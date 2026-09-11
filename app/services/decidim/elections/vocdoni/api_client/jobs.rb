@@ -93,10 +93,15 @@ module Decidim
         end
 
         # Monotonic so that a clock adjustment cannot extend or cut the wait.
+        # `::Process` is spelled with the top-level scope operator because
+        # `Decidim::Elections::Vocdoni::Process` (our sidecar model) sits in
+        # the same namespace and would otherwise shadow Ruby's own `Process`
+        # module, raising `NameError: uninitialized constant
+        # Decidim::Elections::Vocdoni::Process::CLOCK_MONOTONIC`.
         #
         # @return [Float]
         def monotonic_time
-          Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          ::Process.clock_gettime(::Process::CLOCK_MONOTONIC)
         end
       end
     end
