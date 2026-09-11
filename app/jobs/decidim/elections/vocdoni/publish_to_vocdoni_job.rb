@@ -279,7 +279,7 @@ module Decidim
         end
 
         def census_users
-          manifest = Decidim::Elections.census_registry.for(:vocdoni_secure)
+          manifest = Decidim::Elections.census_registry.find(:vocdoni_secure)
           return [] unless manifest&.user_query
 
           Array(manifest.user_query.call(election))
