@@ -394,10 +394,20 @@ module Decidim
           payload
         end
 
+        # Upstream Decidim uses `single_option` / `multiple_option`; the SaaS
+        # accepts lowercase `singlechoice` / `multichoice` and rejects
+        # anything else with code 40037.
+        QUESTION_TYPE_MAP = {
+          "single_option"   => "singlechoice",
+          "multiple_option" => "multichoice"
+        }.freeze
+
         def question_payload(question)
+          type = QUESTION_TYPE_MAP.fetch(question.question_type.to_s, question.question_type.to_s)
+
           payload = {
             "title" => localize(question.body),
-            "type" => question.question_type,
+            "type" => type,
             "choices" => question.response_options.order(:id).map.with_index do |option, idx|
               { "title" => localize(option.body), "value" => idx }
             end
@@ -407,9 +417,9 @@ module Decidim
           payload["description"] = description if description.present?
 
           max = question.max_choices.to_i
-          if max > 1
+          if type == "multichoice" || max > 1
             payload["typeSetup"] = {
-              "maxChoices" => max,
+              "maxChoices" => [max, 1].max,
               "minChoices" => question.mandatory? ? 1 : 0,
               "uniqueChoices" => true
             }
