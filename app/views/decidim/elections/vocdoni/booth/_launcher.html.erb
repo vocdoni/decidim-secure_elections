@@ -17,7 +17,12 @@
   process = election.vocdoni_process
   process_id = process&.vocdoni_process_id
   api_url = Decidim::Elections::Vocdoni.api_url
-  exit_path = decidim_elections.election_path(election)
+  # The upstream engine's URL helpers live on a per-component router; the
+  # bare `election_path(election)` helper is not in scope inside a votes
+  # partial. Build the exit path by hand so a browser back-nav from the
+  # SPA drops the voter back on the election page rather than the site
+  # root.
+  exit_path = Decidim::EngineRouter.main_proxy(election.component).election_path(election)
 %>
 
 <div class="row column mt-8">
