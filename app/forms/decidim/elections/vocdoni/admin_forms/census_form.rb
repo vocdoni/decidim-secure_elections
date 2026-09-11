@@ -30,11 +30,20 @@ module Decidim
 
           def self.from_params(params, additional_params = {})
             instance = super(params, additional_params)
-            # Params may arrive as { credential_fields: { email: "1", phone: "0", ... } }
-            # (form_for check_box style) — normalise to an array of truthy keys.
-            raw = params.respond_to?(:dig) ? params.dig(:credential_fields) : nil
-            if raw.is_a?(Hash) || raw.is_a?(ActionController::Parameters)
+            # Params may arrive as either `{ credential_fields: { email: "1", ... } }`
+            # from a check-box hash, or `{ credential_fields: ["email", ...] }` from
+            # a jsonb rehydrate. Look for a Hash under either `params[:census]`
+            # (mimic prefix) or top-level (legacy call sites).
+            raw =
+              (params.respond_to?(:dig) && params.dig(:census, :credential_fields)) ||
+              (params.respond_to?(:dig) && params.dig("census", "credential_fields")) ||
+              (params.respond_to?(:dig) && params.dig(:credential_fields)) ||
+              (params.respond_to?(:dig) && params.dig("credential_fields"))
+            case raw
+            when Hash, ActionController::Parameters
               instance.credential_fields = raw.select { |_k, v| ActiveModel::Type::Boolean.new.cast(v) }.keys.map(&:to_s)
+            when Array
+              instance.credential_fields = raw.map(&:to_s)
             end
             instance
           end
