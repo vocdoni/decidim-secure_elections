@@ -7,6 +7,13 @@ require "decidim/secure_elections/engine"
 require "decidim/secure_elections/admin_engine"
 require "decidim/secure_elections/component"
 
+# Phase-4 spike (see lib/decidim/secure_elections/phase_4_spike.rb): loaded
+# only when PHASE_4_SPIKE=1 is set. Proves the vocdoni/decidim#1 and #2
+# extension surface is enough to plug this module in as a decidim-elections
+# security layer without patching upstream files. Off by default so
+# production paths are unaffected.
+require "decidim/secure_elections/phase_4_spike" if ENV["PHASE_4_SPIKE"] == "1"
+
 module Decidim
   # Decidim component that delegates the ballot to the Vocdoni protocol through
   # the Vocdoni SaaS API (the "Integrator SDK" surface).

@@ -1,0 +1,11 @@
+en:
+  decidim:
+    elections:
+      censuses:
+        vocdoni_secure:
+          label: "Secure via Vocdoni (spike)"
+      admin:
+        elections:
+          form:
+            results_availability:
+              blockchain_backed: "Blockchain-backed (spike)"
