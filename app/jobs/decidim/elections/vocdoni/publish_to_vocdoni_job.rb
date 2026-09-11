@@ -278,11 +278,17 @@ module Decidim
           @voter_payloads ||= census_users.map { |user| user_to_member(user) }.compact_blank
         end
 
+        # Walks the census-manifest's `#users` iterator (which delegates to the
+        # `user_query` block we registered on the manifest) to build the roster
+        # for this election. `CensusManifest#users` paginates by 5 by default;
+        # we ask for the full list in one shot with an oversized limit — the
+        # spike's stg census is a handful of test users. When this grows into
+        # real deployment the loop can be turned into a proper pager.
         def census_users
           manifest = Decidim::Elections.census_registry.find(:vocdoni_secure)
-          return [] unless manifest&.user_query
+          return [] unless manifest
 
-          Array(manifest.user_query.call(election))
+          Array(manifest.users(election, 0, 100_000))
         end
 
         # Maps a `Decidim::User` onto the Vocdoni memberbase schema. The
