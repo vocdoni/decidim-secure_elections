@@ -35,7 +35,9 @@ module Decidim
 
         initializer "phase_4_spike.register_census_manifest" do
           Decidim::Elections.census_registry.register(:vocdoni_secure) do |manifest|
-            manifest.admin_form = "Decidim::SecureElections::Phase4Spike::AdminForm"
+            # No admin_form for the spike — CensusManifest allows admin_form
+            # to be blank; the partial renders standalone with a message that
+            # names the (real) fields a Vocdoni backend would carry here.
             manifest.admin_form_partial = "decidim/secure_elections/phase_4_spike/admin_form"
             manifest.user_query do |election|
               # Spike-only: the "census" is every user in the org.
@@ -54,13 +56,6 @@ module Decidim
             Rails.logger.info "[phase-4-spike] publish_election:after fired for election ##{election&.id}"
           end
         end
-      end
-
-      # Minimal Form so the census-manifest combobox has something to render
-      # when the admin picks "Secure via Vocdoni (spike)". The real backend
-      # would carry SaaS URL / API key / org address here.
-      class AdminForm < Decidim::Form
-        attribute :placeholder, String
       end
     end
   end
