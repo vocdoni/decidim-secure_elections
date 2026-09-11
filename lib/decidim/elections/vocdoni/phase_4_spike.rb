@@ -67,10 +67,26 @@ module Decidim
           Decidim::Elections.register_results_availability(:blockchain_backed)
         end
 
+        # Enqueues {PublishToVocdoniJob} whenever a Vocdoni-backed election is
+        # published from the Decidim admin. The subscription piggybacks on the
+        # `decidim.elections.admin.publish_election:after` notification added
+        # by vocdoni/decidim#2 (see phase-4/integration).
+        #
+        # The subscriber runs on the request thread but is intentionally cheap:
+        # the actual work happens in the Sidekiq job. Filters out elections
+        # that are not Vocdoni-backed so a plain-CSV election published in the
+        # same host does not enqueue anything.
         initializer "phase_4_spike.subscribe_to_publish" do
           ActiveSupport::Notifications.subscribe("decidim.elections.admin.publish_election:after") do |_name, _started, _finished, _id, payload|
             election = payload[:election]
-            Rails.logger.info "[phase-4-spike] publish_election:after fired for election ##{election&.id}"
+            next if election.blank?
+
+            Rails.logger.info "[phase-4-spike] publish_election:after fired for election ##{election.id} (manifest=#{election.census_manifest.inspect})"
+
+            if election.census_manifest.to_s == "vocdoni_secure"
+              Decidim::Elections::Vocdoni::PublishToVocdoniJob.perform_later(election.id)
+              Rails.logger.info "[phase-4-spike] enqueued PublishToVocdoniJob for election ##{election.id}"
+            end
           end
         end
       end
