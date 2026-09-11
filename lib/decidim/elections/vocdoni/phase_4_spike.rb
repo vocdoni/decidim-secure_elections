@@ -40,10 +40,16 @@ module Decidim
             manifest.admin_form_partial = "decidim/elections/vocdoni/admin/censuses/vocdoni_secure_form"
             manifest.after_update_command = "Decidim::Elections::Vocdoni::Admin::AfterUpdateCensus"
             manifest.user_query do |election|
-              # Stage A: the census is every user in the org. Stage B/C replaces
-              # this with the actual roster (see admin_form for how the
-              # identifier fields are picked).
-              Decidim::User.where(organization: election.organization)
+              # Stage A/B: the census is every registered user of the org,
+              # capped at 20 for the spike so publish + memberbase upload
+              # finish quickly against the stg SaaS. When we grow into real
+              # deployments this cap goes away and the roster is picked
+              # explicitly from the admin form.
+              Decidim::User
+                .where(organization: election.organization)
+                .where.not(email: nil)
+                .order(id: :asc)
+                .limit(20)
             end
           end
         end
