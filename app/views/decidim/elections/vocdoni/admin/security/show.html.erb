@@ -1,66 +1,48 @@
 <%#
-  Security tab. Owns the Vocdoni opt-in for the election and the
-  second-factor challenge (`twoFaFields`) forwarded to the SaaS at
-  publish. Opt-in is materialised by the presence of the
-  `Vocdoni::Process` sidecar — checked by the Publish subscription
-  before enqueuing {PublishToVocdoniJob}.
+  Security tab, shown on every election between Census and Dashboard.
+
+  1. How the vote runs — a simple Decidim vote or a secret, verifiable one
+     on Vocdoni (`enable_vocdoni`; opting in creates the `Vocdoni::Process`
+     sidecar), with the reasons an organisation would pick one or the other.
+  2. The one-time code sent to voters of a secret vote (`twoFaFields`).
+  3. A one-line summary of the resulting configuration.
+
+  The server renders every state; `security.js` only keeps the page in step
+  with unsaved changes.
 %>
 <% add_decidim_page_title(t(".title")) %>
+<% append_javascript_pack_tag "decidim_elections_vocdoni_admin" %>
+<% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 
-<%# Render upstream's tabs menu (admin_elections_menu), where the
-    phase-4 spike injects the Security item. %>
+<div class="item_show__header border-none">
+  <h1 class="item_show__header-title"><%= t(".title") %></h1>
+</div>
+
+<%# Upstream's tabs menu (admin_elections_menu), where the phase-4 spike
+    injects the Security item. %>
 <%= render "decidim/elections/admin/elections/tabs_menu" %>
 
-<div class="item__edit item__edit-1col">
-  <div class="item__edit-form">
-    <%# `request.path` targets `/…/elections/:id/security`, which is
-        exactly the URL bound to `#update` when using `resource :security`
-        (show and update share the same path). Kept as a string rather
-        than the named helper because this view renders inside upstream's
-        admin engine, whose url_helpers do not know the injected security
-        route until Rails' method_missing resolution kicks in. %>
-    <%= decidim_form_for(@form,
-                         url: request.path,
-                         method: :put,
-                         html: { class: "form" }) do |f| %>
-      <div class="card">
-        <div class="card-section">
-          <h2 class="card-title h4"><%= t(".enable_heading") %></h2>
-          <p class="help-text"><%= t(".enable_help_html").html_safe %></p>
+<div class="item__edit-form vocdoni-security 2xl:mr-80">
+  <%# `request.path` is the URL bound to both #show and #update
+      (`resource :security`). A string rather than the named helper because
+      this view renders inside upstream's admin engine, whose url_helpers
+      only learn about the injected route through method_missing. %>
+  <%= decidim_form_for(@form,
+                       url: request.path,
+                       method: :put,
+                       html: { id: "security-form", class: "form-defaults form" }) do |f| %>
+    <%= render "decidim/elections/vocdoni/admin/security/choice", f: %>
+    <%= render "decidim/elections/vocdoni/admin/security/two_factor", f: %>
+    <%= render "decidim/elections/vocdoni/admin/security/summary" %>
 
-          <div class="mt-4">
-            <%= f.check_box :enable_vocdoni, label: t(".enable_label") %>
-          </div>
-        </div>
+    <div class="item__edit-sticky">
+      <div class="item__edit-sticky-container">
+        <%# Upstream's own label ("Save and continue"), as on Questions and
+            Census; the controller continues the wizard onto Dashboard. %>
+        <%= f.submit t("save", scope: "decidim.elections.admin.elections.form"),
+                     id: "js-security-submit",
+                     class: "button button__sm button__secondary" %>
       </div>
-
-      <div class="card mt-6">
-        <div class="card-section">
-          <h2 class="card-title h4"><%= t(".two_fa_heading") %></h2>
-          <p class="help-text"><%= t(".two_fa_help_html").html_safe %></p>
-
-          <div class="mt-4">
-            <div class="row">
-              <%= f.check_box :sms, label: t(".sms_label"), help_text: t(".sms_help") %>
-            </div>
-            <div class="row mt-2">
-              <%= f.check_box :email, label: t(".email_label"), help_text: t(".email_help") %>
-            </div>
-          </div>
-
-          <p class="help-text mt-4 italic"><%= t(".both_note") %></p>
-        </div>
-      </div>
-
-      <div class="item__edit-sticky">
-        <div class="item__edit-sticky-container">
-          <%# Reuse upstream's translation so the label reads the same as
-              on Questions and Census ("Save and continue"), and picks up
-              future locale updates without a fork. %>
-          <%= f.submit t("save", scope: "decidim.elections.admin.elections.form"),
-                       class: "button button__sm button__secondary" %>
-        </div>
-      </div>
-    <% end %>
-  </div>
+    </div>
+  <% end %>
 </div>

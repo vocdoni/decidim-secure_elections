@@ -1,0 +1,107 @@
+<%#
+  Card 1: how the vote runs.
+
+  Each option is a card whose radio is labelled by the card title only; the
+  rest of the card describes it (`aria-describedby`), so a screen reader
+  announces "Simple vote, radio" rather than the whole card. `security.js`
+  makes the rest of the card clickable too; the text stays selectable, as
+  admins copy these points into board papers.
+
+  Both radios write `enable_vocdoni` ("false" / "true"); `data-security-choice`
+  names the card for `security.js`.
+%>
+<% scope = "decidim.elections.vocdoni.admin.security.show.choice" %>
+<%
+  options = {
+    "simple" => { icon: "computer-line", points: {
+      "stored" => "database-2-line",
+      "readable" => "eye-line",
+      "unverifiable" => "search-eye-line",
+      "editable" => "pencil-line"
+    } },
+    "secure" => { icon: "shield-check-line", points: {
+      "anonymous" => "eye-off-line",
+      "tamper" => "search-eye-line",
+      "minimal" => "file-shield-2-line",
+      "locked" => "lock-2-line"
+    } }
+  }
+%>
+<div class="card vocdoni-security__card">
+  <div class="card-divider">
+    <h2 class="card-title" id="security-choice-title"><%= t("legend", scope:) %></h2>
+  </div>
+
+  <div class="card-section">
+    <div class="row column">
+      <fieldset id="js-security-choice"
+                class="vocdoni-security__fieldset"
+                aria-labelledby="security-choice-title"
+                aria-describedby="security-choice-lead">
+        <p class="vocdoni-security__lead" id="security-choice-lead"><%= t("lead", scope:) %></p>
+
+        <div class="vocdoni-choices">
+          <% options.each do |value, option| %>
+            <% selected = @form.choice == value %>
+            <div class="vocdoni-choice<%= " is-selected" if selected %>" data-security-choice-card="<%= value %>">
+              <% if value == "secure" %>
+                <span class="label success vocdoni-choice__badge" id="security-choice-badge"><%= t("recommended", scope:) %></span>
+              <% end %>
+              <div class="vocdoni-choice__header">
+                <%= f.radio_button :enable_vocdoni, (value == "secure").to_s,
+                                   label: false,
+                                   id: "security_choice_#{value}",
+                                   class: "vocdoni-choice__input",
+                                   aria: {
+                                     describedby: [("security-choice-badge" if value == "secure"), "security-choice-#{value}-description"].compact.join(" ")
+                                   },
+                                   data: { security_choice: value } %>
+                <span class="vocdoni-choice__icon" aria-hidden="true"><%= icon option[:icon] %></span>
+                <label for="security_choice_<%= value %>" class="vocdoni-choice__title">
+                  <%= t("#{value}.title", scope:) %>
+                </label>
+              </div>
+
+              <div class="vocdoni-choice__body" id="security-choice-<%= value %>-description">
+                <p class="vocdoni-choice__summary"><%= t("#{value}.summary", scope:) %></p>
+
+                <ul class="vocdoni-choice__points">
+                  <% option[:points].each do |key, point_icon| %>
+                    <li>
+                      <%= icon point_icon, class: "vocdoni-choice__point-icon" %>
+                      <span><%= t("#{value}.points.#{key}", scope:) %></span>
+                    </li>
+                  <% end %>
+                </ul>
+
+                <p class="vocdoni-choice__best">
+                  <strong><%= t("best_for", scope:) %></strong>
+                  <%= t("#{value}.best_for", scope:) %>
+                </p>
+              </div>
+
+              <% if value == "secure" %>
+                <% guide_url = t("secure.guide_url", scope:) %>
+                <p class="vocdoni-choice__footnote">
+                  <%= t("secure.powered_by", scope:) %>
+                  <% if guide_url.present? %>
+                    <%= link_to t("secure.guide_link", scope:), guide_url, target: "_blank", rel: "noopener noreferrer" %>
+                  <% end %>
+                </p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <p class="vocdoni-security__note">
+          <%= icon "information-line" %>
+          <span><%= t("good_to_know_html", scope:) %></span>
+        </p>
+      </fieldset>
+    </div>
+
+    <div class="row column">
+      <%= render "decidim/elections/vocdoni/admin/security/why_it_matters" %>
+    </div>
+  </div>
+</div>

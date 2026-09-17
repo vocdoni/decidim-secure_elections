@@ -1,0 +1,330 @@
+// The Security tab (`admin/security/show.html.erb`).
+//
+// Everything is scoped under `.vocdoni-security`, which sits on the same
+// element as upstream's `.item__edit-form`. That matters for labels:
+// `.item__edit-form label` makes every label small and grey, and a scoped
+// class selector (two classes) is what outranks it without `!important`.
+//
+// Colours are Decidim's tokens only. Text never uses the raw
+// `success`/`warning`/`alert` fills (they fail contrast as text — see
+// `vocdoni.scss`); state pills are `.label` variants from decidim-core.
+
+.vocdoni-security {
+  [hidden] {
+    display: none !important;
+  }
+
+  .vocdoni-security__card {
+    @apply mb-6;
+
+    .card-section > .row:last-child {
+      @apply pb-6;
+    }
+  }
+
+  .vocdoni-security__fieldset {
+    @apply m-0 p-0 border-0 min-w-0;
+  }
+
+  .vocdoni-security__lead {
+    @apply mb-4 text-md text-gray-2 max-w-3xl;
+  }
+
+  .vocdoni-security__note {
+    @apply flex items-start gap-2 mt-4 mb-0 p-3 rounded bg-background text-sm text-gray-2;
+
+    svg {
+      @apply w-4 h-4 mt-0.5 shrink-0 fill-secondary;
+    }
+  }
+}
+
+// Vote-type cards.
+//
+// The card is a plain block; only its title is the radio's <label>.
+// `security.js` makes the rest of the card select the option, without an
+// overlay that would stop admins selecting the text.
+.vocdoni-security {
+  // Two columns only from `xl`: next to Decidim's two admin sidebars the
+  // form is under 650px wide below that, too narrow for side-by-side cards.
+  .vocdoni-choices {
+    @apply grid gap-4 pt-3 xl:grid-cols-2;
+  }
+
+  .vocdoni-choice {
+    @apply relative flex flex-col gap-3 p-5 rounded-lg border-2 border-background-4 bg-white cursor-pointer transition-colors;
+
+    &:hover {
+      @apply border-secondary/50;
+    }
+
+    &.is-selected,
+    &:has(.vocdoni-choice__input:checked) {
+      @apply border-secondary bg-secondary/5;
+
+      .vocdoni-choice__icon {
+        @apply bg-secondary;
+
+        svg {
+          @apply fill-white;
+        }
+      }
+
+      .vocdoni-choice__point-icon {
+        @apply fill-secondary;
+      }
+    }
+
+    &:has(.vocdoni-choice__input:focus-visible) {
+      @apply outline outline-2 outline-offset-2 outline-secondary;
+    }
+  }
+
+  .vocdoni-choice__header {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .vocdoni-choice__input {
+    @apply w-5 h-5 m-0 shrink-0 cursor-pointer accent-[var(--secondary)];
+  }
+
+  .vocdoni-choice__icon {
+    @apply flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-background transition-colors;
+
+    svg {
+      @apply w-5 h-5 fill-secondary;
+    }
+  }
+
+  .vocdoni-choice__title {
+    @apply m-0 text-lg font-semibold text-black cursor-pointer;
+  }
+
+  // "Recommended" sits on the card's top edge, so both cards keep their
+  // headers aligned whatever the width.
+  .vocdoni-choice__badge {
+    @apply absolute -top-3 right-4 z-[1] shadow-sm;
+  }
+
+  .vocdoni-choice__body {
+    @apply flex flex-col flex-1 gap-3;
+  }
+
+  .vocdoni-choice__summary {
+    @apply m-0 text-md font-semibold text-gray-2;
+  }
+
+  .vocdoni-choice__points {
+    @apply grid gap-2 m-0 p-0 list-none;
+
+    li {
+      @apply flex items-start gap-2 m-0 text-sm text-gray-2;
+    }
+  }
+
+  .vocdoni-choice__point-icon {
+    @apply w-4 h-4 mt-0.5 shrink-0 fill-gray-2;
+  }
+
+  .vocdoni-choice__best {
+    @apply mt-auto mb-0 pt-3 border-t border-background-4 text-sm text-gray-2;
+
+    strong {
+      @apply text-black;
+    }
+  }
+
+  .vocdoni-choice__footnote {
+    @apply self-start m-0 text-xs text-gray-2;
+
+    a {
+      @apply text-secondary underline;
+    }
+  }
+}
+
+// "Why it matters" disclosure and the comparison table.
+.vocdoni-security {
+  .vocdoni-why {
+    @apply mt-6 rounded-lg border border-background-4 bg-background;
+
+    &[open] .vocdoni-why__chevron {
+      @apply rotate-90;
+    }
+  }
+
+  .vocdoni-why__summary {
+    @apply flex items-center gap-2 p-4 rounded-lg list-none cursor-pointer font-semibold text-secondary;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &:focus-visible {
+      @apply outline outline-2 outline-offset-2 outline-secondary;
+    }
+
+    svg {
+      @apply w-5 h-5 shrink-0 fill-current;
+    }
+  }
+
+  .vocdoni-why__chevron {
+    @apply transition-transform;
+  }
+
+  .vocdoni-why__content {
+    @apply px-4 pb-4;
+  }
+
+  .vocdoni-why__reasons {
+    @apply grid gap-4 m-0 p-0 list-none xl:grid-cols-2;
+  }
+
+  .vocdoni-why__reason {
+    @apply flex items-start gap-3 m-0 p-4 rounded border border-background-4 bg-white;
+  }
+
+  .vocdoni-why__reason-icon {
+    @apply flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-secondary/10;
+
+    svg {
+      @apply w-5 h-5 fill-secondary;
+    }
+  }
+
+  .vocdoni-why__reason-title {
+    @apply mb-1 text-md font-semibold text-black;
+  }
+
+  .vocdoni-why__reason-body {
+    @apply m-0 text-sm leading-relaxed text-gray-2;
+  }
+
+  .vocdoni-why__table-title {
+    @apply mt-6 mb-2 text-md font-semibold text-black;
+  }
+
+  .vocdoni-compare {
+    table {
+      @apply m-0 rounded bg-white text-sm text-gray-2;
+    }
+
+    th,
+    td {
+      @apply p-3 text-left align-middle;
+    }
+
+    thead th {
+      @apply bg-background-2 font-semibold text-black;
+    }
+
+    tbody tr {
+      @apply border-b border-background-4 last:border-b-0;
+    }
+
+    tbody th {
+      @apply block font-semibold text-black md:table-cell;
+    }
+
+    .vocdoni-compare__secure {
+      @apply md:bg-secondary/5;
+    }
+  }
+
+  .vocdoni-compare__cell {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .vocdoni-compare__icon {
+    @apply w-4 h-4 shrink-0;
+  }
+
+  .vocdoni-compare__icon--yes {
+    @apply fill-success;
+  }
+
+  .vocdoni-compare__icon--no {
+    @apply fill-gray-2;
+  }
+}
+
+// One-time code options.
+.vocdoni-security {
+  .vocdoni-two-factor__options {
+    @apply grid gap-3 mt-4;
+  }
+
+  .vocdoni-two-factor__option {
+    @apply p-4 rounded-lg border border-background-4 bg-white;
+  }
+
+  .vocdoni-two-factor__control {
+    @apply flex flex-wrap items-center gap-3;
+
+    input[type="checkbox"] {
+      @apply w-5 h-5 m-0 shrink-0 accent-[var(--secondary)];
+    }
+  }
+
+  .vocdoni-two-factor__label {
+    @apply flex items-center gap-2 m-0 text-md font-semibold text-black cursor-pointer;
+
+    svg {
+      @apply w-5 h-5 shrink-0 fill-secondary;
+    }
+  }
+
+  .vocdoni-two-factor__both {
+    @apply mt-3 mb-0;
+  }
+
+  .vocdoni-two-factor__help {
+    @apply mt-1 mb-0 ml-8;
+
+    a {
+      @apply text-secondary underline;
+    }
+  }
+
+  // Only the controls fade: the help text explains why they are off, so it
+  // keeps its full contrast.
+  .vocdoni-two-factor:disabled {
+    .vocdoni-two-factor__control {
+      @apply opacity-60;
+    }
+
+    .vocdoni-two-factor__label {
+      @apply cursor-not-allowed;
+    }
+  }
+}
+
+// Summary strip.
+.vocdoni-security {
+  .vocdoni-summary {
+    @apply flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 p-4 rounded-lg border border-background-4 bg-white;
+  }
+
+  .vocdoni-summary__title {
+    @apply flex items-center gap-2 font-semibold text-black;
+
+    svg {
+      @apply w-5 h-5 fill-secondary;
+    }
+  }
+
+  .vocdoni-summary__status {
+    @apply flex flex-wrap items-center gap-2 m-0 text-sm text-gray-2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vocdoni-security {
+    .vocdoni-choice,
+    .vocdoni-choice__icon,
+    .vocdoni-why__chevron {
+      transition: none;
+    }
+  }
+}

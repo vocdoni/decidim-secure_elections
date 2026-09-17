@@ -1,0 +1,85 @@
+<%#
+  The reasons behind the choice, and a comparison an administrator can quote
+  to their board. Open until the election opts in to a secret vote,
+  collapsed after: that admin has already read it.
+
+  Every table row is phrased so that the protective answer is the good one,
+  which is why the tick and the cross can carry the same meaning in every
+  row. The words ("Yes", "Nobody"…) are what a screen reader reads; the
+  icons are decorative.
+%>
+<% scope = "decidim.elections.vocdoni.admin.security.show.why" %>
+<% table_scope = "#{scope}.table" %>
+<%
+  reasons = {
+    "secrecy" => "lock-2-line",
+    "leaks" => "shield-keyhole-line",
+    "gdpr" => "file-shield-2-line",
+    "statutes" => "scales-3-line"
+  }
+  # [row, simple cell, secure cell]; a nil cell reads "No" / "Yes".
+  rows = [
+    ["secrecy", t("rows.secrecy.simple", scope: table_scope), t("rows.secrecy.secure", scope: table_scope)],
+    ["readers", t("rows.readers.simple", scope: table_scope), t("rows.readers.secure", scope: table_scope)],
+    ["tamper", nil, nil],
+    ["verification", nil, nil],
+    ["personal_data", t("rows.personal_data.simple", scope: table_scope), t("rows.personal_data.secure", scope: table_scope)],
+    ["locked", nil, nil]
+  ]
+  simple_heading = t("decidim.elections.vocdoni.admin.security.show.choice.simple.title")
+  secure_heading = t("decidim.elections.vocdoni.admin.security.show.choice.secure.title")
+%>
+<details class="vocdoni-why" <%= "open" unless election.vocdoni_process %>>
+  <summary class="vocdoni-why__summary">
+    <%= icon "arrow-right-s-line", class: "vocdoni-why__chevron" %>
+    <%= icon "government-line" %>
+    <span><%= t("title", scope:) %></span>
+  </summary>
+
+  <div class="vocdoni-why__content">
+    <ul class="vocdoni-why__reasons">
+      <% reasons.each do |key, reason_icon| %>
+        <li class="vocdoni-why__reason">
+          <span class="vocdoni-why__reason-icon" aria-hidden="true"><%= icon reason_icon %></span>
+          <div>
+            <h3 class="vocdoni-why__reason-title"><%= t("#{key}.title", scope:) %></h3>
+            <p class="vocdoni-why__reason-body"><%= t("#{key}.body", scope:) %></p>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+
+    <h3 class="vocdoni-why__table-title"><%= t("title", scope: table_scope) %></h3>
+    <div class="table-stacked vocdoni-compare">
+      <table>
+        <caption class="sr-only"><%= t("caption", scope: table_scope) %></caption>
+        <thead>
+          <tr>
+            <th scope="col"><%= t("feature", scope: table_scope) %></th>
+            <th scope="col"><%= simple_heading %></th>
+            <th scope="col" class="vocdoni-compare__secure"><%= secure_heading %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.each do |key, simple_text, secure_text| %>
+            <tr>
+              <th scope="row"><%= t("rows.#{key}.label", scope: table_scope) %></th>
+              <td data-label="<%= simple_heading %>">
+                <span class="vocdoni-compare__cell">
+                  <%= icon "close-line", class: "vocdoni-compare__icon vocdoni-compare__icon--no" %>
+                  <span><%= simple_text || t("no", scope: table_scope) %></span>
+                </span>
+              </td>
+              <td data-label="<%= secure_heading %>" class="vocdoni-compare__secure">
+                <span class="vocdoni-compare__cell">
+                  <%= icon "check-line", class: "vocdoni-compare__icon vocdoni-compare__icon--yes" %>
+                  <span><%= secure_text || t("yes", scope: table_scope) %></span>
+                </span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</details>

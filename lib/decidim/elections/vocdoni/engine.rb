@@ -88,12 +88,15 @@ module Decidim
         add-line arrow-down-line arrow-left-line arrow-up-line
         bar-chart-box-line bill-line calendar-line calendar-schedule-line
         check-double-line check-line close-circle-line close-line
-        dashboard-line delete-bin-2-line delete-bin-line draft-line
-        edit-line error-warning-line external-link-line eye-line
-        eye-off-line fingerprint-line group-2-line list-check loader-line
-        lock-line more-fill pause-circle-line pencil-line
-        play-circle-line question-answer-line question-line refresh-line
-        shield-check-line stop-circle-line upload-2-line user-follow-line
+        computer-line dashboard-line database-2-line delete-bin-2-line
+        delete-bin-line draft-line edit-line error-warning-line
+        external-link-line eye-line eye-off-line file-shield-2-line
+        fingerprint-line government-line group-2-line information-line
+        list-check loader-line lock-2-line lock-line mail-lock-line more-fill
+        pause-circle-line pencil-line play-circle-line question-answer-line
+        question-line refresh-line scales-3-line search-eye-line
+        shield-check-line shield-keyhole-line smartphone-line
+        stop-circle-line upload-2-line user-follow-line
       ).freeze
 
       # Registers an icon unless somebody already has.
