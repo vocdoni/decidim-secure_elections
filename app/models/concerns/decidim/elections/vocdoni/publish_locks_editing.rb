@@ -5,17 +5,20 @@ module Decidim
     module Vocdoni
       # Prepended onto {Decidim::Elections::Election} by `phase_4_spike`.
       #
-      # Overrides `editable?` for Vocdoni-backed elections: publish is the
-      # point-of-no-return, not Start. Once the election is published the
-      # process, its questions and its census are anchored on the chain and
-      # cannot be edited from Decidim without diverging from what voters see.
+      # In the v3 spike the Vocdoni push is deferred from Publish to Start —
+      # the on-chain freeze happens when the admin clicks Start, not when
+      # they Publish. Between Publish and Start the questions, census and
+      # start_at can still change, and the Start-time push captures whatever
+      # the admin decided. Once the election has actually started, the
+      # process is on chain and further Decidim edits would diverge from
+      # what voters see, so we lock at that point instead of at Publish.
       #
       # For non-Vocdoni elections the upstream rule stands
       # (`published? ? !started? : !votes.exists?`), so this is a delta rather
       # than a replacement.
       module PublishLocksEditing
         def editable?
-          return false if vocdoni_backed? && published?
+          return false if vocdoni_backed? && started?
 
           super
         end
