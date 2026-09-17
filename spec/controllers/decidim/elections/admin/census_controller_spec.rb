@@ -44,7 +44,6 @@ module Decidim
             expect(response.body).to include(I18n.t("legend", scope: "decidim.elections.vocdoni.admin.census_setup.registered"))
           end
         end
-
       end
     end
   end

@@ -58,7 +58,7 @@ module Decidim
           app.config.after_initialize do
             ActiveSupport::Reloader.to_prepare do
               model = Decidim::Elections::Election
-              next if model.defined_enums.key?("results_availability")
+              next if model.defined_enums.has_key?("results_availability")
 
               begin
                 model.enum :results_availability, Decidim::Elections.results_availability_options.index_with(&:to_s)
