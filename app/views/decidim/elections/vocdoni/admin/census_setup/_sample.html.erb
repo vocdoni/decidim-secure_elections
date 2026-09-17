@@ -1,0 +1,20 @@
+<%#
+  A few real rows, folded away.
+
+  The table itself is upstream's (`census/preview`), the same one the Dashboard
+  shows, so the two never disagree about what is in the list. It carries no
+  caption of its own, so the disclosure is what names it and the group label
+  repeats that for a screen reader.
+
+  Locals: `election`.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_setup.sample" %>
+<% rows = preview_users(election) %>
+<% if rows.present? %>
+  <details class="vocdoni-census__details">
+    <summary class="vocdoni-census__details-summary"><%= t("summary", scope:, count: rows.size) %></summary>
+    <div role="group" aria-label="<%= t("summary", scope:, count: rows.size) %>">
+      <%= render partial: "decidim/elections/admin/census/preview", locals: { election: } %>
+    </div>
+  </details>
+<% end %>

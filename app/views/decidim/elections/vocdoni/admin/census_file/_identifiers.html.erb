@@ -1,0 +1,101 @@
+<%#
+  "How do people prove who they are?"
+
+  Asked where the columns are: at the end of the import page, and again on its
+  own when an admin changes their mind later.
+
+  Three kinds of detail:
+    - checked against the list (name, ID number, member number…);
+    - a contact detail (email, phone) — the secure voting service will not
+      check those against anything, so choosing one sends a one-time code
+      there instead, and that code is what proves the person. Saying so on
+      the box is the whole explanation; there is nothing else to set up.
+    - an access code we hand out: fine for a simple vote, and the only thing
+      a secret one cannot use at all.
+
+  Every detail also says how many people on the list do not have it, because
+  a list is usually missing a few emails and those people would silently lose
+  their vote.
+
+  Locals: `form` (any form including `AdminForms::ChoosesIdentifiers`),
+  `name` (the parameter name to submit under), and optionally `options` — the
+  details to render rows for. In the import page that is every detail a list
+  can carry, because the columns are still being decided and the rows follow
+  them live; rows for columns that are not kept are hidden.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.identifiers" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<% errors = form.errors[:identifiers] %>
+<fieldset id="js-census-identifiers"
+          class="vocdoni-census-file__fieldset vocdoni-identifiers"
+          aria-describedby="census-identifiers-lead<%= " census-identifiers-error" if errors.any? %>"
+          data-max="<%= fields_mod::MAX_IDENTIFIERS %>"
+          data-weak="<%= fields_mod::WEAK.join(" ") %>">
+  <legend class="vocdoni-census-file__subtitle"><%= t("legend", scope:) %></legend>
+  <p class="vocdoni-census-file__lead" id="census-identifiers-lead"><%= t("lead", scope:, max: fields_mod::MAX_IDENTIFIERS) %></p>
+
+  <% if errors.any? %>
+    <p class="form-error is-visible" id="census-identifiers-error" role="alert"><%= errors.to_sentence %></p>
+  <% end %>
+
+  <%# Said once before the list, so the asymmetry is not discovered halfway
+      down it. Each contact detail repeats it where it is ticked. %>
+  <% if form.identifier_options.intersect?(fields_mod::TWO_FA) %>
+    <p class="vocdoni-census-file__note">
+      <%= icon "information-line" %>
+      <span><%= t("contact_note", scope:) %></span>
+    </p>
+  <% end %>
+
+  <% available = form.identifier_options %>
+  <% rows = local_assigns.fetch(:options, available) %>
+  <p class="vocdoni-identifiers__empty" data-identifiers-empty <%= "hidden" if available.any? %>>
+    <%= t("none_available", scope:) %>
+  </p>
+
+  <input type="hidden" name="<%= name %>[identifiers][]" value="">
+  <ul class="vocdoni-identifiers__list">
+    <% rows.each do |field| %>
+      <%
+        sends_code = form.sends_code?(field)
+        secure_ok = form.usable_for_secure?(field)
+        missing = form.people_without(field)
+      %>
+      <li class="vocdoni-identifiers__item"
+          data-identifier="<%= field %>"
+          <%= "hidden" unless available.include?(field) %>>
+        <label class="vocdoni-identifiers__label" for="census_identifiers_<%= field %>">
+          <input type="checkbox"
+                 name="<%= name %>[identifiers][]"
+                 id="census_identifiers_<%= field %>"
+                 value="<%= field %>"
+                 aria-describedby="census-identifiers-<%= field %>-hint"
+                 <%= "checked" if form.identifier_selected?(field) %>>
+          <span><%= fields_mod.label(field) %></span>
+          <% if sends_code %>
+            <span class="label success vocdoni-identifiers__badge"><%= t("sends_code", scope:) %></span>
+          <% elsif !secure_ok %>
+            <span class="label vocdoni-identifiers__badge"><%= t("simple_only", scope:) %></span>
+          <% end %>
+        </label>
+        <p class="help-text vocdoni-identifiers__hint" id="census-identifiers-<%= field %>-hint">
+          <span><%= fields_mod.hint(field) %></span>
+          <% if sends_code %>
+            <span><%= t("sends_code_hint", scope:) %></span>
+          <% elsif !secure_ok %>
+            <span><%= t("simple_only_hint.#{field}", scope:, default: t("simple_only_hint.other", scope:)) %></span>
+          <% end %>
+          <%# The answer to "what happens to the members who don't have one?",
+              with their own number, before they choose rather than after. %>
+          <% if missing.positive? %>
+            <span class="vocdoni-identifiers__missing"><%= t("missing", scope:, count: missing) %></span>
+          <% end %>
+        </p>
+      </li>
+    <% end %>
+  </ul>
+
+  <div class="vocdoni-identifiers__weak" data-identifiers-weak <%= "hidden" unless form.weak_identifiers? %>>
+    <%= cell "decidim/announcement", t("weak", scope:), callout_class: "warning" %>
+  </div>
+</fieldset>

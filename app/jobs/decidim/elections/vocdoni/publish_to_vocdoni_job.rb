@@ -525,22 +525,37 @@ module Decidim
         def auth_fields
           return ["memberNumber"] unless election.census_manifest.to_s == "token_csv"
 
-          chosen = Array(election.census_settings.to_h["identifiers"]).map(&:to_s) & CensusCsv::Fields::AUTH
-          return chosen if chosen.any?
+          chosen = census_identifiers
+          unless chosen.intersect?(CensusCsv::Fields::SECURE_IDENTIFIERS)
+            @step = "identifiers"
+            raise Decidim::Elections::Vocdoni::ApiError.new(
+              "Choose on the Census tab which details voters type to identify themselves",
+              code: "no_identifiers",
+              transient: false
+            )
+          end
 
-          @step = "identifiers"
-          raise Decidim::Elections::Vocdoni::ApiError.new(
-            "Choose on the Security tab which details voters type to identify themselves",
-            code: "no_identifiers",
-            transient: false
-          )
+          # May legitimately be empty: a census identified by a contact detail
+          # alone is authenticated by the one-time code sent there, and the
+          # service accepts a census with no `authFields` at all.
+          chosen & CensusCsv::Fields::AUTH
         end
 
-        # Second-factor selection lives on the sidecar's settings, populated by
-        # {Admin::UpdateElectionSecurity} from the Security-tab form. Verbatim
-        # SaaS shape (`["email"]`, `["phone"]`, `["email","phone"]` or `[]`).
+        def census_identifiers
+          Array(election.census_settings.to_h["identifiers"]).map(&:to_s)
+        end
+
+        # Where the one-time code goes. Two sources, because there are two
+        # reasons to send one: the admin asked for it on the Security tab, or
+        # the census identifies people by a contact detail, in which case the
+        # code is what proves the person and is not optional.
+        #
+        # Verbatim SaaS shape (`["email"]`, `["phone"]`, `["email","phone"]`
+        # or `[]`).
         def two_fa_fields
-          Array(process.metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
+          chosen = Array(process.metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
+          chosen |= census_identifiers & CensusCsv::Fields::TWO_FA if election.census_manifest.to_s == "token_csv"
+          chosen.sort
         end
 
         def org_address

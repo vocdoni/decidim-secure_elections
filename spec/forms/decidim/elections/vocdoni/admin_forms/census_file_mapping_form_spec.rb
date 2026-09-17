@@ -25,7 +25,8 @@ module Decidim
           end
 
           let(:columns) { { "0" => "name", "1" => "surname", "2" => "email", "3" => "" } }
-          let(:attributes) { { census_file: { blob: blob.signed_id, columns: } } }
+          let(:identifiers) { %w(name) }
+          let(:attributes) { { census_file: { blob: blob.signed_id, columns:, identifiers: } } }
 
           it { is_expected.to be_valid }
 
@@ -136,6 +137,55 @@ module Decidim
             end
           end
 
+          describe "#guessed_indexes and #unknown_indexes" do
+            it "separates the headings the importer recognised by itself from the rest" do
+              # Nombre, Apellidos and Correo are recognised Spanish headers;
+              # Ciudad is not one of the fields this census understands.
+              expect(form.guessed_indexes).to eq([0, 1, 2])
+              expect(form.unknown_indexes).to eq([3])
+            end
+          end
+
+          describe "#kept_pairs" do
+            it "pairs every kept heading with the label of the detail it was mapped to" do
+              expect(form.kept_pairs).to eq(
+                [
+                  ["Nombre", CensusCsv::Fields.label("name")],
+                  ["Apellidos", CensusCsv::Fields.label("surname")],
+                  ["Correo", CensusCsv::Fields.label("email")]
+                ]
+              )
+            end
+          end
+
+          describe "#dropped_headers" do
+            it "lists the headings of the columns that were not kept" do
+              expect(form.dropped_headers).to eq(%w(Ciudad))
+            end
+          end
+
+          describe "#people_without" do
+            let(:content) do
+              <<~CSV
+                Nombre,Apellidos,Correo,Ciudad
+                Ada,Lovelace,ada@example.org,London
+                Grace,Hopper,,Paris
+              CSV
+            end
+
+            it "counts the rows about to be imported that have nothing in that column" do
+              expect(form.people_without("email")).to eq(1)
+            end
+
+            context "when the file cannot be checked yet (a blob error, an unmapped column)" do
+              let(:attributes) { { census_file: { columns: } } }
+
+              it "is zero rather than raising" do
+                expect(form.people_without("email")).to eq(0)
+              end
+            end
+          end
+
           describe "#lacks_identity?" do
             it "is false once an identity field is kept" do
               expect(form.lacks_identity?).to be(false)
@@ -146,6 +196,62 @@ module Decidim
 
               it "is true" do
                 expect(form.lacks_identity?).to be(true)
+              end
+            end
+          end
+
+          describe "the details voters type to be found on the list" do
+            context "when none is chosen" do
+              let(:identifiers) { [] }
+
+              it "is invalid" do
+                expect(form).to be_invalid
+                expect(form.errors.details[:identifiers]).to include(a_hash_including(error: :blank))
+              end
+            end
+
+            context "when the chosen field is a column that was not kept" do
+              # The email column is dropped: only name and surname remain.
+              let(:columns) { { "0" => "name", "1" => "surname", "2" => "", "3" => "" } }
+              let(:identifiers) { %w(email) }
+
+              it "is invalid" do
+                expect(form).to be_invalid
+                expect(form.errors.details[:identifiers]).to include(a_hash_including(error: :unknown))
+              end
+            end
+
+            context "when two of the rows about to be imported cannot be told apart by the chosen details" do
+              let(:content) do
+                <<~CSV
+                  Nombre,Apellidos,Correo,Ciudad
+                  Rosalind,Franklin,rosalind@example.org,London
+                  Rosalind,Franklin,rosalind2@example.org,Paris
+                CSV
+              end
+              let(:identifiers) { %w(name surname) }
+
+              it "is invalid and says how many rows collide" do
+                expect(form).to be_invalid
+                expect(form.errors.details[:identifiers]).to include(a_hash_including(error: :not_unique, count: 2))
+              end
+            end
+
+            context "when the file has a row to fix" do
+              # The duplicate check runs against the rows that would actually
+              # be imported; a row-level error (a bad email) is not one of
+              # them, so it is not counted as a collision.
+              let(:content) do
+                <<~CSV
+                  Nombre,Apellidos,Correo,Ciudad
+                  Ada,Lovelace,not-an-email,London
+                  Ada,Lovelace,ada2@example.org,Paris
+                CSV
+              end
+              let(:identifiers) { %w(name surname) }
+
+              it "is otherwise valid: the identifiers do not collide" do
+                expect(form).to be_valid
               end
             end
           end

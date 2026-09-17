@@ -1,0 +1,44 @@
+<%#
+  Lines that stop the import, on the page that caused them.
+
+  All or nothing: a census is a list of credentials, and importing 197 of 200
+  people would quietly leave three of them unable to vote. So nothing was
+  saved, and the only job here is to make each problem easy to find in the
+  admin's own spreadsheet — by line number, with what that line says.
+
+  Locals: `rows` (already capped), `total`.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.failed_rows" %>
+<% shown = rows.first(200) %>
+<% remaining = total - shown.size %>
+<div class="vocdoni-census-file__failed" id="js-census-file-failed" tabindex="-1">
+  <%= cell "decidim/announcement",
+           { title: t("title", scope:, count: total), body: t("body", scope:) },
+           callout_class: "alert" %>
+
+  <div class="table-stacked vocdoni-census-file__errors-table">
+    <table>
+      <caption class="sr-only"><%= t("caption", scope:) %></caption>
+      <thead>
+        <tr>
+          <th scope="col"><%= t("line_header", scope:) %></th>
+          <th scope="col"><%= t("contents_header", scope:) %></th>
+          <th scope="col"><%= t("fix_header", scope:) %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% shown.each do |row| %>
+          <tr>
+            <td data-label="<%= t("line_header", scope:) %>"><%= row.number %></td>
+            <td data-label="<%= t("contents_header", scope:) %>"><%= row.cells.to_h.map { |key, value| "#{key}: #{value}" }.join(", ") %></td>
+            <td data-label="<%= t("fix_header", scope:) %>"><%= row.summary %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if remaining.positive? %>
+    <p class="vocdoni-census-file__more-rows"><%= t("more_lines", scope:, count: remaining) %></p>
+  <% end %>
+</div>

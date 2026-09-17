@@ -24,7 +24,9 @@
     injects the Security item. %>
 <%= render "decidim/elections/admin/elections/tabs_menu" %>
 
-<div class="item__edit-form vocdoni-security 2xl:mr-80">
+<%# `vocdoni-cards` carries the selectable-card styles this page shares with
+    the Census tab; `vocdoni-security` everything that is only this page's. %>
+<div class="item__edit-form vocdoni-security vocdoni-cards 2xl:mr-80">
   <%# `request.path` is the URL bound to both #show and #update
       (`resource :security`). A string rather than the named helper because
       this view renders inside upstream's admin engine, whose url_helpers

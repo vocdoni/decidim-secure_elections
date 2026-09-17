@@ -1,0 +1,132 @@
+<%#
+  Second state of the page: the file has been read.
+
+  What the admin is asked for, in the order they can answer it:
+
+    1. Anything wrong with the lines (nothing is imported until it is fixed).
+    2. What we understood — a sentence, not a table. The full table is one
+       disclosure away for whoever wants to check every column; re-asking
+       about columns whose heading we recognised turned a confirmation into
+       nine decisions that all looked equally certain.
+    3. The columns we could NOT place. These are the only ones that need a
+       decision, so they are the only ones with a question on screen.
+    4. Which of those details a voter types to be found on the list.
+    5. Import.
+
+  Locals: `form` (CensusFileMappingForm), `outcome` (nil unless an import was
+  refused over its rows).
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.review" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<% target_options = [[t("ignore", scope:), ""]] + fields_mod::TARGETS.map { |field| [fields_mod.label(field), field] } %>
+<% unknown = form.unknown_indexes %>
+<% failed_rows = outcome&.failed_rows.to_a %>
+
+<%= decidim_form_for(form,
+                     url: wizard_path(:collection),
+                     method: :patch,
+                     html: { id: "js-census-file-mapping-form", class: "form-defaults form" }) do |f| %>
+  <%= f.hidden_field :blob, value: form.blob %>
+
+  <% if failed_rows.any? %>
+    <%= render "decidim/elections/vocdoni/admin/census_file/failed_rows", rows: failed_rows, total: outcome.failed_rows.size %>
+  <% end %>
+
+  <%# Uploading the downloaded template unchanged is the commonest way to end
+      up with a file holding nobody: its example line is never imported. %>
+  <% if form.reader.people_count.zero? %>
+    <%= cell "decidim/announcement",
+             { title: t("nobody.title", scope:),
+               body: t(form.reader.example_row_count.positive? ? "nobody.only_example" : "nobody.no_rows", scope:) },
+             callout_class: "alert" %>
+  <% end %>
+
+  <div class="card vocdoni-census-file__card">
+    <div class="card-divider">
+      <h2 class="card-title"><%= t("legend", scope:, file: form.file&.filename.to_s) %></h2>
+    </div>
+
+    <div class="card-section">
+      <div class="row column">
+        <p class="vocdoni-census-file__count">
+          <%= icon "group-2-line" %>
+          <span><%= t("people", scope:, count: form.reader.people_count) %></span>
+          <%= link_to t("another_file", scope:), wizard_path(:new), class: "vocdoni-census-file__inline-link" %>
+        </p>
+
+        <% if form.reader.truncated? %>
+          <p class="vocdoni-census-file__note">
+            <%= icon "information-line" %>
+            <span><%= t("truncated", scope:) %></span>
+          </p>
+        <% end %>
+
+        <%# What we understood, in one sentence. %>
+        <% if form.kept_pairs.any? %>
+          <p class="vocdoni-census-file__understood">
+            <%= icon "check-line" %>
+            <%# Heading and detail together: a wrong guess is visible without
+                opening anything, and a wrong guess about who somebody is is
+                exactly what an organiser is afraid of. %>
+            <span><%= t("understood", scope:, fields: form.kept_pairs.map { |header, label| "#{header} → #{label}" }.to_sentence) %></span>
+          </p>
+        <% end %>
+
+        <% if form.dropped_headers.any? %>
+          <p class="vocdoni-census-file__dropped">
+            <%= t("dropped", scope:, count: form.dropped_headers.size, headers: form.dropped_headers.to_sentence) %>
+          </p>
+        <% end %>
+
+        <%# Only the columns we could not place ask a question. %>
+        <% if unknown.any? %>
+          <div class="vocdoni-census-file__unknown" id="js-census-file-unknown">
+            <h3 class="vocdoni-census-file__subtitle"><%= t("unknown_title", scope:, count: unknown.size) %></h3>
+            <p class="help-text"><%= t("unknown_lead", scope:) %></p>
+            <%= render "decidim/elections/vocdoni/admin/census_file/columns",
+                       form:, indexes: unknown, target_options:, table_id: "js-census-file-unknown-table" %>
+          </div>
+        <% end %>
+
+        <%# The ones we placed ourselves, for whoever wants to check them.
+            Each column's select is rendered exactly once across the page —
+            twice would mean two inputs of the same name, and the hidden one
+            would quietly win. %>
+        <% if form.guessed_indexes.any? %>
+          <details class="vocdoni-census-file__details" <%= "open" if form.errors[:columns].any? %>>
+            <summary class="vocdoni-census-file__details-summary"><%= t("check_all", scope:, count: form.guessed_indexes.size) %></summary>
+            <% if form.errors[:columns].any? %>
+              <p class="form-error is-visible" role="alert"><%= form.errors[:columns].to_sentence %></p>
+            <% end %>
+            <%= render "decidim/elections/vocdoni/admin/census_file/columns",
+                       form:, indexes: form.guessed_indexes, target_options:, table_id: "js-census-file-mapping-table" %>
+          </details>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%# No card title: the fieldset's own legend asks the question. %>
+  <div class="card vocdoni-census-file__card">
+    <div class="card-section">
+      <div class="row column">
+        <%= render "decidim/elections/vocdoni/admin/census_file/identifiers",
+                   form:,
+                   name: "census_file",
+                   options: fields_mod::SIMPLE_IDENTIFIERS %>
+      </div>
+    </div>
+  </div>
+
+  <div class="item__edit-sticky">
+    <div class="item__edit-sticky-container">
+      <%= link_to t("cancel", scope:), census_path, class: "button button__sm button__transparent-secondary" %>
+      <% if form.reader.people_count.positive? %>
+        <%= f.submit t("submit", scope:, count: form.reader.people_count), class: "button button__sm button__secondary" %>
+      <% else %>
+        <%# Nothing to import: the only way forward is a file with people in it. %>
+        <%= link_to t("another_file", scope:), wizard_path(:new), class: "button button__sm button__secondary" %>
+      <% end %>
+    </div>
+  </div>
+<% end %>

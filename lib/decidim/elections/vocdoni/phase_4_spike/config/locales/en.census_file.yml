@@ -26,6 +26,93 @@ en:
           census_file:
             create:
               invalid: "We couldn't read that file. Please check the details below and try again."
+            new:
+              title: "Add participants from a file"
+              file_missing: "We couldn't read that file any more — it may have expired. Please upload it again."
+              upload_title: "Your file"
+              lead: "Upload the list of people who may vote. Any spreadsheet saved as CSV works — one person per line, with the column names on the first line."
+              file_label: "Your file (CSV)"
+              help_columns: "Any columns, in any order — we will tell you what we understood."
+              help_excel: "Using Excel? Choose \"Save as\" and pick \"CSV UTF-8 (Comma delimited)\"."
+              help_limit: "Secret, verifiable votes currently accept up to %{limit} people per organisation. Larger lists can run as a simple vote."
+              fields_title: "Which details we can recognise"
+              fields_caption: "The details this list can recognise"
+              fields_label: "Detail"
+              fields_meaning: "What it means"
+              fields_example: "Example"
+              template_help: "Not sure where to start? Download a file with every column we understand and one example line. Delete the columns you do not need, replace the example with your own people, and upload it."
+              download_template: "Download a template"
+              continue: "Continue"
+              cancel: "Cancel"
+            review:
+              legend: "%{file}"
+              people:
+                one: "1 person in this file."
+                other: "%{count} people in this file."
+              another_file: "Use another file"
+              truncated: "This file has more rows than we can show here — every row will still be imported."
+              understood: "We understood these columns: %{fields}."
+              dropped:
+                one: "%{headers} will not be used."
+                other: "These columns will not be used: %{headers}."
+              unknown_title:
+                one: "We could not tell what 1 column is"
+                other: "We could not tell what %{count} columns are"
+              unknown_lead: "Say what each one holds, or leave it out. Everything else is already sorted."
+              check_all:
+                one: "Check the column we recognised"
+                other: "Check the %{count} columns we recognised"
+              table_caption: "Columns of your file and what each one means"
+              column_header: "Column"
+              column_placeholder: "(column %{number})"
+              examples_header: "Example values"
+              no_examples: "No examples in the file"
+              meaning_header: "What this column means"
+              meaning_select_label: "What \"%{column}\" means"
+              ignore: "Don't use this column"
+              submit:
+                one: "Import 1 person"
+                other: "Import %{count} people"
+              cancel: "Cancel"
+              nobody:
+                title: "There is nobody in this file yet"
+                only_example: "It still holds only the example line the template comes with (Ada Lovelace). Open the file in your spreadsheet, replace that line with your own participants — one person per line — and upload it again."
+                no_rows: "It has column names on the first line, but no people underneath them. Add one line per person and upload the file again."
+            failed_rows:
+              title:
+                one: "1 line needs fixing, so nothing was imported"
+                other: "%{count} lines need fixing, so nothing was imported"
+              body: "Correct them in your spreadsheet and upload the file again. Nobody was added to the list."
+              caption: "Lines to fix"
+              line_header: "Line"
+              contents_header: "What the line contains"
+              fix_header: "What to fix"
+              more_lines:
+                one: "…and 1 more line"
+                other: "…and %{count} more lines"
+            identifiers:
+              page_title: "How people identify themselves"
+              legend: "How do people prove who they are?"
+              lead: "Choose up to %{max} details from your list. A voter types them to be found on it, so pick details your people know by heart and that others are unlikely to know."
+              contact_note: "Email and phone work differently depending on how you run the vote, which you choose next on the Security tab."
+              none_available: "Your list has no details people could type. Keep at least one column that identifies a person."
+              simple_only: "Simple vote only"
+              sends_code: "Code in a secret vote"
+              sends_code_hint: "In a simple vote, people type it in like any other detail. In a secret, verifiable vote it cannot be checked against the list, so we send a one-time code there instead and that code is what proves who they are — nothing else to set up."
+              missing:
+                one: "1 person on your list has nothing in this column, so they could not vote."
+                other: "%{count} people on your list have nothing in this column, so they could not vote."
+              # An access code has a way out that the other two do not, so the
+              # reason is per detail.
+              simple_only_hint:
+                other: "A secret, verifiable vote can't use this as proof of identity."
+                token: "A secret, verifiable vote can't use a code you hand out. To use one anyway, match its column as “Member number” instead."
+              weak: "Anyone who knows these details could vote on someone else's behalf. Add an ID number, a member number or an access code."
+              submit: "Save"
+              cancel: "Cancel"
+            update_identifiers:
+              success: "Saved. People will now identify themselves with the details you chose."
+              invalid: "Nothing was saved. Please check the choices below."
             update:
               success:
                 one: "1 person is now on your list."
@@ -36,110 +123,3 @@ en:
             destroy:
               success: "The list was removed."
               invalid: "The list couldn't be removed."
-            edit:
-              file_missing: "We couldn't find that file. Please upload it again."
-              title: "Match your columns"
-              intro:
-                columns:
-                  one: "We found 1 column in your file."
-                  other: "We found %{count} columns in your file."
-                people:
-                  one: "It has 1 person in it."
-                  other: "It has %{count} people in it."
-                help: "Tell us what each column contains. Columns you don't need can be left out."
-              nobody:
-                title: "There is nobody in this file yet"
-                only_example: "It still holds only the example line the template comes with (Ada Lovelace). Open the file in your spreadsheet, replace that line with your own participants — one person per line — and upload it again."
-                no_rows: "It has column names on the first line, but no people underneath them. Add one line per person and upload the file again."
-              example_row_notice:
-                one: "The template's example line (Ada Lovelace) is not counted as a person and will not be imported."
-                other: "%{count} lines are the template's example (Ada Lovelace). They are not counted as people and will not be imported."
-              column_header: "Column"
-              column_placeholder: "(column %{number})"
-              examples_header: "Example values"
-              no_examples: "No examples in the file"
-              meaning_header: "What this column means"
-              meaning_select_label: "What \"%{column}\" means"
-              no_value: "Don't use this column"
-              identity_warning: "For a secret, verifiable vote, keep at least one of: Member number, National ID number, Email or Phone."
-              truncated_notice: "This file has more rows than we can show here — every row will still be imported."
-              submit:
-                one: "Import 1 person"
-                other: "Import %{count} people"
-              back: "Back"
-              upload_another: "Upload another file"
-            steps:
-              upload: "Upload your file"
-              match: "Match columns"
-              aria_label: "Steps to add participants from a file"
-            tab:
-              empty:
-                title: "Add your participants from a file"
-                lead: "Upload a CSV with your list of participants and we'll help you get it ready to use. It takes three steps:"
-                step_1_title: "Upload your file"
-                step_1_body: "Any spreadsheet saved as CSV works — one person per line."
-                step_2_title: "Tell us what each column means"
-                step_2_body: "We'll suggest a match for each column; you confirm or change it."
-                step_3_title: "Choose how people identify themselves"
-                step_3_body: "On the Security tab, pick what a voter has to provide — for example, name and ID number, or email and access code."
-                fields_title: "Details we can recognise"
-                download_template: "Download a template"
-                upload_button: "Upload a file"
-              status:
-                title: "Participants from a file"
-                people_count:
-                  one: "1 person"
-                  other: "%{count} people"
-                file: "File: %{name}"
-                imported_at: "Imported %{date}"
-                columns_title: "Columns we kept"
-                replace: "Replace the list"
-                remove: "Remove the list"
-                remove_confirm_title: "Remove this list of participants?"
-                remove_confirm_body:
-                  one: "This removes the 1 person currently on the list. This can't be undone."
-                  other: "This removes all %{count} people currently on the list. This can't be undone."
-                locked: "This election is already on the voting network, so its list of participants can no longer be changed."
-                next_step_title: "Next step"
-                next_step_missing: "Nobody can vote yet — choose on the Security tab how people identify themselves."
-                next_step_ready: "People identify themselves with: %{fields}."
-            new:
-              title: "Add participants from a file"
-              upload_title: "Upload your file"
-              file_label: "Your file (CSV)"
-              help_title: "What this file needs"
-              help_columns: "Any columns, in any order — you'll tell us what they mean next."
-              help_one_row: "One person per line, with column names on the first line."
-              help_dates: "Dates can be written as 31/12/1990 or 1990-12-31."
-              help_size: "Up to 20,000 people in a single file."
-              help_excel: "Using Excel? Choose \"Save as\" and pick \"CSV UTF-8 (Comma delimited)\"."
-              help_limit: "Secret, verifiable votes currently accept up to %{limit} people per organisation. Larger lists can run as a simple vote."
-              help_zero_padding: "If your member numbers start with 0, check your spreadsheet hasn't removed the zeros before saving."
-              fields_title: "Details we understand"
-              fields_caption: "The details this list can recognise"
-              fields_label: "Detail"
-              fields_meaning: "What it means"
-              fields_example: "Example"
-              template_title: "Not sure where to start?"
-              template_help: "Download a file with the right column names and one example line showing how to write each detail. Replace that line with your own participants — it is never imported."
-              download_template: "Download a template"
-              download_template_full: "Download a template with every detail"
-              continue: "Continue"
-              cancel: "Cancel"
-            errors:
-              title: "Fix your file"
-              announcement:
-                one: "Nothing was imported: 1 line needs fixing. Correct it in your spreadsheet and upload the file again."
-                other: "Nothing was imported: %{count} lines need fixing. Correct them in your spreadsheet and upload the file again."
-              caption: "Lines to fix"
-              skipped_example:
-                one: "The example row that comes with the template was skipped — it wasn't counted as a person."
-                other: "%{count} rows identical to the template's example were skipped — they weren't counted as people."
-              line_header: "Line"
-              contents_header: "What the line contains"
-              fix_header: "What to fix"
-              more_lines:
-                one: "…and 1 more line"
-                other: "…and %{count} more lines"
-              back_to_matching: "Back to matching columns"
-              upload_corrected: "Upload a corrected file"

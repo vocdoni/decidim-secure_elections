@@ -1,0 +1,94 @@
+<%#
+  Set-up for "Registered participants".
+
+  Two things an admin cannot get from upstream's version of this: how many
+  people could actually vote right now, and what each verification means.
+  Decidim labels them "Direct" and "Multi-Step", which describes how they are
+  built; the organiser needs to know who does the checking, so the pill says
+  that instead and a line explains the rest.
+
+  The checkboxes are written by hand rather than through
+  `collection_check_boxes` so each one can point at its own description and
+  count; the names are the ones `InternalUsersForm` reads. The hidden field
+  carries "none ticked".
+
+  The options sub-form of a ticked verification is upstream's own partial.
+
+  Locals: `f` (the form builder around `InternalUsersForm`), `chosen`.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_setup.registered" %>
+<% shown = chosen == "internal_users" %>
+<div class="card vocdoni-census__card"
+     data-census-block="internal_users"
+     <%= "hidden" unless shown %>>
+  <div class="card-divider">
+    <h2 class="card-title" id="census-registered-title"><%= t("legend", scope:) %></h2>
+  </div>
+
+  <div class="card-section">
+    <div class="row column">
+      <p class="vocdoni-census__count">
+        <%= icon "group-2-line" %>
+        <span><%= t("eligible", scope:, count: eligible_count) %></span>
+      </p>
+
+      <fieldset class="vocdoni-census__fieldset" aria-describedby="census-verifications-lead">
+        <legend class="vocdoni-census__legend"><%= t("verifications_legend", scope:) %></legend>
+        <p class="vocdoni-census__lead" id="census-verifications-lead"><%= t("verifications_lead", scope:) %></p>
+
+        <% if verification_rows.empty? %>
+          <p class="vocdoni-census__note">
+            <%= icon "information-line" %>
+            <span><%= t("no_verifications", scope:) %></span>
+          </p>
+        <% else %>
+          <input type="hidden" name="internal_users[authorization_handlers_names][]" value="">
+          <ul class="vocdoni-verifications">
+            <% verification_rows.each do |row| %>
+              <%
+                workflow = row[:workflow]
+                name = row[:name]
+                ticked = f.object.authorization_handlers_names.include?(name)
+                description_id = "census-verification-#{name}-description"
+              %>
+              <li class="vocdoni-verification" data-verification="<%= name %>">
+                <label class="vocdoni-verification__label" for="census_verification_<%= name %>">
+                  <input type="checkbox"
+                         name="internal_users[authorization_handlers_names][]"
+                         id="census_verification_<%= name %>"
+                         value="<%= name %>"
+                         aria-describedby="<%= description_id %>"
+                         <%= "checked" if ticked %>>
+                  <span class="vocdoni-verification__name"><%= verification_name(workflow) %></span>
+                  <span class="label vocdoni-verification__kind"><%= verification_kind_label(workflow) %></span>
+                </label>
+
+                <p class="help-text vocdoni-verification__description" id="<%= description_id %>">
+                  <span><%= verification_description(workflow) %></span>
+                  <span class="vocdoni-verification__granted"><%= t("granted", scope:, count: row[:granted]) %></span>
+                </p>
+
+                <div class="vocdoni-verification__options"
+                     id="census-verification-<%= name %>-options"
+                     data-verification-options="<%= name %>"
+                     <%= "hidden" unless ticked %>>
+                  <%= render "decidim/elections/admin/censuses/internal_users_options_form", form: f, handler_name: name %>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+
+          <%# `internal_users` is "ready" for Decidim whatever is ticked, so
+              without this an admin can publish a vote nobody can cast. %>
+          <% if eligible_count.zero? %>
+            <%= cell "decidim/announcement",
+                     { title: t("nobody.title", scope:), body: t("nobody.body", scope:) },
+                     callout_class: "warning" %>
+          <% end %>
+        <% end %>
+      </fieldset>
+
+      <%= render "decidim/elections/vocdoni/admin/census_setup/sample", election: %>
+    </div>
+  </div>
+</div>

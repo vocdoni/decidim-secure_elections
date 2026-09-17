@@ -23,6 +23,7 @@ module Decidim
           end
 
           let(:columns) { { "0" => "name", "1" => "email" } }
+          let(:identifiers) { %w(email) }
 
           let(:blob) do
             ActiveStorage::Blob.create_and_upload!(
@@ -32,7 +33,7 @@ module Decidim
             )
           end
 
-          let(:form) { AdminForms::CensusFileMappingForm.from_params(census_file: { blob: blob.signed_id, columns: }) }
+          let(:form) { AdminForms::CensusFileMappingForm.from_params(census_file: { blob: blob.signed_id, columns:, identifiers: }) }
 
           it "imports every row as a voter" do
             expect { command.call }.to broadcast(:ok, 2)
@@ -46,6 +47,7 @@ module Decidim
 
             expect(election.census_manifest).to eq("token_csv")
             expect(election.census_settings["fields"]).to eq(%w(name email))
+            expect(election.census_settings["identifiers"]).to eq(%w(email))
             expect(election.census_settings["columns"]).to eq(
               [{ "header" => "Nombre", "field" => "name" }, { "header" => "Correo", "field" => "email" }]
             )
@@ -67,13 +69,13 @@ module Decidim
             expect { command.call }.to have_enqueued_job(ActiveStorage::PurgeJob)
           end
 
-          context "when the census was already a file census with identifiers chosen" do
-            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(name phone) }) }
+          context "when the census was already a file census with different identifiers stored" do
+            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(phone) }) }
 
-            it "keeps only the identifiers the new file still maps" do
+            it "replaces them with whatever was chosen for this import, rather than merging" do
               command.call
 
-              expect(election.reload.census_settings["identifiers"]).to eq(%w(name))
+              expect(election.reload.census_settings["identifiers"]).to eq(%w(email))
             end
           end
 
@@ -89,6 +91,7 @@ module Decidim
 
           context "when the file has an example row identical to the template's" do
             let(:columns) { { "0" => "name" } }
+            let(:identifiers) { %w(name) }
             let(:content) do
               <<~CSV
                 Nombre

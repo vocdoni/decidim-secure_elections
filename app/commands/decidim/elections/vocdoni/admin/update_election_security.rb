@@ -32,8 +32,6 @@ module Decidim
             return broadcast(:invalid) if form.invalid?
             return broadcast(:invalid) unless election.editable?
 
-            save_identifiers!
-
             if form.enable_vocdoni
               enable!
               PreflightTrigger.call(election.reload)
@@ -54,15 +52,6 @@ module Decidim
               "settings" => { "twofa_fields" => form.two_fa_fields }
             )
             sidecar.save!
-          end
-
-          # How voters of a file census prove who they are. Stored with the
-          # census because a simple vote needs it too.
-          def save_identifiers!
-            return unless form.file_census?
-
-            settings = election.census_settings.to_h.merge("identifiers" => form.chosen_identifiers)
-            election.update!(census_settings: settings)
           end
 
           def disable!

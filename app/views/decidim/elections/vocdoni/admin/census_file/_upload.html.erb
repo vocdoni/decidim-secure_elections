@@ -1,0 +1,81 @@
+<%#
+  First state of the page: choose a file.
+
+  Deliberately short. Everything that used to be here — the table of every
+  detail we understand, the warnings about dates, sizes and leading zeros —
+  was advice about a file the admin had not uploaded yet, and it is all
+  checked against the real file one step later, where it can be said with
+  their own numbers. What is left is what they cannot find out by trying.
+
+  Locals: `form` (CensusFileUploadForm).
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.new" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+
+<%= decidim_form_for(form, url: wizard_path(:collection), method: :post, html: { class: "form-defaults form", multipart: true }) do |f| %>
+  <div class="card vocdoni-census-file__card">
+    <div class="card-divider">
+      <h2 class="card-title"><%= t("upload_title", scope:) %></h2>
+    </div>
+
+    <div class="card-section">
+      <div class="row column">
+        <p class="vocdoni-census-file__lead"><%= t("lead", scope:) %></p>
+
+        <%= f.upload :file,
+                     label: t("file_label", scope:),
+                     button_class: "button button__sm button__transparent-secondary",
+                     extension_allowlist: %w(csv) %>
+
+        <ul class="vocdoni-census-file__help-list">
+          <li><%= t("help_columns", scope:) %></li>
+          <li><%= t("help_excel", scope:) %></li>
+          <li><%= t("help_limit", scope:, limit: Decidim::Elections::Vocdoni::PublishToVocdoniJob.max_roster) %></li>
+        </ul>
+
+        <details class="vocdoni-census-file__details">
+          <summary class="vocdoni-census-file__details-summary"><%= t("fields_title", scope:) %></summary>
+          <div class="table-stacked vocdoni-census-file__fields-table">
+            <table>
+              <caption class="sr-only"><%= t("fields_caption", scope:) %></caption>
+              <thead>
+                <tr>
+                  <th scope="col"><%= t("fields_label", scope:) %></th>
+                  <th scope="col"><%= t("fields_meaning", scope:) %></th>
+                  <th scope="col"><%= t("fields_example", scope:) %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% fields_mod::TARGETS.each do |field| %>
+                  <tr>
+                    <td data-label="<%= t("fields_label", scope:) %>"><strong><%= fields_mod.label(field) %></strong></td>
+                    <td data-label="<%= t("fields_meaning", scope:) %>"><%= fields_mod.hint(field) %></td>
+                    <td data-label="<%= t("fields_example", scope:) %>"><code><%= fields_mod.example(field) %></code></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          <p class="help-text"><%= t("template_help", scope:) %></p>
+          <%# One template, with every column we understand: deleting the
+              columns you do not need costs nothing, choosing between two
+              templates costs a decision nobody can make well. %>
+          <ul class="vocdoni-census-file__template-links">
+            <li>
+              <%= link_to t("download_template", scope:),
+                          template_path(fields: fields_mod::TARGETS),
+                          class: "button button__xs button__transparent-secondary" %>
+            </li>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="item__edit-sticky">
+    <div class="item__edit-sticky-container">
+      <%= link_to t("cancel", scope:), census_path, class: "button button__sm button__transparent-secondary" %>
+      <%= f.submit t("continue", scope:), class: "button button__sm button__secondary" %>
+    </div>
+  </div>
+<% end %>

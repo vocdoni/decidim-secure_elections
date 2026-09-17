@@ -501,8 +501,22 @@ module Decidim
         # Vocdoni's memberbase needs at least one of these to identify a voter.
         IDENTITY = %w(memberNumber nationalId email phone).freeze
 
-        # Usable as Vocdoni `authFields`.
+        # Usable as Vocdoni `authFields` — details a voter types and the
+        # service checks against the member list.
         AUTH = %w(memberNumber nationalId name surname birthDate).freeze
+
+        # Contact details. The service refuses these as `authFields` (verified
+        # against saas-api-dev: `authFields: ["email"]` is a 400), but takes
+        # them as `twoFaFields`, where the one-time code sent there is what
+        # proves the person. So they identify a voter of a secret vote too —
+        # by a different mechanism, which is why choosing one turns the code
+        # on rather than being refused.
+        TWO_FA = %w(email phone).freeze
+
+        # Everything a voter of a secret, verifiable vote can be asked for,
+        # one way or the other. Only an access code we hand out is left: the
+        # service has nowhere to put it.
+        SECURE_IDENTIFIERS = (AUTH + TWO_FA).freeze
 
         # Usable to sign in to a simple (non-Vocdoni) vote.
         SIMPLE_IDENTIFIERS = (TARGETS - %w(weight)).freeze

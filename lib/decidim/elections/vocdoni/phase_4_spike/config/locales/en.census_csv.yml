@@ -32,7 +32,9 @@ en:
               email: The person's email address.
               phone: The person's phone number.
               weight: How many votes this person's ballot should count as. Leave this column unmapped if everyone should have one vote.
-              token: A private code you send this person separately, which they type in to prove who they are. It only works for a simple vote — for a secret, verifiable one, match the column as Member number instead.
+              # Where it matters that this one cannot be used for a secret
+              # vote, the page says so next to it — no need to repeat it here.
+              token: A private code you send this person separately, which they type in to prove who they are.
             rows:
               invalid_email: "“%{value}” is not a valid email address"
               invalid_date: "“%{value}” is not a valid date of birth (use 31/12/1990 or 1990-12-31)"

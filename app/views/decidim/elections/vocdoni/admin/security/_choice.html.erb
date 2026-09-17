@@ -73,7 +73,15 @@
                 <% if unavailable %>
                   <p class="vocdoni-choice__unavailable">
                     <%= icon "error-warning-line" %>
-                    <span><%= t("too_large", scope:, count: @form.census_size, limit: @form.max_roster) %></span>
+                    <span>
+                      <%# Two different reasons a secret vote is out of reach,
+                          and each one is fixed somewhere else. %>
+                      <% if @form.secure_blocked_by_identifiers? %>
+                        <%= t("refused_identifiers", scope:, fields: @form.refused_identifier_labels.to_sentence) %>
+                      <% else %>
+                        <%= t("too_large", scope:, count: @form.census_size, limit: @form.max_roster) %>
+                      <% end %>
+                    </span>
                   </p>
                 <% end %>
 

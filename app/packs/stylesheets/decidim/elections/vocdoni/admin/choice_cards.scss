@@ -1,0 +1,142 @@
+// Selectable cards shared by the Security tab's vote-type question
+// (`admin/security/_choice.html.erb`) and the Census tab's census-type
+// question (`admin/census_setup/_choice.html.erb`) — same markup, same
+// behaviour, so one stylesheet instead of two copies drifting apart.
+//
+// Scoped under `.vocdoni-cards`, which both pages put on the same element as
+// upstream's `.item__edit-form` (alongside `.vocdoni-security` or
+// `.vocdoni-census` respectively). That nesting still matters for
+// `.vocdoni-choice__title`: it is the radio's `<label>`, and
+// `.item__edit-form label` makes every label small and grey. Keeping the
+// selector one level deep — `.vocdoni-cards .vocdoni-choice__title` — is what
+// outranks it without `!important`.
+//
+// The card is a plain block; only its title is the radio's <label>.
+// `security.js` makes the rest of the card select the option, without an
+// overlay that would stop admins selecting the text.
+.vocdoni-cards {
+  // Two columns only from `xl`: next to Decidim's two admin sidebars the
+  // form is under 650px wide below that, too narrow for side-by-side cards.
+  .vocdoni-choices {
+    @apply grid gap-4 pt-3 xl:grid-cols-2;
+  }
+
+  .vocdoni-choice {
+    @apply relative flex flex-col gap-3 p-5 rounded-lg border-2 border-background-4 bg-white cursor-pointer transition-colors;
+
+    &:hover {
+      @apply border-secondary/50;
+    }
+
+    &.is-selected,
+    &:has(.vocdoni-choice__input:checked) {
+      @apply border-secondary bg-secondary/5;
+
+      .vocdoni-choice__icon {
+        @apply bg-secondary;
+
+        svg {
+          @apply fill-white;
+        }
+      }
+
+      .vocdoni-choice__point-icon {
+        @apply fill-secondary;
+      }
+    }
+
+    &:has(.vocdoni-choice__input:focus-visible) {
+      @apply outline outline-2 outline-offset-2 outline-secondary;
+    }
+  }
+
+  .vocdoni-choice.is-unavailable {
+    @apply bg-background cursor-not-allowed;
+
+    &:hover {
+      @apply border-background-4;
+    }
+  }
+
+  .vocdoni-choice__unavailable {
+    @apply flex items-start gap-2 m-0 p-3 rounded bg-white text-sm text-gray-2;
+
+    svg {
+      @apply w-4 h-4 mt-0.5 shrink-0 fill-gray-2;
+    }
+  }
+
+  .vocdoni-choice__header {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .vocdoni-choice__input {
+    @apply w-5 h-5 m-0 shrink-0 cursor-pointer accent-[var(--secondary)];
+  }
+
+  .vocdoni-choice__icon {
+    @apply flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-background transition-colors;
+
+    svg {
+      @apply w-5 h-5 fill-secondary;
+    }
+  }
+
+  .vocdoni-choice__title {
+    @apply m-0 text-lg font-semibold text-black cursor-pointer;
+  }
+
+  // "Recommended" sits on the card's top edge, so both cards keep their
+  // headers aligned whatever the width.
+  .vocdoni-choice__badge {
+    @apply absolute -top-3 right-4 z-[1] shadow-sm;
+  }
+
+  .vocdoni-choice__body {
+    @apply flex flex-col flex-1 gap-3;
+  }
+
+  .vocdoni-choice__summary {
+    @apply m-0 text-md font-semibold text-gray-2;
+  }
+
+  .vocdoni-choice__points {
+    @apply grid gap-2 m-0 p-0 list-none;
+
+    li {
+      @apply flex items-start gap-2 m-0 text-sm text-gray-2;
+    }
+  }
+
+  .vocdoni-choice__point-icon {
+    @apply w-4 h-4 mt-0.5 shrink-0 fill-gray-2;
+  }
+
+  .vocdoni-choice__best {
+    @apply mt-auto mb-0 pt-3 border-t border-background-4 text-sm text-gray-2;
+
+    strong {
+      @apply text-black;
+    }
+  }
+
+  .vocdoni-choice__footnote {
+    @apply self-start m-0 text-xs text-gray-2;
+
+    a {
+      @apply text-secondary underline;
+    }
+  }
+}
+
+// `security.scss` already turns these off for the Security tab (it carries
+// both `.vocdoni-security` and `.vocdoni-cards`), but the Census tab only
+// carries `.vocdoni-cards`, so the card's own scope needs the rule too.
+@media (prefers-reduced-motion: reduce) {
+  .vocdoni-cards {
+    .vocdoni-choice,
+    .vocdoni-choice__icon {
+      transition: none;
+    }
+  }
+}
