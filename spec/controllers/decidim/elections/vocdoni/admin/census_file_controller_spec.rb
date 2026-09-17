@@ -75,6 +75,36 @@ module Decidim
                 expect(election.voters.count).to eq(0)
               end
             end
+
+            context "when the admin uploads the downloaded template untouched" do
+              # The page itself is the fix here — it has to render, and say
+              # what is wrong — so this one case goes through the views.
+              render_views
+
+              let(:content) do
+                <<~CSV
+                  First name,Member number
+                  Ada,000123
+                CSV
+              end
+
+              it "sends them back to matching and says the file holds only the example line" do
+                patch :update, params: { election_id: election.id, census_file: { blob: blob.signed_id, columns: } }
+
+                expect(response).to render_template(:edit)
+                expect(response).to have_http_status(:unprocessable_content)
+                expect(flash.now[:alert]).to eq(
+                  I18n.t("census_file.update.only_example", scope: "decidim.elections.vocdoni.admin")
+                )
+                expect(response.body).to include(
+                  I18n.t("decidim.elections.vocdoni.admin.census_file.edit.nobody.title")
+                )
+                expect(response.body).not_to include(
+                  I18n.t("decidim.elections.vocdoni.admin.census_file.edit.submit", count: 0)
+                )
+                expect(election.voters.count).to eq(0)
+              end
+            end
           end
 
           describe "DELETE destroy" do

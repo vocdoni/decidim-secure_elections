@@ -17,7 +17,13 @@ module Decidim
         #
         # Broadcasts:
         #   :ok, count              imported
-        #   :invalid_rows, outcome  the file has problems (RowMapper outcome)
+        #   :invalid_rows, outcome  the file has lines to fix (RowMapper outcome)
+        #   :no_rows, outcome       nothing is wrong, there is simply nobody
+        #                           to import: an empty file, or one that
+        #                           still holds only the template's example
+        #                           line. Kept apart from `:invalid_rows`
+        #                           because "0 lines need fixing" tells an
+        #                           admin nothing about what to do next.
         #   :invalid                form invalid or election locked
         class ImportCensusFile < Decidim::Command
           BATCH_SIZE = 1_000
@@ -32,7 +38,8 @@ module Decidim
             return broadcast(:invalid) if form.invalid? || !election.editable?
 
             outcome = CensusCsv::RowMapper.new(form.reader, form.mapping).call
-            return broadcast(:invalid_rows, outcome) if outcome.failed? || outcome.rows.empty?
+            return broadcast(:invalid_rows, outcome) if outcome.failed?
+            return broadcast(:no_rows, outcome) if outcome.rows.empty?
 
             import!(outcome.rows)
             form.file.purge_later

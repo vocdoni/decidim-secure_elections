@@ -525,6 +525,8 @@ module Decidim
           "token" => "A1B2C3"
         }.freeze
 
+        EXAMPLE_VALUES = EXAMPLES.values.freeze
+
         # Header aliases {Importer.field_for} cannot know about: either the
         # field (`token`) is not part of {Vocdoni::CensusMember} at all, or
         # the header an admin actually types (a Spanish or Catalan
@@ -559,6 +561,25 @@ module Decidim
         # @return [String, nil] a plausible example value, for templates and help text.
         def self.example(field)
           EXAMPLES[field.to_s]
+        end
+
+        # True for the filled-in example line the downloaded template carries.
+        # That line must never become a real person: its member number and
+        # access code are the same in every template this instance hands out,
+        # so anyone could use them to vote.
+        #
+        # {RowMapper} decides authoritatively, on the mapped values, once the
+        # admin has said what each column means. This answers the same
+        # question from the raw cells, before that — so the matching step can
+        # say up front that a file carries no real people, instead of
+        # promising an import that then has nothing to import.
+        #
+        # @param cells [Array<String, nil>]
+        def self.example_row?(cells)
+          values = Array(cells).map { |cell| cell.to_s.strip }.reject(&:empty?)
+          return false if values.empty?
+
+          values.all? { |value| EXAMPLE_VALUES.include?(value) }
         end
 
         # Every target's own label, normalised once so a header that reads
@@ -746,6 +767,19 @@ module Decidim
         def row_count
           load!
           @rows.size
+        end
+
+        # @return [Integer] rows that are the template's own example line
+        #   ({Fields.example_row?}), which is never imported as a person.
+        def example_row_count
+          load!
+          @example_row_count ||= @rows.count { |cells, _number| Fields.example_row?(cells) }
+        end
+
+        # @return [Integer] rows that stand for a real person — what an
+        #   import will actually be worth.
+        def people_count
+          row_count - example_row_count
         end
 
         # @return [Boolean] true when the file had more data rows than {MAX_ROWS}.

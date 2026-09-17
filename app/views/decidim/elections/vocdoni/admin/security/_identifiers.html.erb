@@ -56,7 +56,8 @@
                 </label>
                 <p class="help-text vocdoni-identifiers__hint" id="security-identifiers-<%= field %>-hint">
                   <span data-identifier-hint="ok"><%= fields.hint(field) %></span>
-                  <span data-identifier-hint="refused" <%= "hidden" if allowed %>><%= t("not_for_secure", scope:) %></span>
+                  <%# An access code has its own way out (see the locale), so the reason is per detail. %>
+                  <span data-identifier-hint="refused" <%= "hidden" if allowed %>><%= t("not_for_secure.#{field}", scope:, default: t("not_for_secure.other", scope:)) %></span>
                 </p>
               </li>
             <% end %>

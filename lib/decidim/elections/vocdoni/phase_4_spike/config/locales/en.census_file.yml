@@ -31,6 +31,8 @@ en:
                 one: "1 person is now on your list."
                 other: "%{count} people are now on your list."
               invalid: "Nothing was imported. Please fix the problems below and try again."
+              only_example: "Nothing was imported: your file still holds only the example line that came with the template."
+              no_people: "Nothing was imported: we found no people in your file."
             destroy:
               success: "The list was removed."
               invalid: "The list couldn't be removed."
@@ -45,6 +47,13 @@ en:
                   one: "It has 1 person in it."
                   other: "It has %{count} people in it."
                 help: "Tell us what each column contains. Columns you don't need can be left out."
+              nobody:
+                title: "There is nobody in this file yet"
+                only_example: "It still holds only the example line the template comes with (Ada Lovelace). Open the file in your spreadsheet, replace that line with your own participants — one person per line — and upload it again."
+                no_rows: "It has column names on the first line, but no people underneath them. Add one line per person and upload the file again."
+              example_row_notice:
+                one: "The template's example line (Ada Lovelace) is not counted as a person and will not be imported."
+                other: "%{count} lines are the template's example (Ada Lovelace). They are not counted as people and will not be imported."
               column_header: "Column"
               column_placeholder: "(column %{number})"
               examples_header: "Example values"
@@ -58,6 +67,7 @@ en:
                 one: "Import 1 person"
                 other: "Import %{count} people"
               back: "Back"
+              upload_another: "Upload another file"
             steps:
               upload: "Upload your file"
               match: "Match columns"
@@ -111,7 +121,7 @@ en:
               fields_meaning: "What it means"
               fields_example: "Example"
               template_title: "Not sure where to start?"
-              template_help: "Download a blank file with the right column names already filled in."
+              template_help: "Download a file with the right column names and one example line showing how to write each detail. Replace that line with your own participants — it is never imported."
               download_template: "Download a template"
               download_template_full: "Download a template with every detail"
               continue: "Continue"

@@ -57,6 +57,7 @@ module Decidim
             # command as `self`, where the controller's helpers do not exist.
             done_path = census_path
             errors_view = method(:render_row_errors)
+            empty_view = method(:render_no_rows)
 
             ImportCensusFile.call(@form, election, current_user) do
               on(:ok) do |count|
@@ -66,6 +67,10 @@ module Decidim
 
               on(:invalid_rows) do |outcome|
                 errors_view.call(outcome)
+              end
+
+              on(:no_rows) do |outcome|
+                empty_view.call(outcome)
               end
 
               on(:invalid) do
@@ -137,6 +142,16 @@ module Decidim
           def render_row_errors(outcome)
             @outcome = outcome
             render :errors, status: :unprocessable_content
+          end
+
+          # Nothing was wrong with the file — there was simply nobody in it to
+          # import. The "lines to fix" page would have an empty table, so the
+          # admin goes back to the matching step, which keeps their file and
+          # their choices and says what the file is missing.
+          def render_no_rows(outcome)
+            key = outcome.skipped_examples.to_i.positive? ? "only_example" : "no_people"
+            flash.now[:alert] = I18n.t("census_file.update.#{key}", scope: "decidim.elections.vocdoni.admin")
+            render :edit, status: :unprocessable_content
           end
 
           # A header row plus one example line, with the separator Spanish

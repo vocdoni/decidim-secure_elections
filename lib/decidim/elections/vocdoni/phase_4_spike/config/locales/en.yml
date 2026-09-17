@@ -107,7 +107,9 @@ en:
               identifiers:
                 legend: "How people prove who they are"
                 lead: "Choose up to %{max} details from your list that each person will type to vote. Pick details your people know by heart and that others are unlikely to know."
-                not_for_secure: "The secure voting service doesn't accept this detail as proof of identity. Use a one-time code below instead."
+                not_for_secure:
+                  other: "The secure voting service doesn't accept this detail as proof of identity. Turn on a one-time code below instead."
+                  token: "The secure voting service only accepts details that identify a person, so it can't take a free-form code. To let people vote with a code you hand out, match that column as “Member number” when you upload your list."
                 weak: "Anyone who knows these details could vote on someone else's behalf. Add an ID number, a member number or an access code, or turn on a one-time code."
                 no_list_html: "Upload your list on the <a href=\"%{url}\">Census tab</a> first; then choose here which of its details people type to vote."
                 no_census_html: "Choose who can vote on the <a href=\"%{url}\">Census tab</a> first."

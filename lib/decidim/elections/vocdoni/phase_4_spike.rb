@@ -35,6 +35,42 @@ module Decidim
           end
         end
 
+        # Upstream bakes the `results_availability` enum into the model from
+        # `config.after_initialize` (`decidim_elections.results_availability_enum`),
+        # which runs once per boot. In development the model is reloaded on
+        # every code change and the enum goes with it, so the next page that
+        # asks an election for its status dies with "undefined method
+        # 'per_question?'" until the server is restarted — the Dashboard and
+        # Publish both do. Put it back whenever it goes missing.
+        #
+        # The callback is registered from `after_initialize`, after upstream
+        # has defined the enum, so it does nothing at boot and only ever
+        # fires on a later reload — registering it as a plain `to_prepare`
+        # runs it *before* upstream's own definition instead, and the two
+        # collide ("already defined by another enum") before the app is up.
+        #
+        # Development only: nothing reloads in production, where the enum is
+        # upstream's business. Belongs in the fork (vocdoni/decidim#1); it
+        # lives here until it lands there.
+        initializer "phase_4_spike.keep_results_availability_enum" do |app|
+          next unless Rails.env.development?
+
+          app.config.after_initialize do
+            ActiveSupport::Reloader.to_prepare do
+              model = Decidim::Elections::Election
+              next if model.defined_enums.key?("results_availability")
+
+              begin
+                model.enum :results_availability, Decidim::Elections.results_availability_options.index_with(&:to_s)
+              rescue ArgumentError
+                # A half-reloaded class can still carry the generated
+                # predicates; leaving them is better than a 500 on every page.
+                nil
+              end
+            end
+          end
+        end
+
         # Decorate upstream `Decidim::Elections::Election` with two spike-
         # specific behaviours. Runs on every code reload in development
         # (`to_prepare`) and once in production after Zeitwerk has loaded

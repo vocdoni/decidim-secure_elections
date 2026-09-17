@@ -12,6 +12,14 @@
 <% append_javascript_pack_tag "decidim_elections_vocdoni_admin" %>
 <% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 
+<%
+  # The template's own example line is not a person (see
+  # `CensusCsv::Fields.example_row?`), so it is left out of every count on
+  # this page: an admin who uploads the template unchanged is told so here,
+  # rather than being offered an import that would bring in nobody.
+  people_count = @form.reader.people_count
+  example_rows = @form.reader.example_row_count
+%>
 <% target_options = [[t("no_value", scope:), ""]] +
                     Decidim::Elections::Vocdoni::CensusCsv::Fields::TARGETS.map { |field| [Decidim::Elections::Vocdoni::CensusCsv::Fields.label(field), field] } %>
 
@@ -29,6 +37,13 @@
     <%= cell "decidim/announcement", messages, callout_class: "alert" %>
   <% end %>
 
+  <% if people_count.zero? %>
+    <%= cell "decidim/announcement",
+             { title: t("nobody.title", scope:),
+               body: t(example_rows.positive? ? "nobody.only_example" : "nobody.no_rows", scope:) },
+             callout_class: "alert" %>
+  <% end %>
+
   <%= decidim_form_for(@form, url: wizard_path(:collection), method: :patch, html: { id: "js-census-file-mapping-form", class: "form-defaults form" }) do |f| %>
     <%= f.hidden_field :blob, value: @form.blob %>
 
@@ -41,9 +56,16 @@
         <div class="row column">
           <p class="vocdoni-census-file__lead">
             <%= t("intro.columns", scope:, count: @form.headers.size) %>
-            <%= t("intro.people", scope:, count: @form.reader.row_count) %>
+            <%= t("intro.people", scope:, count: people_count) %>
           </p>
           <p class="vocdoni-census-file__lead"><%= t("intro.help", scope:) %></p>
+
+          <% if example_rows.positive? && people_count.positive? %>
+            <p class="vocdoni-census-file__note">
+              <%= icon "information-line" %>
+              <span><%= t("example_row_notice", scope:, count: example_rows) %></span>
+            </p>
+          <% end %>
 
           <% if @form.reader.truncated? %>
             <p class="vocdoni-census-file__note">
@@ -110,7 +132,12 @@
     <div class="item__edit-sticky">
       <div class="item__edit-sticky-container">
         <%= link_to t("back", scope:), wizard_path(:new), class: "button button__sm button__transparent-secondary" %>
-        <%= f.submit t("submit", scope:, count: @form.reader.row_count), class: "button button__sm button__secondary" %>
+        <% if people_count.positive? %>
+          <%= f.submit t("submit", scope:, count: people_count), class: "button button__sm button__secondary" %>
+        <% else %>
+          <%# Nothing to import: the only way forward is a file with people in it. %>
+          <%= link_to t("upload_another", scope:), wizard_path(:new), class: "button button__sm button__secondary" %>
+        <% end %>
       </div>
     </div>
   <% end %>

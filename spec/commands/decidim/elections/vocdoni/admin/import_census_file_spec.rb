@@ -105,6 +105,39 @@ module Decidim
             end
           end
 
+          context "when the file holds nothing but the template's example line" do
+            let(:columns) { { "0" => "name", "1" => "email" } }
+            let(:content) do
+              <<~CSV
+                Nombre,Correo
+                Ada,ada@example.org
+              CSV
+            end
+
+            it "says there is nobody to import rather than reporting lines to fix" do
+              outcome = nil
+              expect do
+                described_class.call(form, election, user) { on(:no_rows) { |result| outcome = result } }
+              end.not_to(change { election.voters.count })
+
+              expect(outcome.skipped_examples).to eq(1)
+              expect(outcome.failed_rows).to be_empty
+            end
+          end
+
+          context "when the file has headings and no people under them" do
+            let(:content) { "Nombre,Correo\n" }
+
+            it "says there is nobody to import" do
+              outcome = nil
+              expect do
+                described_class.call(form, election, user) { on(:no_rows) { |result| outcome = result } }
+              end.not_to(change { election.voters.count })
+
+              expect(outcome.skipped_examples).to eq(0)
+            end
+          end
+
           context "when one line is wrong" do
             let(:content) do
               <<~CSV
