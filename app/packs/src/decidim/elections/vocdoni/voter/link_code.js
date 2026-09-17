@@ -1,3 +1,5 @@
+/* eslint-disable no-bitwise -- the packed link is a bitfield layout by design */
+
 /**
  * The packed voting link, `?v=<base64url>`.
  *
