@@ -214,12 +214,16 @@ module Decidim
         # `PushElectionJob#perform`). The new job here uses the new
         # `start_at`.
         #
-        # Runs at boot (initializer) rather than every reload (to_prepare)
-        # because on z4 `cache_classes` is true — the callback is added
-        # once to the loaded class and stays. Local dev with reloading
-        # loses the callback after a code edit; a full server restart
-        # brings it back.
-        initializer "phase_4_spike.reschedule_push_on_start_at_change" do
+        # Wired via `config.after_initialize` so the callback is only
+        # attached once `Decidim::Elections::Election` has been loaded by
+        # its own engine — an `initializer` block runs too early for a
+        # bare `Decidim::Elections::Election.class_eval` and blows up at
+        # `db:create` / `db:schema:load` time with NameError.
+        #
+        # On z4 `cache_classes` is true so this fires once at boot and
+        # the callback stays attached. In local dev the callback can
+        # disappear on reload; a full server restart brings it back.
+        config.after_initialize do
           Decidim::Elections::Election.class_eval do
             after_update_commit do
               next unless respond_to?(:saved_change_to_start_at?) && saved_change_to_start_at?
