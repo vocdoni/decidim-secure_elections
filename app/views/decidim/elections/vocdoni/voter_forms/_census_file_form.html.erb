@@ -1,0 +1,58 @@
+<%#
+  How a voter on a "Participants from a file" census signs in: one field per
+  detail the admin chose on the Security tab (`form.object.identifiers`).
+
+  `values` is a Hash attribute on CensusFileForm (no per-field attributes to
+  bind to), so every input is built by hand rather than through the form
+  builder — `census_file_voter[values][FIELD]`, matching what
+  `CensusFileForm#value_for` reads back.
+
+  No hint is given about which detail was wrong on a failed attempt: a
+  partial match, an ambiguous match and no match all fail identically
+  (`decidim.elections.censuses.token_csv_form.invalid`, upstream's own
+  message, reused as-is).
+%>
+<% scope = "decidim.elections.vocdoni.census_file_voter" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<% identifiers = form.object.identifiers %>
+
+<% if identifiers.empty? %>
+  <%= cell "decidim/announcement", t("not_ready", scope:), callout_class: "alert" %>
+<% else %>
+  <fieldset class="vocdoni-census-file__voter">
+    <legend class="sr-only"><%= t("legend", scope:) %></legend>
+
+    <% identifiers.each_with_index do |field, index| %>
+      <%
+        field_id = "census_file_voter_values_#{field}"
+        field_name = "census_file_voter[values][#{field}]"
+        value = form.object.value_for(field)
+        label = fields_mod.label(field)
+        first_field = index.zero?
+      %>
+      <div class="field vocdoni-census-file__voter-field">
+        <%= label_tag field_id, safe_join([label, form.send(:required_indicator)]) %>
+        <% case field %>
+        <% when "birthDate" %>
+          <%= date_field_tag field_name, value, id: field_id, required: true, autofocus: first_field, class: "input-group-field" %>
+        <% when "email" %>
+          <%= email_field_tag field_name, value, id: field_id, required: true, autofocus: first_field, autocomplete: "email", class: "input-group-field" %>
+        <% when "phone" %>
+          <%= telephone_field_tag field_name, value, id: field_id, required: true, autofocus: first_field, autocomplete: "tel", class: "input-group-field" %>
+        <% when "token" %>
+          <%= password_field_tag field_name, value, id: field_id, required: true, autofocus: first_field, autocomplete: "one-time-code", class: "input-group-field" %>
+        <% when "name" %>
+          <%= text_field_tag field_name, value, id: field_id, required: true, autofocus: first_field, autocomplete: "given-name", class: "input-group-field" %>
+        <% when "surname" %>
+          <%= text_field_tag field_name, value, id: field_id, required: true, autofocus: first_field, autocomplete: "family-name", class: "input-group-field" %>
+        <% else %>
+          <%= text_field_tag field_name, value, id: field_id, required: true, autofocus: first_field, autocomplete: "off", class: "input-group-field" %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <p class="help-text"><%= t("help", scope:) %></p>
+  </fieldset>
+
+  <%= render "decidim/elections/censuses/submit_button", form: %>
+<% end %>

@@ -35,6 +35,42 @@ module Decidim
           end
         end
 
+        # Upstream bakes the `results_availability` enum into the model from
+        # `config.after_initialize` (`decidim_elections.results_availability_enum`),
+        # which runs once per boot. In development the model is reloaded on
+        # every code change and the enum goes with it, so the next page that
+        # asks an election for its status dies with "undefined method
+        # 'per_question?'" until the server is restarted — the Dashboard and
+        # Publish both do. Put it back whenever it goes missing.
+        #
+        # The callback is registered from `after_initialize`, after upstream
+        # has defined the enum, so it does nothing at boot and only ever
+        # fires on a later reload — registering it as a plain `to_prepare`
+        # runs it *before* upstream's own definition instead, and the two
+        # collide ("already defined by another enum") before the app is up.
+        #
+        # Development only: nothing reloads in production, where the enum is
+        # upstream's business. Belongs in the fork (vocdoni/decidim#1); it
+        # lives here until it lands there.
+        initializer "phase_4_spike.keep_results_availability_enum" do |app|
+          next unless Rails.env.development?
+
+          app.config.after_initialize do
+            ActiveSupport::Reloader.to_prepare do
+              model = Decidim::Elections::Election
+              next if model.defined_enums.key?("results_availability")
+
+              begin
+                model.enum :results_availability, Decidim::Elections.results_availability_options.index_with(&:to_s)
+              rescue ArgumentError
+                # A half-reloaded class can still carry the generated
+                # predicates; leaving them is better than a 500 on every page.
+                nil
+              end
+            end
+          end
+        end
+
         # Decorate upstream `Decidim::Elections::Election` with two spike-
         # specific behaviours. Runs on every code reload in development
         # (`to_prepare`) and once in production after Zeitwerk has loaded
@@ -77,6 +113,46 @@ module Decidim
             Decidim::Elections::VotesController.include(
               Decidim::Elections::Vocdoni::RedirectsVoterToBooth
             )
+
+            # Census saves re-check an opted-in election against Vocdoni and
+            # clean up the rows a file census leaves behind when its type
+            # changes.
+            unless Decidim::Elections::Admin::ProcessCensus <= Decidim::Elections::Vocdoni::Admin::CensusSavedHook
+              Decidim::Elections::Admin::ProcessCensus.prepend(
+                Decidim::Elections::Vocdoni::Admin::CensusSavedHook
+              )
+            end
+          end
+        end
+
+        # "Participants from a file": upstream's `token_csv` census, opened up
+        # to any CSV. The file is uploaded and its columns mapped in our own
+        # wizard (`census_file`); the voter signs in with the details the admin
+        # picks on the Security tab instead of a fixed email + token pair.
+        # Upstream registers the manifest in its own initializer, so it is
+        # adjusted once every initializer has run. The manifest's voter pieces
+        # stay generic: a Vocdoni-backed election never reaches them
+        # (`RedirectsVoterToBooth`).
+        initializer "phase_4_spike.census_file" do |app|
+          Decidim::Elections::AdminEngine.routes.append do
+            resources :elections, only: [] do
+              resource :census_file, only: [:new, :create, :edit, :update, :destroy],
+                                     controller: "/decidim/elections/vocdoni/admin/census_file" do
+                get :template
+              end
+            end
+          end
+
+          app.config.after_initialize do
+            manifest = Decidim::Elections.census_registry.find(:token_csv)
+            next if manifest.blank?
+
+            manifest.admin_form = "Decidim::Elections::Vocdoni::AdminForms::CensusFileSettingsForm"
+            manifest.admin_form_partial = "decidim/elections/vocdoni/admin/censuses/token_csv_form"
+            manifest.after_update_command = nil
+            manifest.user_presenter = "Decidim::Elections::Vocdoni::CensusFileVoterPresenter"
+            manifest.voter_form = "Decidim::Elections::Vocdoni::VoterForms::CensusFileForm"
+            manifest.voter_form_partial = "decidim/elections/vocdoni/voter_forms/census_file_form"
           end
         end
 

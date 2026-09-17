@@ -28,7 +28,7 @@ module Decidim
           def update
             enforce_permission_to(:update, :census, election:)
 
-            @form = form(AdminForms::SecurityForm).from_params(params)
+            @form = form(AdminForms::SecurityForm).from_params(params, election:)
             # Captured before the Decidim::Command call because on(:ok)/on(:invalid)
             # run with `instance_eval` inside the command: `self` there is the
             # command, not the controller, so route helpers would raise
@@ -39,7 +39,8 @@ module Decidim
 
             UpdateElectionSecurity.call(@form, election) do
               on(:ok) do
-                flash[:notice] = I18n.t("security.update.success", scope: "decidim.elections.vocdoni.admin")
+                notice = election.vocdoni_process&.census_validation_pending? ? "success_checking" : "success"
+                flash[:notice] = I18n.t("security.update.#{notice}", scope: "decidim.elections.vocdoni.admin")
                 redirect_to next_path
               end
 

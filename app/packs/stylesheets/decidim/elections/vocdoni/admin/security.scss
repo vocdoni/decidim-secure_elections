@@ -80,6 +80,22 @@
     }
   }
 
+  .vocdoni-choice.is-unavailable {
+    @apply bg-background cursor-not-allowed;
+
+    &:hover {
+      @apply border-background-4;
+    }
+  }
+
+  .vocdoni-choice__unavailable {
+    @apply flex items-start gap-2 m-0 p-3 rounded bg-white text-sm text-gray-2;
+
+    svg {
+      @apply w-4 h-4 mt-0.5 shrink-0 fill-gray-2;
+    }
+  }
+
   .vocdoni-choice__header {
     @apply flex flex-wrap items-center gap-3;
   }
@@ -300,6 +316,88 @@
   }
 }
 
+// Identifiers of a file census.
+.vocdoni-security {
+  .vocdoni-identifiers__list {
+    @apply grid gap-3 m-0 p-0 list-none xl:grid-cols-2;
+  }
+
+  .vocdoni-identifiers__item {
+    @apply m-0 p-4 rounded-lg border border-background-4 bg-white;
+
+    &:has(input:checked) {
+      @apply border-secondary bg-secondary/5;
+    }
+
+    &.is-unavailable {
+      @apply bg-background;
+
+      .vocdoni-identifiers__label {
+        @apply text-gray-2 cursor-not-allowed;
+      }
+    }
+  }
+
+  .vocdoni-identifiers__label {
+    @apply flex items-center gap-3 m-0 text-md font-semibold text-black cursor-pointer;
+
+    input {
+      @apply w-5 h-5 m-0 shrink-0 accent-[var(--secondary)];
+    }
+  }
+
+  .vocdoni-identifiers__hint {
+    @apply mt-1 mb-0 ml-8;
+
+    span + span {
+      @apply block mt-1;
+    }
+  }
+
+  .vocdoni-identifiers__weak {
+    @apply mt-4;
+  }
+
+  .vocdoni-two-factor__option.is-unavailable {
+    @apply bg-background;
+
+    .vocdoni-two-factor__label {
+      @apply text-gray-2 cursor-not-allowed;
+
+      svg {
+        @apply fill-gray-2;
+      }
+    }
+  }
+}
+
+// Result of the check with the secure voting service.
+.vocdoni-security {
+  .vocdoni-validation__pending {
+    @apply flex items-start gap-3 p-4 rounded-lg bg-background;
+
+    svg {
+      @apply w-6 h-6 shrink-0 fill-secondary animate-spin;
+    }
+  }
+
+  .vocdoni-validation__title {
+    @apply m-0 font-semibold text-black;
+  }
+
+  .vocdoni-validation__problems {
+    @apply mt-2 mb-4 pl-5 list-disc text-sm text-gray-2;
+  }
+
+  .vocdoni-validation__details {
+    @apply mt-2 mb-3 text-sm;
+
+    summary {
+      @apply cursor-pointer text-secondary;
+    }
+  }
+}
+
 // Summary strip.
 .vocdoni-security {
   .vocdoni-summary {
@@ -325,6 +423,10 @@
     .vocdoni-choice__icon,
     .vocdoni-why__chevron {
       transition: none;
+    }
+
+    .vocdoni-validation__pending svg {
+      animation: none;
     }
   }
 }

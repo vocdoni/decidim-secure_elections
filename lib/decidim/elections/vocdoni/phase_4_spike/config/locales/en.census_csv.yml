@@ -1,0 +1,42 @@
+---
+en:
+  decidim:
+    elections:
+      vocdoni:
+        admin:
+          census_file:
+            # Labels for Decidim::Elections::Vocdoni::CensusCsv::Fields::TARGETS.
+            # Used both as the column-mapping UI's dropdown options and as
+            # the downloadable template's own headers, so they double as
+            # header aliases (Fields.suggest) — someone re-uploading a
+            # template they downloaded earlier must round-trip.
+            fields:
+              memberNumber: Member number
+              nationalId: National ID number
+              name: First name
+              surname: Last name
+              birthDate: Date of birth
+              email: Email
+              phone: Phone
+              weight: Voting weight
+              token: Access code
+            # One plain-English line per field, shown next to the mapping
+            # dropdown so an admin who has never heard "credential" or
+            # "identity field" can still pick the right column.
+            field_hints:
+              memberNumber: A number or code your organisation already uses to identify this person, such as a membership number.
+              nationalId: A national identity document number, such as a DNI, NIE or passport number.
+              name: The person's first name.
+              surname: The person's last name or family name.
+              birthDate: The person's date of birth.
+              email: The person's email address.
+              phone: The person's phone number.
+              weight: How many votes this person's ballot should count as. Leave this column unmapped if everyone should have one vote.
+              token: A private code you send this person separately, which they type in to prove who they are. It only works for a simple vote — for a secret, verifiable one, match the column as Member number instead.
+            rows:
+              invalid_email: "“%{value}” is not a valid email address"
+              invalid_date: "“%{value}” is not a valid date of birth (use 31/12/1990 or 1990-12-31)"
+              invalid_phone: "“%{value}” is not a valid phone number (it needs at least 6 digits)"
+              invalid_weight: "“%{value}” is not a valid voting weight (use a whole number greater than 0)"
+              no_values: This line has no value in any of the columns you kept
+              duplicate_line: "Same details as line %{line}"
