@@ -134,8 +134,11 @@ jobs:
           cache: npm
 
       - uses: browser-actions/setup-chrome@v2
-        with:
-          install-chromedriver: true
+        # No `install-chromedriver`: the action's stable-channel chromedriver
+        # drifts one release ahead of stable Chrome (chromedriver 153 vs Chrome
+        # 152 as of 2026-09), and Selenium refuses the mismatched pair. Without
+        # a driver in PATH, Selenium Manager fetches one that matches the
+        # installed Chrome at test time.
 
       - run: npm ci
 
