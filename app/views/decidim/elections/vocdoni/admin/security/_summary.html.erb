@@ -1,0 +1,27 @@
+<%#
+  The resulting configuration, in one line.
+
+  Every pill and sentence is rendered here and all but one are `hidden`, so
+  the classes stay literal for Tailwind and no copy lives in JavaScript.
+  The level pill is `.label` (neutral) for a simple vote and `.label.success`
+  for the secret ones — Decidim's contrast-safe pill colours. The text, not
+  the colour, carries the meaning.
+%>
+<% scope = "decidim.elections.vocdoni.admin.security.show.summary" %>
+<% level = @form.level %>
+<div class="vocdoni-summary" id="js-security-summary">
+  <span class="vocdoni-summary__title">
+    <%= icon "shield-keyhole-line" %>
+    <span><%= t("title", scope:) %></span>
+  </span>
+  <p class="vocdoni-summary__status" role="status">
+    <span class="label" data-security-level="basic" <%= "hidden" unless level == "basic" %>><%= t("levels.basic", scope:) %></span>
+    <span class="label success" data-security-level="strong" <%= "hidden" unless level == "strong" %>><%= t("levels.strong", scope:) %></span>
+    <span class="label success" data-security-level="strongest" <%= "hidden" unless level == "strongest" %>><%= t("levels.strongest", scope:) %></span>
+    <% Decidim::Elections::Vocdoni::AdminForms::SecurityForm::LEVELS.each do |sentence_level| %>
+      <span class="vocdoni-summary__sentence" data-security-sentence="<%= sentence_level %>" <%= "hidden" unless level == sentence_level %>>
+        <%= t("sentences.#{sentence_level}", scope:) %>
+      </span>
+    <% end %>
+  </p>
+</div>

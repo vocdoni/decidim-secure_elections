@@ -1,0 +1,66 @@
+<%#
+  Card 2: the one-time code (`twoFaFields`).
+
+  Only meaningful for a secret vote, so the whole fieldset is `disabled`
+  while the simple vote is selected; `security.js` flips it as the admin
+  changes the vote type. Email and SMS are independent; with both on, the
+  voter picks the channel when the code is requested.
+%>
+<% scope = "decidim.elections.vocdoni.admin.security.show.two_factor" %>
+<% enabled = @form.enable_vocdoni %>
+<div class="card vocdoni-security__card">
+  <div class="card-divider">
+    <h2 class="card-title" id="security-two-factor-title"><%= t("legend", scope:) %></h2>
+  </div>
+
+  <div class="card-section">
+    <div class="row column">
+      <fieldset id="js-security-two-factor"
+                class="vocdoni-security__fieldset vocdoni-two-factor"
+                aria-labelledby="security-two-factor-title"
+                aria-describedby="security-two-factor-lead"
+                <%= "disabled" unless enabled %>>
+        <p class="vocdoni-security__lead" id="security-two-factor-lead"><%= t("lead", scope:) %></p>
+
+        <p class="vocdoni-security__note" data-two-factor-note="simple" <%= "hidden" if enabled %>>
+          <%= icon "information-line" %>
+          <span><%= t("simple_note", scope:) %></span>
+        </p>
+
+        <div class="vocdoni-two-factor__options">
+          <div class="vocdoni-two-factor__option">
+            <div class="vocdoni-two-factor__control">
+              <%= f.check_box :email,
+                              label: false,
+                              id: "security_email",
+                              aria: { describedby: "security-email-help" },
+                              data: { security_code: true } %>
+              <label for="security_email" class="vocdoni-two-factor__label">
+                <%= icon "mail-lock-line" %>
+                <span><%= t("email.label", scope:) %></span>
+              </label>
+            </div>
+            <p class="help-text vocdoni-two-factor__help" id="security-email-help"><%= t("email.help", scope:) %></p>
+          </div>
+
+          <div class="vocdoni-two-factor__option">
+            <div class="vocdoni-two-factor__control">
+              <%= f.check_box :sms,
+                              label: false,
+                              id: "security_sms",
+                              aria: { describedby: "security-sms-help" },
+                              data: { security_code: true } %>
+              <label for="security_sms" class="vocdoni-two-factor__label">
+                <%= icon "smartphone-line" %>
+                <span><%= t("sms.label", scope:) %></span>
+              </label>
+            </div>
+            <p class="help-text vocdoni-two-factor__help" id="security-sms-help"><%= t("sms.help", scope:) %></p>
+          </div>
+        </div>
+
+        <p class="help-text vocdoni-two-factor__both"><%= t("both_note", scope:) %></p>
+      </fieldset>
+    </div>
+  </div>
+</div>

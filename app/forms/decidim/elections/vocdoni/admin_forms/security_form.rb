@@ -45,6 +45,21 @@ module Decidim
                 email: two_fa.include?("email"))
           end
 
+          # Summary levels shown on the tab, from least to most protected.
+          LEVELS = %w(basic strong strongest).freeze
+
+          # The page presents `enable_vocdoni` as two cards: a simple vote
+          # (off) and a secret, verifiable vote (on).
+          def choice
+            enable_vocdoni ? "secure" : "simple"
+          end
+
+          def level
+            return "basic" unless enable_vocdoni
+
+            two_fa_fields.any? ? "strongest" : "strong"
+          end
+
           # SaaS-shape array — the same value we forward verbatim as
           # `twoFaFields` in the process-creation payload. Kept sorted so
           # two equivalent selections do not appear as different diffs.
