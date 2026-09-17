@@ -7,7 +7,7 @@ import { createBallotStep } from "src/decidim/elections/vocdoni/voter/ballot_ste
 import { createReceiptStep } from "src/decidim/elections/vocdoni/voter/receipt_step";
 import { createUi } from "src/decidim/elections/vocdoni/voter/ui";
 import { QUESTION_STATE } from "src/decidim/elections/vocdoni/voter/submit_step";
-import strings from "../../../../../../public/vocdoni/locales/en.json";
+import strings from "../../../../../../../public/vocdoni/locales/en.json";
 
 /**
  * Test-only fixture for the voting page's steps. Not imported by any entrypoint, so it
@@ -27,7 +27,7 @@ import strings from "../../../../../../public/vocdoni/locales/en.json";
 
 export const i18n = strings;
 
-const SHELL = path.join(__dirname, "../../../../../../public/vocdoni/vote.html");
+const SHELL = path.join(__dirname, "../../../../../../../public/vocdoni/vote.html");
 
 /**
  * Paints the shipped shell into the test document.

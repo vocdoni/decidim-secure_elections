@@ -17,7 +17,7 @@ jest.mock("@vocdoni/ballot", () => ({ encodeQuestionBallot: jest.fn() }));
 import fs from "node:fs";
 import path from "node:path";
 import { createVotingPage } from "src/decidim/elections/vocdoni/voter/voting_page";
-import strings from "../../../../../../public/vocdoni/locales/en.json";
+import strings from "../../../../../../../public/vocdoni/locales/en.json";
 
 /**
  * What `createVotingPage` does with a process read: it has to turn one public,
@@ -48,7 +48,7 @@ const PROCESS = {
   }]
 };
 
-const SHELL = path.join(__dirname, "../../../../../../public/vocdoni/vote.html");
+const SHELL = path.join(__dirname, "../../../../../../../public/vocdoni/vote.html");
 
 const visible = (node) => Boolean(node) && !node.hasAttribute("hidden");
 
