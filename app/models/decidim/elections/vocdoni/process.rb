@@ -123,11 +123,16 @@ module Decidim
           save!
         end
 
-        # The last census pre-flight. Deprecated in the v2 spike: the census
-        # pre-flight is no longer run on save (the Census tab is vanilla),
-        # only when the publish job runs. The methods are kept because the
-        # sidecar's `metadata["census_validation"]` may still be read by the
-        # dashboard/monitor code from earlier stages.
+        # The last census pre-flight: the roster is pushed to the Vocdoni
+        # memberbase and checked with the chosen identifiers, in the
+        # background, whenever the census or the Security tab changes on an
+        # opted-in election ({PreflightTrigger}). The Security tab shows the
+        # outcome.
+        #
+        # Shapes:
+        #   { "pending" => true, "at" => … }                       queued/running
+        #   { "ok" => true, "at", "size" }                         passed
+        #   { "ok" => false, "at", "step", "code", "message", "data" } failed
         #
         # `ok: true` means the auth-field selection produced unique, complete
         # credentials over the current roster. Any other value blocks a
@@ -162,8 +167,21 @@ module Decidim
           save!
         end
 
+        def mark_census_validation_pending!
+          self.metadata = metadata.merge("census_validation" => { "pending" => true, "at" => Time.current.iso8601 })
+          save!
+        end
+
         def census_validation
           metadata["census_validation"]
+        end
+
+        def census_validation_pending?
+          census_validation.is_a?(Hash) && census_validation["pending"] == true
+        end
+
+        def last_error_details
+          metadata["last_error"].presence
         end
 
         def census_valid?

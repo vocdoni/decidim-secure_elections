@@ -77,6 +77,46 @@ module Decidim
             Decidim::Elections::VotesController.include(
               Decidim::Elections::Vocdoni::RedirectsVoterToBooth
             )
+
+            # Census saves re-check an opted-in election against Vocdoni and
+            # clean up the rows a file census leaves behind when its type
+            # changes.
+            unless Decidim::Elections::Admin::ProcessCensus <= Decidim::Elections::Vocdoni::Admin::CensusSavedHook
+              Decidim::Elections::Admin::ProcessCensus.prepend(
+                Decidim::Elections::Vocdoni::Admin::CensusSavedHook
+              )
+            end
+          end
+        end
+
+        # "Participants from a file": upstream's `token_csv` census, opened up
+        # to any CSV. The file is uploaded and its columns mapped in our own
+        # wizard (`census_file`); the voter signs in with the details the admin
+        # picks on the Security tab instead of a fixed email + token pair.
+        # Upstream registers the manifest in its own initializer, so it is
+        # adjusted once every initializer has run. The manifest's voter pieces
+        # stay generic: a Vocdoni-backed election never reaches them
+        # (`RedirectsVoterToBooth`).
+        initializer "phase_4_spike.census_file" do |app|
+          Decidim::Elections::AdminEngine.routes.append do
+            resources :elections, only: [] do
+              resource :census_file, only: [:new, :create, :edit, :update, :destroy],
+                                     controller: "/decidim/elections/vocdoni/admin/census_file" do
+                get :template
+              end
+            end
+          end
+
+          app.config.after_initialize do
+            manifest = Decidim::Elections.census_registry.find(:token_csv)
+            next if manifest.blank?
+
+            manifest.admin_form = "Decidim::Elections::Vocdoni::AdminForms::CensusFileSettingsForm"
+            manifest.admin_form_partial = "decidim/elections/vocdoni/admin/censuses/token_csv_form"
+            manifest.after_update_command = nil
+            manifest.user_presenter = "Decidim::Elections::Vocdoni::CensusFileVoterPresenter"
+            manifest.voter_form = "Decidim::Elections::Vocdoni::VoterForms::CensusFileForm"
+            manifest.voter_form_partial = "decidim/elections/vocdoni/voter_forms/census_file_form"
           end
         end
 

@@ -81,6 +81,48 @@ module Decidim
               expect(sidecar).to be_nil
             end
           end
+
+          context "when it is a file census" do
+            let(:fields) { %w(memberNumber name) }
+            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "fields" => fields }) }
+            let(:identifiers) { %w(memberNumber) }
+            let(:form) { AdminForms::SecurityForm.new(election:, enable_vocdoni:, identifiers:) }
+
+            context "when a simple vote is chosen" do
+              let(:enable_vocdoni) { false }
+
+              it "saves the chosen identifiers with the census, without creating a sidecar" do
+                expect { command.call }.to broadcast(:ok)
+
+                expect(election.reload.census_settings["identifiers"]).to eq(%w(memberNumber))
+                expect(sidecar).to be_nil
+              end
+            end
+
+            context "when a secure vote is chosen and the census already has people in it" do
+              let(:enable_vocdoni) { true }
+
+              before { Decidim::Elections::Voter.create!(election:, data: { "memberNumber" => "1" }) }
+
+              it "marks the census pre-flight as pending and enqueues it" do
+                expect { command.call }.to broadcast(:ok).and have_enqueued_job(Vocdoni::PreflightCensusJob).with(election.id)
+
+                expect(sidecar).to be_census_validation_pending
+              end
+            end
+
+            context "when the chosen identifiers are invalid" do
+              let(:identifiers) { [] }
+              let(:enable_vocdoni) { false }
+
+              it "broadcasts invalid and saves nothing" do
+                expect { command.call }.to broadcast(:invalid)
+
+                expect(election.reload.census_settings["identifiers"]).to be_nil
+                expect(sidecar).to be_nil
+              end
+            end
+          end
         end
       end
     end

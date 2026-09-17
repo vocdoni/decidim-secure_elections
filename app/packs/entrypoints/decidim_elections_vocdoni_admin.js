@@ -9,9 +9,11 @@
 // keeps its cards and summary in step with unsaved choices.
 import "stylesheets/decidim/elections/vocdoni/admin/editor.scss";
 import "stylesheets/decidim/elections/vocdoni/admin/security.scss";
+import "stylesheets/decidim/elections/vocdoni/admin/census_file.scss";
 import "src/decidim/elections/vocdoni/admin/questions_editor";
 import "src/decidim/elections/vocdoni/admin/census";
 import "src/decidim/elections/vocdoni/admin/public_link";
 import "src/decidim/elections/vocdoni/admin/monitor";
 import "src/decidim/elections/vocdoni/admin/setup";
 import "src/decidim/elections/vocdoni/admin/security";
+import "src/decidim/elections/vocdoni/admin/census_file";

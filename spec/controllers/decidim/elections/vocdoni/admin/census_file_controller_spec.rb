@@ -1,0 +1,112 @@
+# frozen_string_literal: true
+
+require "spec_helper"
+require "decidim/elections/test/factories"
+
+module Decidim
+  module Elections
+    module Vocdoni
+      module Admin
+        describe CensusFileController do
+          let(:component) { create(:elections_component) }
+          let(:organization) { component.organization }
+          let(:election) { create(:election, component:) }
+          let(:current_user) { create(:user, :admin, :confirmed, organization:) }
+
+          let(:content) do
+            <<~CSV
+              name,memberNumber
+              Rosalind,000123
+            CSV
+          end
+
+          let(:blob) do
+            ActiveStorage::Blob.create_and_upload!(io: StringIO.new(content), filename: "people.csv", content_type: "text/csv")
+          end
+
+          before do
+            request.env["decidim.current_organization"] = organization
+            request.env["decidim.current_participatory_space"] = component.participatory_space
+            request.env["decidim.current_component"] = component
+            sign_in current_user
+          end
+
+          describe "POST create" do
+            it "redirects to the mapping step, carrying the uploaded blob" do
+              post :create, params: { election_id: election.id, census_import: { file: blob.signed_id } }
+
+              expect(response).to redirect_to(a_string_matching(%r{census_file/edit\?blob=}))
+            end
+
+            context "with no file" do
+              it "renders new again with an error, unprocessable" do
+                post :create, params: { election_id: election.id, census_import: {} }
+
+                expect(response).to render_template(:new)
+                expect(response).to have_http_status(:unprocessable_content)
+              end
+            end
+          end
+
+          describe "PATCH update" do
+            let(:columns) { { "0" => "name", "1" => "memberNumber" } }
+
+            it "imports the file and redirects to the census tab" do
+              patch :update, params: { election_id: election.id, census_file: { blob: blob.signed_id, columns: } }
+
+              expect(election.voters.count).to eq(1)
+              expect(response).to redirect_to(a_string_matching(%r{/census\z}))
+            end
+
+            context "when the file has a bad row" do
+              let(:content) do
+                <<~CSV
+                  name,memberNumber,email
+                  Rosalind,000123,not-an-email
+                CSV
+              end
+              let(:columns) { { "0" => "name", "1" => "memberNumber", "2" => "email" } }
+
+              it "renders the row errors, unprocessable" do
+                patch :update, params: { election_id: election.id, census_file: { blob: blob.signed_id, columns: } }
+
+                expect(response).to render_template(:errors)
+                expect(response).to have_http_status(:unprocessable_content)
+                expect(election.voters.count).to eq(0)
+              end
+            end
+          end
+
+          describe "DELETE destroy" do
+            before { Decidim::Elections::Voter.create!(election:, data: { "name" => "Ada" }) }
+
+            it "removes the list and redirects to the census tab" do
+              delete :destroy, params: { election_id: election.id }
+
+              expect(election.voters.count).to eq(0)
+              expect(response).to redirect_to(a_string_matching(%r{/census\z}))
+            end
+          end
+
+          describe "GET template" do
+            it "sends a CSV with the requested columns" do
+              get :template, params: { election_id: election.id, fields: %w(name memberNumber) }
+
+              expect(response.media_type).to eq("text/csv")
+              body = response.body.force_encoding(Encoding::UTF_8)
+              expect(body).to start_with("\uFEFF")
+              expect(CSV.parse(body.delete_prefix("\uFEFF"), col_sep: ";").first).to eq(["First name", "Member number"])
+            end
+
+            it "falls back to a default set of columns when none are requested" do
+              get :template, params: { election_id: election.id }
+
+              expect(response).to be_successful
+              expect(CSV.parse(response.body, col_sep: ";").first).not_to be_empty
+            end
+          end
+        end
+      end
+    end
+  end
+end

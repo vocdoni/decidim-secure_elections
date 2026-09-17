@@ -4,8 +4,10 @@
   1. How the vote runs — a simple Decidim vote or a secret, verifiable one
      on Vocdoni (`enable_vocdoni`; opting in creates the `Vocdoni::Process`
      sidecar), with the reasons an organisation would pick one or the other.
-  2. The one-time code sent to voters of a secret vote (`twoFaFields`).
-  3. A one-line summary of the resulting configuration.
+  2. How voters prove who they are (file census: 1–3 of its columns).
+  3. The one-time code sent to voters of a secret vote (`twoFaFields`).
+  4. What the secure voting service said about the list.
+  5. A one-line summary of the resulting configuration.
 
   The server renders every state; `security.js` only keeps the page in step
   with unsaved changes.
@@ -32,7 +34,9 @@
                        method: :put,
                        html: { id: "security-form", class: "form-defaults form" }) do |f| %>
     <%= render "decidim/elections/vocdoni/admin/security/choice", f: %>
+    <%= render "decidim/elections/vocdoni/admin/security/identifiers" %>
     <%= render "decidim/elections/vocdoni/admin/security/two_factor", f: %>
+    <%= render "decidim/elections/vocdoni/admin/security/validation" %>
     <%= render "decidim/elections/vocdoni/admin/security/summary" %>
 
     <div class="item__edit-sticky">

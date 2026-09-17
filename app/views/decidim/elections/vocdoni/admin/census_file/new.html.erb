@@ -1,0 +1,96 @@
+<%#
+  Step 1 of the "Participants from a file" wizard: upload the CSV.
+
+  @form is a CensusFileUploadForm (attribute `file`). Submitting takes the
+  admin straight to step 2 (`edit`), where the columns are matched — this
+  step only checks the file can be read at all.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.new" %>
+<% add_decidim_page_title(t("title", scope:)) %>
+<% append_javascript_pack_tag "decidim_elections_vocdoni_admin" %>
+<% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
+
+<div class="item_show__header border-none">
+  <h1 class="item_show__header-title"><%= t("title", scope:) %></h1>
+</div>
+
+<%= render "decidim/elections/admin/elections/tabs_menu" %>
+
+<div class="vocdoni-census-file 2xl:mr-80">
+  <%= render "decidim/elections/vocdoni/admin/census_file/steps", current: :upload %>
+
+  <%= decidim_form_for(@form, url: wizard_path(:collection), method: :post, html: { class: "form-defaults form", multipart: true }) do |f| %>
+    <div class="card vocdoni-census-file__card">
+      <div class="card-divider">
+        <h2 class="card-title"><%= t("upload_title", scope:) %></h2>
+      </div>
+
+      <div class="card-section">
+        <div class="row column">
+          <%= f.upload :file,
+                       label: t("file_label", scope:),
+                       button_class: "button button__sm button__transparent-secondary",
+                       extension_allowlist: %w(csv) %>
+        </div>
+
+        <div class="row column">
+          <h3 class="vocdoni-census-file__subtitle"><%= t("help_title", scope:) %></h3>
+          <ul class="vocdoni-census-file__help-list">
+            <li><%= t("help_columns", scope:) %></li>
+            <li><%= t("help_one_row", scope:) %></li>
+            <li><%= t("help_dates", scope:) %></li>
+            <li><%= t("help_size", scope:) %></li>
+            <li><%= t("help_excel", scope:) %></li>
+            <li><%= t("help_limit", scope:, limit: Decidim::Elections::Vocdoni::PublishToVocdoniJob.max_roster) %></li>
+            <li><%= t("help_zero_padding", scope:) %></li>
+          </ul>
+        </div>
+
+        <div class="row column">
+          <h3 class="vocdoni-census-file__subtitle"><%= t("fields_title", scope:) %></h3>
+          <div class="table-stacked vocdoni-census-file__fields-table">
+            <table>
+              <caption class="sr-only"><%= t("fields_caption", scope:) %></caption>
+              <thead>
+                <tr>
+                  <th scope="col"><%= t("fields_label", scope:) %></th>
+                  <th scope="col"><%= t("fields_meaning", scope:) %></th>
+                  <th scope="col"><%= t("fields_example", scope:) %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% Decidim::Elections::Vocdoni::CensusCsv::Fields::TARGETS.each do |field| %>
+                  <tr>
+                    <td data-label="<%= t("fields_label", scope:) %>"><strong><%= Decidim::Elections::Vocdoni::CensusCsv::Fields.label(field) %></strong></td>
+                    <td data-label="<%= t("fields_meaning", scope:) %>"><%= Decidim::Elections::Vocdoni::CensusCsv::Fields.hint(field) %></td>
+                    <td data-label="<%= t("fields_example", scope:) %>"><code><%= Decidim::Elections::Vocdoni::CensusCsv::Fields.example(field) %></code></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="row column">
+          <h3 class="vocdoni-census-file__subtitle"><%= t("template_title", scope:) %></h3>
+          <p class="help-text"><%= t("template_help", scope:) %></p>
+          <ul class="vocdoni-census-file__template-links">
+            <li><%= link_to t("download_template", scope:), template_path, class: "button button__xs button__transparent-secondary" %></li>
+            <li>
+              <%= link_to t("download_template_full", scope:),
+                          template_path(fields: Decidim::Elections::Vocdoni::CensusCsv::Fields::TARGETS),
+                          class: "button button__xs button__transparent-secondary" %>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="item__edit-sticky">
+      <div class="item__edit-sticky-container">
+        <%= link_to t("cancel", scope:), census_path, class: "button button__sm button__transparent-secondary" %>
+        <%= f.submit t("continue", scope:), class: "button button__sm button__secondary" %>
+      </div>
+    </div>
+  <% end %>
+</div>

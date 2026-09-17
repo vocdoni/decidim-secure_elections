@@ -1,0 +1,172 @@
+// "Participants from a file" — the Census tab pill/status panel
+// (`admin/censuses/_token_csv_form.html.erb`) and the upload wizard
+// (`admin/census_file/{new,edit,errors}.html.erb`).
+//
+// Everything is scoped under `.vocdoni-census-file`, including the voter
+// sign-in fields (`.vocdoni-census-file__voter`), which share the same
+// name even though they render on a public page rather than the wizard —
+// one file, one prefix, easier to grep than to keep two in sync.
+
+.vocdoni-census-file {
+  [hidden] {
+    display: none !important;
+  }
+
+  &__card {
+    @apply mb-6;
+  }
+
+  &__subtitle {
+    @apply text-lg font-semibold text-black mb-2 mt-4 first:mt-0;
+  }
+
+  &__lead {
+    @apply mb-2 text-md text-gray-2 max-w-3xl;
+  }
+
+  &__note {
+    @apply flex items-start gap-2 mt-4 mb-0 p-3 rounded bg-background text-sm text-gray-2;
+
+    svg {
+      @apply w-4 h-4 mt-0.5 shrink-0 fill-secondary;
+    }
+  }
+
+  &__help-list {
+    @apply list-disc pl-5 text-sm text-gray-2 space-y-1;
+  }
+
+  &__template-links {
+    @apply flex flex-wrap gap-2 list-none pl-0 mt-2;
+  }
+
+  &__actions {
+    @apply flex flex-wrap gap-2 mt-4;
+  }
+
+  // Step indicator (`_steps.html.erb`).
+  &__steps {
+    @apply mb-6;
+
+    ol {
+      @apply flex flex-wrap gap-4 list-none pl-0 m-0;
+    }
+  }
+
+  &__step {
+    @apply flex items-center gap-2 text-sm text-gray-2;
+
+    &.is-current {
+      @apply text-secondary font-semibold;
+
+      .vocdoni-census-file__step-number {
+        @apply bg-secondary text-white;
+      }
+    }
+  }
+
+  &__step-number {
+    @apply flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-background-4 text-xs font-semibold;
+  }
+
+  // Empty-state "3 steps" list (Census tab).
+  &__mini-steps {
+    @apply list-none pl-0 space-y-3 my-4;
+
+    li {
+      @apply flex flex-col;
+    }
+
+    strong {
+      @apply text-black;
+    }
+
+    span {
+      @apply text-sm text-gray-2;
+    }
+  }
+
+  // Recognised-details pills, both in the empty state and the "columns we
+  // kept" status card.
+  &__pills {
+    @apply flex flex-wrap gap-2 list-none pl-0 my-2;
+  }
+
+  &__pill {
+    @apply inline-block px-3 py-1 rounded-full bg-background-4 text-sm text-black;
+  }
+
+  // Recognised-details list (empty state), with each detail's hint shown
+  // underneath its name instead of a hover-only `title` attribute.
+  &__fields-grid {
+    @apply grid gap-3 list-none pl-0 my-2 xl:grid-cols-2;
+  }
+
+  &__fields-grid-item {
+    @apply flex flex-col;
+
+    strong {
+      @apply text-black;
+    }
+
+    .help-text {
+      @apply m-0;
+    }
+  }
+
+  // Status card (list already imported).
+  &__status {
+    @apply p-5 rounded-lg border border-background-4 bg-white;
+  }
+
+  &__count {
+    @apply text-lg font-semibold text-black my-1;
+  }
+
+  &__details {
+    @apply list-none pl-0 text-sm text-gray-2 space-y-1 my-2;
+  }
+
+  &__next-step {
+    @apply mt-6;
+  }
+
+  // Wizard step 1: recognised-fields table.
+  &__fields-table {
+    code {
+      @apply text-xs;
+    }
+  }
+
+  // Wizard step 2: mapping table.
+  &__mapping-table {
+    .vocdoni-census-file__select {
+      @apply w-full max-w-xs;
+    }
+  }
+
+  &__samples {
+    @apply text-sm text-gray-2;
+
+    &--empty {
+      @apply text-gray-2;
+    }
+  }
+
+  &__errors-table td {
+    @apply align-top;
+  }
+
+  &__more-rows {
+    @apply mt-2 text-sm text-gray-2;
+  }
+
+  // Voter sign-in fields (public booth passthrough form).
+  &__voter {
+    @apply m-0 p-0 border-0 min-w-0;
+  }
+
+  &__voter-field {
+    @apply mb-4;
+  }
+}

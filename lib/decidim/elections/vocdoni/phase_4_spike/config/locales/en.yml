@@ -1,4 +1,21 @@
 en:
+  activemodel:
+    attributes:
+      security:
+        identifiers: "Details people type to vote"
+    errors:
+      models:
+        security:
+          attributes:
+            enable_vocdoni:
+              roster_too_large: "Your list has %{count} people. Secret, verifiable votes accept up to %{limit} for now; run this one as a simple vote."
+            identifiers:
+              blank: "Choose at least one detail people type to vote."
+              too_many: "Choose at most %{count} details."
+              not_for_secure: "%{fields} can't be used for a secret, verifiable vote."
+              not_unique:
+                one: "1 person can't be told apart with %{fields}. Add another detail."
+                other: "%{count} people in your list share the same %{fields}, so they can't be told apart. Add another detail."
   decidim:
     admin:
       menu:
@@ -37,7 +54,7 @@ en:
                   summary: "Ballots are sealed so nobody can read them, and the count can be checked independently."
                   points:
                     anonymous: "Nobody — not even administrators — can link a ballot to a voter."
-                    tamper: "Any tampering is detectable: each voter gets a receipt to check on a public explorer, and the results export links there too."
+                    tamper: "Any tampering is detectable: each voter gets a receipt they can check on a public website, and the results export links there too."
                     minimal: "Only the details needed to check who may vote are used; ballots hold no personal data."
                     locked: "Locked once published — that is what makes it trustworthy."
                   best_for: "Elections of officers, statutory votes, budgets — anything that must stand up to challenge."
@@ -46,6 +63,7 @@ en:
                   # rendered when this has a value.
                   guide_url: ""
                   guide_link: "Read the full guide"
+                too_large: "Your list has %{count} people. Secret, verifiable votes accept up to %{limit} for now, so this vote can only run as a simple vote."
                 good_to_know_html: "<strong>Good to know:</strong> you can change this choice until the election is published. Voters won't notice any difference, except the one-time code if you enable it."
               why:
                 title: "Why it matters for organisations and public bodies"
@@ -86,17 +104,65 @@ en:
                       secure: "None"
                     locked:
                       label: "Locked once published"
+              identifiers:
+                legend: "How people prove who they are"
+                lead: "Choose up to %{max} details from your list that each person will type to vote. Pick details your people know by heart and that others are unlikely to know."
+                not_for_secure: "The secure voting service doesn't accept this detail as proof of identity. Use a one-time code below instead."
+                weak: "Anyone who knows these details could vote on someone else's behalf. Add an ID number, a member number or an access code, or turn on a one-time code."
+                no_list_html: "Upload your list on the <a href=\"%{url}\">Census tab</a> first; then choose here which of its details people type to vote."
+                no_census_html: "Choose who can vote on the <a href=\"%{url}\">Census tab</a> first."
+                registered:
+                  lead: "Your census is made of people registered on this platform."
+                  simple: "They vote while signed in to their account; nothing else is asked."
+                  secure: "In the voting booth they type their participant number, which we show them when they open the vote while signed in."
               two_factor:
                 legend: "Confirm voters' identity with a one-time code"
                 lead: "Each voter receives a one-time code when they open the ballot and types it in before voting. It stops someone voting on behalf of another person and makes the result harder to dispute."
                 simple_note: "Available for secret, verifiable votes."
                 email:
                   label: "Email code"
-                  help: "The code goes to the email address each participant registered with."
+                  help: "The code goes to each person's email address."
+                  needs_column: "Your list has no email column, so there is nowhere to send this code."
+                  not_for_registered: "Not available."
                 sms:
                   label: "SMS code"
-                  help: "The code goes by text message, so every voter needs a phone number registered with the voting service."
+                  help: "The code goes by text message to each person's phone number."
+                  needs_column: "Your list has no phone column, so there is nowhere to send this code."
+                  not_for_registered: "Registered participants have no phone number on this platform, so this code can't be sent."
                 both_note: "If both are on, each voter chooses how to receive the code."
+              validation:
+                legend: "Check with the secure voting service"
+                details: "Technical details"
+                pending:
+                  title: "Checking your list…"
+                  body: "We're sending your list to the secure voting service to make sure everyone can vote with the details you chose. This usually takes less than a minute."
+                  refresh: "Refresh"
+                  stale: "This is taking longer than expected. Save the Security tab again to retry; if it keeps happening, contact support."
+                ok:
+                  title:
+                    one: "Your list is ready: 1 person can vote."
+                    other: "Your list is ready: %{count} people can vote."
+                  body: "Everyone can be told apart with the details you chose. You can publish the election."
+                failed:
+                  title: "Your list isn't ready for a secret vote yet"
+                  generic: "The secure voting service couldn't accept the list. Check the details below, fix the list or your choices, and save again."
+                  codes:
+                    roster_too_large: "The secure voting service accepts up to %{limit} people per organisation. Reduce the list or contact support."
+                    no_identifiers: "Choose above which details people type to vote."
+                    no_identity: "Some people have no member number, ID number, email or phone. The secure voting service needs at least one of them for every person: add one of those columns to your file."
+                  problems:
+                    duplicates:
+                      one: "1 person can't be told apart from another with the details you chose."
+                      other: "%{count} people can't be told apart from others with the details you chose."
+                    missing_data:
+                      one: "1 person is missing one of the details you chose."
+                      other: "%{count} people are missing one of the details you chose."
+                    not_found:
+                      one: "1 person couldn't be found in the secure voting service."
+                      other: "%{count} people couldn't be found in the secure voting service."
+                publish_failed:
+                  title: "Publishing to the secure voting service failed"
+                  body: "The election is published here, but the secure vote could not be set up. Contact support with the technical details below."
               summary:
                 title: "Your configuration"
                 levels:
@@ -109,10 +175,14 @@ en:
                   strongest: "Anonymous ballots, result checkable by anyone. Voters confirm their identity with a one-time code."
             update:
               success: "Security settings updated."
+              success_checking: "Security settings updated. We're checking your list with the secure voting service; the result appears on the Security tab."
               invalid: "Security settings could not be saved. Please review the errors below."
         booth:
           launcher:
             help_html: "Your ballot is signed and submitted in your browser. The Decidim server never sees a vote."
             enter: "Open the voting booth"
+            asked_for_html: "In the booth you will be asked for your <strong>%{details}</strong>, exactly as your organisation has them."
+            participant_number_html: "In the booth you will be asked for your participant number: <strong>%{number}</strong>."
+            sign_in_first: "Sign in first: the booth will ask for your participant number, which we show you here once you are signed in."
             chain_note_html: "Anchored on the Vocdoni chain <code>%{chain}</code>."
             not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."

@@ -1,0 +1,78 @@
+<%#
+  Card: what the secure voting service said about the list.
+
+  Shown once the election opted in. The check runs in the background
+  (`PreflightCensusJob`) after every change to the census or to this tab, so
+  "checking" offers a refresh link rather than a spinner. A failure is
+  explained in plain words from its code; the raw message stays behind a
+  disclosure for whoever has to debug it. A failed publication is shown the
+  same way, since the Dashboard does not show it.
+%>
+<% scope = "decidim.elections.vocdoni.admin.security.show.validation" %>
+<% process = election.vocdoni_process %>
+<% validation = process&.census_validation %>
+<% last_error = process&.last_error_details if process&.failed? %>
+<% if process.present? && (validation.present? || last_error.present?) %>
+  <div class="card vocdoni-security__card" id="security-validation">
+    <div class="card-divider">
+      <h2 class="card-title"><%= t("legend", scope:) %></h2>
+    </div>
+
+    <div class="card-section">
+      <div class="row column" role="status">
+        <% if last_error.present? %>
+          <%= cell("decidim/announcement",
+                   { title: t("publish_failed.title", scope:), body: t("publish_failed.body", scope:) },
+                   callout_class: "alert") %>
+          <details class="vocdoni-validation__details">
+            <summary><%= t("details", scope:) %></summary>
+            <p class="help-text"><%= last_error["message"] %></p>
+          </details>
+        <% end %>
+
+        <% if validation.is_a?(Hash) && validation["pending"] %>
+          <div class="vocdoni-validation__pending">
+            <%= icon "loader-line" %>
+            <div>
+              <p class="vocdoni-validation__title"><%= t("pending.title", scope:) %></p>
+              <% stale = validation["at"].present? && Time.zone.parse(validation["at"].to_s) < 5.minutes.ago %>
+              <p class="help-text"><%= t(stale ? "pending.stale" : "pending.body", scope:) %></p>
+              <%= link_to t("pending.refresh", scope:), request.path, class: "button button__xs button__transparent-secondary" %>
+            </div>
+          </div>
+        <% elsif validation.is_a?(Hash) && validation["ok"] == true %>
+          <%= cell("decidim/announcement",
+                   { title: t("ok.title", scope:, count: validation["size"].to_i), body: t("ok.body", scope:) },
+                   callout_class: "success") %>
+        <% elsif validation.is_a?(Hash) %>
+          <%
+            data = validation["data"].to_h
+            problems = {
+              "duplicates" => Array(data["duplicates"]).size,
+              "missingData" => Array(data["missingData"]).size,
+              "notFound" => Array(data["notFound"]).size
+            }.select { |_key, count| count.positive? }
+            known_codes = %w(roster_too_large no_identifiers no_identity)
+            code = validation["code"].to_s
+          %>
+          <%= cell("decidim/announcement",
+                   { title: t("failed.title", scope:),
+                     body: known_codes.include?(code) ? t("failed.codes.#{code}", scope:, limit: Decidim::Elections::Vocdoni::PublishToVocdoniJob.max_roster) : t("failed.generic", scope:) },
+                   callout_class: "alert") %>
+          <% if problems.any? %>
+            <ul class="vocdoni-validation__problems">
+              <% problems.each do |key, count| %>
+                <li><%= t("failed.problems.#{key.underscore}", scope:, count:) %></li>
+              <% end %>
+            </ul>
+          <% end %>
+          <details class="vocdoni-validation__details">
+            <summary><%= t("details", scope:) %></summary>
+            <p class="help-text"><%= validation["message"] %></p>
+          </details>
+          <%= link_to t("pending.refresh", scope:), request.path, class: "button button__xs button__transparent-secondary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

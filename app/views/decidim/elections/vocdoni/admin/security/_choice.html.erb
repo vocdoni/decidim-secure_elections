@@ -40,10 +40,15 @@
                 aria-describedby="security-choice-lead">
         <p class="vocdoni-security__lead" id="security-choice-lead"><%= t("lead", scope:) %></p>
 
+        <% if @form.errors[:enable_vocdoni].any? %>
+          <p class="form-error is-visible" role="alert"><%= @form.errors[:enable_vocdoni].to_sentence %></p>
+        <% end %>
+
         <div class="vocdoni-choices">
           <% options.each do |value, option| %>
             <% selected = @form.choice == value %>
-            <div class="vocdoni-choice<%= " is-selected" if selected %>" data-security-choice-card="<%= value %>">
+            <% unavailable = value == "secure" && !@form.secure_available? %>
+            <div class="vocdoni-choice<%= " is-selected" if selected %><%= " is-unavailable" if unavailable %>" data-security-choice-card="<%= value %>">
               <% if value == "secure" %>
                 <span class="label success vocdoni-choice__badge" id="security-choice-badge"><%= t("recommended", scope:) %></span>
               <% end %>
@@ -52,6 +57,7 @@
                                    label: false,
                                    id: "security_choice_#{value}",
                                    class: "vocdoni-choice__input",
+                                   disabled: unavailable,
                                    aria: {
                                      describedby: [("security-choice-badge" if value == "secure"), "security-choice-#{value}-description"].compact.join(" ")
                                    },
@@ -64,6 +70,12 @@
 
               <div class="vocdoni-choice__body" id="security-choice-<%= value %>-description">
                 <p class="vocdoni-choice__summary"><%= t("#{value}.summary", scope:) %></p>
+                <% if unavailable %>
+                  <p class="vocdoni-choice__unavailable">
+                    <%= icon "error-warning-line" %>
+                    <span><%= t("too_large", scope:, count: @form.census_size, limit: @form.max_roster) %></span>
+                  </p>
+                <% end %>
 
                 <ul class="vocdoni-choice__points">
                   <% option[:points].each do |key, point_icon| %>

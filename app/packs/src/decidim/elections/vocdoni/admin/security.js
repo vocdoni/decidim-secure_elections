@@ -9,7 +9,10 @@
  *    and the card title still do.
  * 2. The one-time code card is only usable while the secret vote is
  *    selected.
- * 3. The summary line follows the selection.
+ * 3. The identifiers of a file census follow the vote type (the secure
+ *    service accepts fewer details), stop at the maximum, and warn when the
+ *    choice is easy to guess.
+ * 4. The summary line follows the selection.
  *
  * All copy comes from the page; selectors are ids with a `js-` prefix or
  * `data-` attributes, never classes.
@@ -18,6 +21,7 @@
 const CHOICE_ID = "js-security-choice";
 const TWO_FACTOR_ID = "js-security-two-factor";
 const SUMMARY_ID = "js-security-summary";
+const IDENTIFIERS_ID = "js-security-identifiers";
 
 /**
  * Mirrors `SecurityForm#level`.
@@ -48,6 +52,12 @@ const setupSecurity = () => {
   const codes = Array.from(twoFactor.querySelectorAll("[data-security-code]"));
   const notes = Array.from(twoFactor.querySelectorAll("[data-two-factor-note]"));
 
+  const identifiers = document.getElementById(IDENTIFIERS_ID);
+  const identifierItems = identifiers
+    ? Array.from(identifiers.querySelectorAll("[data-identifier]"))
+    : [];
+  const registeredNotes = Array.from(document.querySelectorAll("[data-identifiers-note]"));
+
   const selected = () => {
     const radio = radios.find((input) => input.checked);
     return radio
@@ -68,7 +78,56 @@ const setupSecurity = () => {
       element.hidden = usable;
     });
 
-    return usable && codes.some((box) => box.checked);
+    return usable && codes.some((box) => box.checked && !box.disabled);
+  };
+
+  // Which boxes the vote type allows, then the maximum: once it is reached
+  // the other allowed boxes are disabled too, so the limit explains itself.
+  const syncIdentifiers = (value, oneTimeCode) => {
+    registeredNotes.forEach((element) => {
+      element.hidden = element.dataset.identifiersNote !== value;
+    });
+
+    if (!identifiers) {
+      return;
+    }
+
+    const max = parseInt(identifiers.dataset.max, 10) || 3;
+    const weakFields = (identifiers.dataset.weak || "").split(" ");
+    const allowed = (item) => item.dataset[value === "secure"
+      ? "secureOk"
+      : "simpleOk"] === "true";
+
+    // A detail the secret vote refuses is unticked while it is refused and
+    // ticked again when the admin goes back to a simple vote.
+    identifierItems.forEach((item) => {
+      const box = item.querySelector("input[type=checkbox]");
+      const ok = allowed(item);
+      if (!ok && box.checked) {
+        box.checked = false;
+        item.dataset.wasChecked = "true";
+      } else if (ok && item.dataset.wasChecked === "true") {
+        box.checked = true;
+        Reflect.deleteProperty(item.dataset, "wasChecked");
+      }
+      item.classList.toggle("is-unavailable", !ok);
+      item.querySelectorAll("[data-identifier-hint=refused]").forEach((hint) => {
+        hint.hidden = ok;
+      });
+    });
+
+    const chosen = identifierItems.filter((item) => item.querySelector("input[type=checkbox]").checked);
+    identifierItems.forEach((item) => {
+      const box = item.querySelector("input[type=checkbox]");
+      box.disabled = !allowed(item) || (!box.checked && chosen.length >= max);
+    });
+
+    const weak = chosen.length > 0 &&
+      chosen.every((item) => weakFields.includes(item.dataset.identifier)) &&
+      !oneTimeCode;
+    identifiers.querySelectorAll("[data-identifiers-weak]").forEach((element) => {
+      element.hidden = !weak;
+    });
   };
 
   const syncSummary = (level) => {
@@ -86,14 +145,16 @@ const setupSecurity = () => {
   const sync = () => {
     const value = selected();
     syncCards(value);
-    syncSummary(securityLevel(value, syncTwoFactor(value)));
+    const oneTimeCode = syncTwoFactor(value);
+    syncIdentifiers(value, oneTimeCode);
+    syncSummary(securityLevel(value, oneTimeCode));
   };
 
   cards.forEach((card) => {
     card.addEventListener("click", (event) => {
       // Links, the radio and its label already do their own thing, and a
       // click that ends a text selection is not a choice.
-      if (event.target.closest("a, input, label") || String(window.getSelection())) {
+      if (event.target.closest("a, input, label") || String(window.getSelection()) || card.classList.contains("is-unavailable")) {
         return;
       }
       const radio = card.querySelector("[data-security-choice]");
@@ -106,6 +167,9 @@ const setupSecurity = () => {
 
   radios.forEach((radio) => radio.addEventListener("change", sync));
   codes.forEach((box) => box.addEventListener("change", sync));
+  identifierItems.forEach((item) => {
+    item.querySelector("input[type=checkbox]").addEventListener("change", sync);
+  });
 
   // Form state survives a back-navigation, so start in step with it.
   sync();

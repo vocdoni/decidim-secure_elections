@@ -31,6 +31,29 @@
              default: "Your ballot is signed and submitted in your browser. The Decidim server never sees a vote.") %>
     </p>
     <%
+      # Tell the voter, before they leave, what the booth will ask for.
+      asked = if election.census_manifest.to_s == "token_csv"
+                Array(election.census_settings.to_h["identifiers"]).map(&:to_s) & Decidim::Elections::Vocdoni::CensusCsv::Fields::AUTH
+              else
+                %w(memberNumber)
+              end
+      voter = respond_to?(:current_user) ? current_user : nil
+    %>
+    <% if election.census_manifest.to_s == "token_csv" && asked.any? %>
+      <p class="mb-4">
+        <%= t("decidim.elections.vocdoni.booth.launcher.asked_for_html",
+              details: asked.map { |field| Decidim::Elections::Vocdoni::CensusCsv::Fields.label(field).downcase_first }.to_sentence) %>
+      </p>
+    <% elsif election.census_manifest.to_s != "token_csv" %>
+      <p class="mb-4">
+        <% if voter %>
+          <%= t("decidim.elections.vocdoni.booth.launcher.participant_number_html", number: voter.id) %>
+        <% else %>
+          <%= t("decidim.elections.vocdoni.booth.launcher.sign_in_first") %>
+        <% end %>
+      </p>
+    <% end %>
+    <%
       booth_url = "/vocdoni/vote.html?api=#{CGI.escape(api_url)}&process=#{CGI.escape(process_id)}&locale=#{I18n.locale}&exit=#{CGI.escape(exit_path)}"
     %>
     <%= link_to booth_url,
@@ -40,10 +63,10 @@
       <%= t("decidim.elections.vocdoni.booth.launcher.enter",
              default: "Open the voting booth") %>
     <% end %>
-    <p class="mt-4 text-sm text-gray-600">
+    <p class="mt-4 text-sm text-gray-2">
       <%= t("decidim.elections.vocdoni.booth.launcher.chain_note_html",
              default: "Anchored on the Vocdoni chain <code>%{chain}</code>.",
-             chain: process.chain_id.to_s.presence || "…").html_safe %>
+             chain: process.chain_id.to_s.presence || "…") %>
     </p>
   <% else %>
     <p class="mb-4">

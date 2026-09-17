@@ -1,0 +1,131 @@
+<%#
+  Census tab, "Participants from a file (CSV)" manifest.
+
+  Rendered by upstream's own `decidim/elections/admin/census/edit.html.erb`
+  *inside its own <form>* (`election.census.admin_form_partial`), so this
+  partial must never open a nested <form> of its own — everything here is
+  links, the upload/matching itself happens in the separate wizard
+  (`Decidim::Elections::Vocdoni::Admin::CensusFileController`). Upstream
+  renders its own 5-row preview underneath this partial, so there is no
+  sample table here.
+
+  Locals: `election`, `form` (upstream's builder around
+  CensusFileSettingsForm — not used for input here, everything is read
+  straight off the election).
+%>
+<%# Upstream's Census page only loads its own pack. %>
+<% append_javascript_pack_tag "decidim_elections_vocdoni_admin" %>
+<% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
+<% scope = "decidim.elections.vocdoni.admin.census_file.tab" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<% settings = election.census_settings.to_h %>
+<%
+  # A list uploaded with upstream's own importer (email + token) has rows but
+  # no settings: show it as a list, with the columns its rows carry. The
+  # actual voter count is preferred over the stored "rows" figure, which is
+  # only a snapshot taken at import time and goes stale as people are added
+  # or removed from the census afterwards.
+  people_count = election.voters.count
+  kept_fields = Array(settings["fields"]).presence ||
+                (election.voters.first&.data.to_h.keys.to_a & fields_mod::TARGETS)
+%>
+<% no_list_yet = election.voters.none? %>
+
+<div class="vocdoni-census-file vocdoni-census-file__tab">
+  <% if no_list_yet %>
+    <div class="row column">
+      <h2 class="vocdoni-census-file__subtitle"><%= t("empty.title", scope:) %></h2>
+      <p class="vocdoni-census-file__lead"><%= t("empty.lead", scope:) %></p>
+
+      <ol class="vocdoni-census-file__mini-steps">
+        <li>
+          <strong><%= t("empty.step_1_title", scope:) %></strong>
+          <span><%= t("empty.step_1_body", scope:) %></span>
+        </li>
+        <li>
+          <strong><%= t("empty.step_2_title", scope:) %></strong>
+          <span><%= t("empty.step_2_body", scope:) %></span>
+        </li>
+        <li>
+          <strong><%= t("empty.step_3_title", scope:) %></strong>
+          <span><%= t("empty.step_3_body", scope:) %></span>
+        </li>
+      </ol>
+
+      <h3 class="vocdoni-census-file__subtitle"><%= t("empty.fields_title", scope:) %></h3>
+      <ul class="vocdoni-census-file__fields-grid">
+        <% fields_mod::TARGETS.each do |field| %>
+          <li class="vocdoni-census-file__fields-grid-item">
+            <strong><%= fields_mod.label(field) %></strong>
+            <span class="help-text"><%= fields_mod.hint(field) %></span>
+          </li>
+        <% end %>
+      </ul>
+
+      <div class="vocdoni-census-file__actions">
+        <%= link_to t("empty.download_template", scope:), template_election_census_file_path(election),
+                    class: "button button__sm button__transparent-secondary" %>
+        <% if election.editable? %>
+          <%= link_to t("empty.upload_button", scope:), new_election_census_file_path(election),
+                      class: "button button__sm button__secondary" %>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="row column">
+      <div class="vocdoni-census-file__status">
+        <h2 class="vocdoni-census-file__subtitle"><%= t("status.title", scope:) %></h2>
+
+        <p class="vocdoni-census-file__count">
+          <%= t("status.people_count", scope:, count: people_count.to_i) %>
+        </p>
+
+        <ul class="vocdoni-census-file__details">
+          <% if settings.dig("file", "name").present? %>
+            <li><%= t("status.file", scope:, name: settings.dig("file", "name")) %></li>
+          <% end %>
+          <% if settings.dig("file", "imported_at").present? %>
+            <li><%= t("status.imported_at", scope:, date: l(Time.zone.parse(settings.dig("file", "imported_at")), format: :short)) %></li>
+          <% end %>
+        </ul>
+
+        <h3 class="vocdoni-census-file__subtitle"><%= t("status.columns_title", scope:) %></h3>
+        <ul class="vocdoni-census-file__pills">
+          <% kept_fields.each do |field| %>
+            <li class="vocdoni-census-file__pill"><%= fields_mod.label(field) %></li>
+          <% end %>
+        </ul>
+
+        <% if election.editable? %>
+          <div class="vocdoni-census-file__actions">
+            <%= link_to t("status.replace", scope:), new_election_census_file_path(election),
+                        class: "button button__sm button__transparent-secondary" %>
+            <%= link_to t("status.remove", scope:), election_census_file_path(election),
+                        method: :delete,
+                        class: "button button__sm button__transparent-secondary",
+                        data: {
+                          confirm: t("status.remove_confirm_body", scope:, count: people_count.to_i),
+                          "confirm-title": t("status.remove_confirm_title", scope:)
+                        } %>
+          </div>
+        <% else %>
+          <p class="vocdoni-census-file__note">
+            <%= icon "lock-2-line" %>
+            <span><%= t("status.locked", scope:) %></span>
+          </p>
+        <% end %>
+
+        <div class="vocdoni-census-file__next-step">
+          <% identifiers = Array(settings["identifiers"]) %>
+          <% if identifiers.empty? %>
+            <%= cell "decidim/announcement", t("status.next_step_missing", scope:), callout_class: "warning" %>
+          <% else %>
+            <p class="vocdoni-census-file__lead">
+              <%= t("status.next_step_ready", scope:, fields: identifiers.map { |field| fields_mod.label(field) }.to_sentence) %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

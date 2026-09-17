@@ -1,0 +1,80 @@
+<%#
+  Rendered by CensusFileController#update when the file has rows it cannot
+  import (RowMapper found problems). All-or-nothing: nothing was saved, so
+  this page's only job is to make each problem easy to find and fix.
+
+  @form is the CensusFileMappingForm the admin just submitted (still
+  carrying the blob and the chosen columns, so "back to matching" and
+  re-import both work without asking the admin to upload again).
+  @outcome is the RowMapper's outcome (rows, failed_rows, total,
+  skipped_examples).
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.errors" %>
+<% add_decidim_page_title(t("title", scope:)) %>
+<% append_javascript_pack_tag "decidim_elections_vocdoni_admin" %>
+<% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
+
+<% shown_rows = @outcome.failed_rows.first(200) %>
+<% remaining = @outcome.failed_rows.size - shown_rows.size %>
+
+<div class="item_show__header border-none">
+  <h1 class="item_show__header-title"><%= t("title", scope:) %></h1>
+</div>
+
+<%= render "decidim/elections/admin/elections/tabs_menu" %>
+
+<div class="vocdoni-census-file 2xl:mr-80">
+  <%= cell "decidim/announcement", t("announcement", scope:, count: @outcome.failed_rows.size), callout_class: "alert" %>
+
+  <% if @outcome.skipped_examples.to_i.positive? %>
+    <p class="vocdoni-census-file__note">
+      <%= icon "information-line" %>
+      <span><%= t("skipped_example", scope:, count: @outcome.skipped_examples.to_i) %></span>
+    </p>
+  <% end %>
+
+  <div class="card vocdoni-census-file__card">
+    <div class="card-section">
+      <div class="row column">
+        <div class="table-stacked vocdoni-census-file__errors-table">
+          <table>
+            <caption class="sr-only"><%= t("caption", scope:) %></caption>
+            <thead>
+              <tr>
+                <th scope="col"><%= t("line_header", scope:) %></th>
+                <th scope="col"><%= t("contents_header", scope:) %></th>
+                <th scope="col"><%= t("fix_header", scope:) %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% shown_rows.each do |row| %>
+                <%
+                  contents = row.cells.to_h.map { |key, value| "#{key}: #{value}" }.join(", ")
+                  messages = row.summary
+                %>
+                <tr>
+                  <td data-label="<%= t("line_header", scope:) %>"><%= row.number %></td>
+                  <td data-label="<%= t("contents_header", scope:) %>"><%= contents %></td>
+                  <td data-label="<%= t("fix_header", scope:) %>"><%= messages %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <% if remaining.positive? %>
+          <p class="vocdoni-census-file__more-rows"><%= t("more_lines", scope:, count: remaining) %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="item__edit-sticky">
+    <div class="item__edit-sticky-container">
+      <%= link_to t("back_to_matching", scope:),
+                  wizard_path(:edit, blob: @form.blob, census_file: { columns: @form.columns }),
+                  class: "button button__sm button__transparent-secondary" %>
+      <%= link_to t("upload_corrected", scope:), wizard_path(:new), class: "button button__sm button__secondary" %>
+    </div>
+  </div>
+</div>

@@ -45,11 +45,22 @@ module Decidim
         # Defensive bound on the memberbase pagination walk.
         MAX_MEMBER_PAGES = 200
 
-        # Cap on the demo roster — mirrors the phase-4 spike's original
-        # `:vocdoni_secure` `user_query`. Keeps publish + memberbase upload
-        # fast against the stg SaaS. Real deployments will replace this
-        # inline query with a proper roster picked from the admin form.
-        DEMO_ROSTER_LIMIT = 20
+        # Largest roster we push. The SaaS caps the memberbase per organisation
+        # (100 on staging), so a bigger census is refused with a clear message
+        # instead of being silently truncated. Override with
+        # `VOCDONI_MAX_ROSTER`.
+        def self.max_roster
+          Integer(ENV.fetch("VOCDONI_MAX_ROSTER", 100))
+        end
+
+        # Census pre-flight, run in the background by {PreflightCensusJob}:
+        # pushes the roster, builds the group and asks the SaaS to validate
+        # the census with the chosen identifiers and one-time code. The
+        # outcome lands on `process.metadata["census_validation"]`, which the
+        # Security tab shows. Never raises.
+        def self.preview_census!(election_id)
+          new.send(:run_preview!, election_id)
+        end
 
         def perform(election_id)
           return unless bootstrap!(election_id)
@@ -103,9 +114,47 @@ module Decidim
         end
 
         def prepare_census!
+          ensure_roster_within_limit!
           ensure_members_pushed!
           ensure_group_created!
           ensure_census_validated!
+          process.record_census_validation!(ok: true, size: voter_payloads.size)
+        end
+
+        def run_preview!(election_id)
+          return unless bootstrap!(election_id)
+          return if published_upstream? || process.vocdoni_process_id.present?
+
+          Decidim::Elections::Vocdoni.validate_configuration!
+          prepare_census!
+        rescue StandardError => e
+          record_preview_failure!(e)
+        end
+
+        def record_preview_failure!(error)
+          return if process.blank?
+
+          process.record_census_validation!(
+            ok: false,
+            step: @step,
+            code: error.respond_to?(:code) ? error.try(:code) : nil,
+            message: redact(error.message),
+            data: extract_error_data(error)
+          )
+        rescue StandardError => e
+          Rails.logger.error("[vocdoni] could not record the census pre-flight failure for election ##{election&.id}: #{e.class}")
+        end
+
+        def ensure_roster_within_limit!
+          @step = "roster"
+          limit = self.class.max_roster
+          return if census_rows.size <= limit
+
+          raise Decidim::Elections::Vocdoni::ApiError.new(
+            "The census has #{census_rows.size} people; the secure voting service accepts up to #{limit} per organisation",
+            code: "roster_too_large",
+            transient: false
+          )
         end
 
         # SaaS 400s carry `{"error":..., "code":..., "data":{...}}` as JSON;
@@ -156,10 +205,8 @@ module Decidim
           # on the (censusId, loginHash) unique index because the clones all
           # hash to the same auth-field value. Filter by what is already there.
           existing = upstream_member_index
-          fresh = payloads.reject { |p| existing.key?("memberNumber:#{p["memberNumber"].to_s.strip.downcase}") }
-          if fresh.empty?
-            return
-          end
+          fresh = payloads.reject { |p| identity_keys(p).any? { |key| existing.has_key?(key) } }
+          return if fresh.empty?
 
           response = client.organizations.add_members(org_address, fresh).to_h
           await_job!(response["jobId"])
@@ -296,22 +343,25 @@ module Decidim
         # ---------------------------------------------------------------------
 
         def voter_payloads
-          @voter_payloads ||= census_users.map { |user| user_to_member(user) }.compact_blank
+          @voter_payloads ||= census_rows.map { |row| member_payload(row) }.compact_blank
         end
 
-        # Demo roster: every registered user of the org that has an email,
-        # capped at `DEMO_ROSTER_LIMIT`. The cap is applied through a
-        # `pluck` + `where(id:)` so it survives the outer `.limit` the
-        # census-manifest paging composes on the returned relation (an outer
-        # `.limit` on ActiveRecord overrides a chained inner `.limit`).
-        def census_users
-          ids = Decidim::User
-                .where(organization: election.organization)
-                .where.not(email: nil)
-                .order(id: :asc)
-                .limit(DEMO_ROSTER_LIMIT)
-                .pluck(:id)
-          Decidim::User.where(id: ids)
+        # The people the admin put in the census, whatever its type: the
+        # authorised participants of a "Registered participants" census, or
+        # the rows of a "Participants from a file" one. One query, no paging
+        # limit — the size is bounded by `max_roster` before anything is sent.
+        def census_rows
+          @census_rows ||= begin
+            census = election.census
+            census ? census.users(election, 0, self.class.max_roster + 1).to_a : []
+          end
+        end
+
+        def member_payload(row)
+          case row
+          when Decidim::Elections::Voter then voter_to_member(row)
+          when Decidim::User then user_to_member(row)
+          end
         end
 
         # Maps a `Decidim::User` onto the Vocdoni memberbase schema. The
@@ -325,18 +375,40 @@ module Decidim
           }.compact
         end
 
+        # Maps a row of a file census onto the memberbase schema. Values were
+        # cleaned on import (ISO dates, digits-only phones). `weight` must be
+        # sent as a string (an integer 400s with "missing members"), and the
+        # Decidim-only access code never leaves this server.
+        VOTER_MEMBER_FIELDS = %w(memberNumber nationalId name surname birthDate email phone weight).freeze
+
+        def voter_to_member(voter)
+          data = voter.data.to_h.stringify_keys.slice(*VOTER_MEMBER_FIELDS)
+          data.transform_values { |value| value.to_s.strip }.compact_blank
+        end
+
+        def identity_keys(payload)
+          MEMBER_IDENTITY_FIELDS.filter_map do |field|
+            value = payload[field].to_s.strip.downcase
+            "#{field}:#{value}" if value.present?
+          end
+        end
+
         def resolve_member_ids!
           @step = "list_members"
           index = upstream_member_index
 
-          census_users.map do |user|
-            id = index["memberNumber:#{user.id}"] ||
-                 (user.email.present? && index["email:#{user.email.strip.downcase}"])
+          voter_payloads.filter_map do |payload|
+            keys = identity_keys(payload)
+            if keys.empty?
+              raise Decidim::Elections::Vocdoni::ApiError.new(
+                "A person in the census has no member number, ID number, email or phone, so the secure voting service cannot tell them apart",
+                code: "no_identity",
+                transient: false
+              )
+            end
 
-            next nil if id.blank?
-
-            id
-          end.compact
+            keys.lazy.filter_map { |key| index[key] }.first
+          end.uniq
         end
 
         # Memoized so ensure_members_pushed! (which reads it to dedupe against
@@ -445,12 +517,23 @@ module Decidim
         # Config
         # ---------------------------------------------------------------------
 
-        # Fixed to `memberNumber` (the Decidim user id, which every roster row
-        # we push carries). The Security tab does not let the admin pick auth
-        # fields for the demo — `memberNumber` is a stable, unique identifier
-        # over any Decidim organisation.
+        # What voters type in the booth. A file census uses the identifiers
+        # the admin chose on the Security tab (only those the SaaS accepts as
+        # authFields); registered participants use their participant number
+        # (`memberNumber`, the Decidim user id), which the booth launcher shows
+        # to a signed-in voter.
         def auth_fields
-          ["memberNumber"]
+          return ["memberNumber"] unless election.census_manifest.to_s == "token_csv"
+
+          chosen = Array(election.census_settings.to_h["identifiers"]).map(&:to_s) & CensusCsv::Fields::AUTH
+          return chosen if chosen.any?
+
+          @step = "identifiers"
+          raise Decidim::Elections::Vocdoni::ApiError.new(
+            "Choose on the Security tab which details voters type to identify themselves",
+            code: "no_identifiers",
+            transient: false
+          )
         end
 
         # Second-factor selection lives on the sidecar's settings, populated by
