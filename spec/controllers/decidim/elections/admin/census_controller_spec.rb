@@ -8,11 +8,14 @@ module Decidim
     module Admin
       # This is upstream's own controller. This engine takes it over with a
       # view override (`Decidim::Elections::Vocdoni::CensusPage`, prepended
-      # in `phase_4_spike.rb`) rather than a controller of its own, so the
-      # engine has to be exercised through upstream's routes.
+      # in `phase_4_spike.rb`) rather than a controller of its own.
+      #
+      # Only the page itself is exercised here. What a save does is covered
+      # by `spec/commands/decidim/elections/admin/process_census_spec.rb`:
+      # upstream redirects to a route mounted once per participatory-space
+      # type, which a controller spec cannot resolve, and the command is
+      # where the behaviour actually lives.
       describe CensusController do
-        routes { Decidim::Elections::AdminEngine.routes }
-
         let(:organization) { create(:organization, available_authorizations: %w(dummy_authorization_handler)) }
         let(:component) { create(:elections_component, organization:) }
         let(:election) { create(:election, component:) }
@@ -34,7 +37,7 @@ module Decidim
           render_views
 
           it "renders this engine's page rather than upstream's" do
-            get :edit, params: { election_id: election.id }
+            get :edit, params: { id: election.id }
 
             expect(response).to be_successful
             expect(response.body).to include(I18n.t("legend", scope: "decidim.elections.vocdoni.admin.census_setup.choice"))
@@ -42,58 +45,6 @@ module Decidim
           end
         end
 
-        describe "PATCH update" do
-          context "when Registered participants is chosen, with verifications ticked" do
-            it "saves the census type and the chosen handlers" do
-              patch :update, params: {
-                election_id: election.id,
-                manifest: "internal_users",
-                internal_users: { authorization_handlers_names: %w(dummy_authorization_handler) }
-              }
-
-              election.reload
-              expect(election.census_manifest).to eq("internal_users")
-              expect(election.census_settings["authorization_handlers"].keys).to eq(%w(dummy_authorization_handler))
-            end
-          end
-
-          context "when the election already is a file census with an imported list" do
-            let(:stored_settings) do
-              {
-                "columns" => [{ "header" => "Name", "field" => "name" }],
-                "fields" => %w(name),
-                "identifiers" => %w(name),
-                "file" => { "name" => "people.csv", "rows" => 1, "imported_at" => Time.current.iso8601 }
-              }
-            end
-            let(:election) { create(:election, component:, census_manifest: "token_csv", census_settings: stored_settings) }
-
-            # The regression this guards: saving the Census tab with the same
-            # type still selected used to wipe the columns, the mapping and
-            # the chosen identifiers the file wizard stored, leaving a census
-            # with people in it that nobody could be identified by.
-            it "keeps the census settings intact" do
-              patch :update, params: { election_id: election.id, manifest: "token_csv" }
-
-              election.reload
-              expect(election.census_manifest).to eq("token_csv")
-              expect(election.census_settings["columns"]).to eq(stored_settings["columns"])
-              expect(election.census_settings["fields"]).to eq(stored_settings["fields"])
-              expect(election.census_settings["identifiers"]).to eq(stored_settings["identifiers"])
-              expect(election.census_settings["file"]["name"]).to eq("people.csv")
-            end
-          end
-
-          context "when no census type is chosen and the election has none yet" do
-            it "redirects with an alert instead of raising" do
-              expect { patch :update, params: { election_id: election.id } }.not_to raise_error
-
-              expect(response).to redirect_to(a_string_matching(%r{/census\z}))
-              expect(flash[:alert]).to be_present
-              expect(election.reload.census_manifest).to be_nil
-            end
-          end
-        end
       end
     end
   end

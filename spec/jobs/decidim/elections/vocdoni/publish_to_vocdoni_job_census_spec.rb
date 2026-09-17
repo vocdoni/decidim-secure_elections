@@ -76,6 +76,65 @@ module Decidim
           end
         end
 
+        # authFields/twoFaFields as they would actually be sent, for the
+        # combinations the Census tab can now produce now that email/phone are
+        # allowed identifiers: a plain AUTH pair, a contact detail alone (its
+        # one-time code is what proves the person, so authFields is legitimately
+        # empty), a mix of the two, and an access code alone (which the service
+        # cannot use at all, so publishing is refused).
+        describe "#auth_fields and #two_fa_fields together" do
+          def process_for(election)
+            Vocdoni::Process.create!(election:, state: "pending")
+            bootstrap(election)
+          end
+
+          context "when the census is identified by name and a national ID number" do
+            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(name nationalId) }) }
+
+            before { process_for(election) }
+
+            it "sends both as authFields and sends no one-time code" do
+              expect(job.send(:auth_fields)).to eq(%w(name nationalId))
+              expect(job.send(:two_fa_fields)).to eq([])
+            end
+          end
+
+          context "when the census is identified by email alone" do
+            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(email) }) }
+
+            before { process_for(election) }
+
+            it "sends no authFields: the one-time code sent to that address is what proves the person" do
+              expect(job.send(:auth_fields)).to eq([])
+              expect(job.send(:two_fa_fields)).to eq(%w(email))
+            end
+          end
+
+          context "when the census is identified by a national ID number and email" do
+            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(nationalId email) }) }
+
+            before { process_for(election) }
+
+            it "sends the national ID as an authField and turns the email code on" do
+              expect(job.send(:auth_fields)).to eq(%w(nationalId))
+              expect(job.send(:two_fa_fields)).to eq(%w(email))
+            end
+          end
+
+          context "when the census is identified only by an access code we hand out" do
+            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(token) }) }
+
+            before { process_for(election) }
+
+            it "raises no_identifiers: the secure voting service has nowhere to put it" do
+              expect { job.send(:auth_fields) }.to raise_error(Decidim::Elections::Vocdoni::ApiError) do |error|
+                expect(error.code).to eq("no_identifiers")
+                expect(error.transient?).to be(false)
+              end
+            end
+          end
+        end
+
         describe ".preview_census!" do
           let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(memberNumber) }) }
 

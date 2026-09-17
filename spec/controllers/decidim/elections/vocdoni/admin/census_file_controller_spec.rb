@@ -53,7 +53,7 @@ module Decidim
                 )
                 expect(response.body).to include(
                   I18n.t("decidim.elections.vocdoni.admin.census_file.review.understood",
-                         fields: [CensusCsv::Fields.label("name"), CensusCsv::Fields.label("memberNumber")].to_sentence)
+                         fields: ["name → #{CensusCsv::Fields.label("name")}", "memberNumber → #{CensusCsv::Fields.label("memberNumber")}"].to_sentence)
                 )
               end
             end

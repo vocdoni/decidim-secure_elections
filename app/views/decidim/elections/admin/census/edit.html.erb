@@ -41,9 +41,11 @@
 
 <div class="item__edit-form vocdoni-census vocdoni-cards">
   <%# No `manifest` in the URL: a query parameter would outrank the radio in
-      the body, and the radio is the answer now. %>
+      the body, and the radio is the answer now. The path comes from the
+      component's admin proxy rather than the bare route helper, which only
+      resolves inside upstream's engine. %>
   <%= decidim_form_for(internal_users_form,
-                       url: election_census_path(election),
+                       url: Decidim::EngineRouter.admin_proxy(election.component).census_election_path(election),
                        method: :patch,
                        html: { id: "census-election-form", class: "form-defaults form" }) do |f| %>
     <%= render "decidim/elections/vocdoni/admin/census_setup/choice", chosen: %>

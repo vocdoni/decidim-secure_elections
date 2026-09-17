@@ -20,6 +20,9 @@
   people_count = census_voters_count
   kept_fields = census_columns(election)
   identifier_labels = census_identifier_labels(election)
+  # This engine's own routes only resolve inside upstream's admin engine;
+  # the proxy builds them from the component wherever this renders.
+  admin = Decidim::EngineRouter.admin_proxy(election.component)
 %>
 <div class="card vocdoni-census__card vocdoni-census-file"
      data-census-block="token_csv"
@@ -48,10 +51,10 @@
         </details>
 
         <div class="vocdoni-census__actions">
-          <%= link_to t("empty.download_template", scope:), template_election_census_file_path(election),
+          <%= link_to t("empty.download_template", scope:), admin.template_election_census_file_path(election),
                       class: "button button__sm button__transparent-secondary" %>
           <% if election.editable? %>
-            <%= link_to t("empty.upload", scope:), new_election_census_file_path(election),
+            <%= link_to t("empty.upload", scope:), admin.new_election_census_file_path(election),
                         class: "button button__sm button__secondary" %>
           <% end %>
         </div>
@@ -68,16 +71,16 @@
             <span class="vocdoni-census__identifiers--missing"><%= t("status.no_identifiers", scope:) %></span>
           <% end %>
           <% if election.editable? %>
-            <%= link_to t("status.change_identifiers", scope:), identifiers_election_census_file_path(election),
+            <%= link_to t("status.change_identifiers", scope:), admin.identifiers_election_census_file_path(election),
                         class: "vocdoni-census__inline-link" %>
           <% end %>
         </p>
 
         <% if election.editable? %>
           <div class="vocdoni-census__actions">
-            <%= link_to t("status.replace", scope:), new_election_census_file_path(election),
+            <%= link_to t("status.replace", scope:), admin.new_election_census_file_path(election),
                         class: "button button__sm button__transparent-secondary" %>
-            <%= link_to t("status.remove", scope:), election_census_file_path(election),
+            <%= link_to t("status.remove", scope:), admin.election_census_file_path(election),
                         method: :delete,
                         class: "button button__sm button__transparent-secondary",
                         data: {
