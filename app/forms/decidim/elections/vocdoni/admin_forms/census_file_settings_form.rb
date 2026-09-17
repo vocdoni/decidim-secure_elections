@@ -24,6 +24,17 @@ module Decidim
 
             election.census_settings.to_h.slice(*KEYS)
           end
+
+          # Upstream's Census tab builds this form with
+          # `from_params(params, election:)`, which puts the election in the
+          # form's *context*, never in its attributes. Read both: without the
+          # context the election is nil here, this form echoes nothing, and
+          # `ProcessCensus` wipes the columns, the mapping and the chosen
+          # identifiers on every "Save and continue" — leaving a census with
+          # people in it that nobody can be identified by.
+          def election
+            super || (context[:election] if context)
+          end
         end
       end
     end

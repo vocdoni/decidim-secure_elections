@@ -25,6 +25,16 @@ module Decidim
             it "echoes back the columns, fields, file and identifiers" do
               expect(form.census_settings).to eq(settings)
             end
+
+            # Upstream's Census tab builds the form with
+            # `from_params(params, election:)` — the election arrives in the
+            # context, not in the attributes. Reading only the attribute made
+            # every "Save and continue" wipe the census settings.
+            it "echoes them back when the election comes in the context" do
+              from_controller = described_class.from_params({ manifest: "token_csv" }, election:)
+
+              expect(from_controller.census_settings).to eq(settings)
+            end
           end
 
           context "when there is no election" do

@@ -58,6 +58,15 @@ module Decidim
                 identifiers: Array(election.census_settings.to_h["identifiers"]).map(&:to_s))
           end
 
+          # {.from_model} passes the election as an attribute, while the
+          # controller's `from_params(params, election:)` puts it in the
+          # form's context instead. Read both: with a nil election every
+          # predicate below answers "no", and the identifier rules this form
+          # exists to enforce are silently skipped on save.
+          def election
+            super || (context[:election] if context)
+          end
+
           def file_census?
             election&.census_manifest.to_s == "token_csv"
           end

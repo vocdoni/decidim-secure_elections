@@ -10,6 +10,31 @@ module Decidim
         describe SecurityForm do
           let(:election) { create(:election) }
 
+          # The controller never passes the election as an attribute: it calls
+          # `from_params(params, election:)`, which puts it in the context. A
+          # form that only looks at its attributes finds nothing there, every
+          # predicate answers "no", and the identifier rules below are skipped
+          # exactly when they matter — on save.
+          describe "built the way the controller builds it" do
+            subject(:form) do
+              described_class.from_params({ security: { enable_vocdoni: "1", identifiers: [] } }, election:)
+            end
+
+            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "fields" => %w(name nationalId) }) }
+
+            before { Decidim::Elections::Voter.create!(election:, data: { "name" => "Rosalind", "nationalId" => "1X" }) }
+
+            it "sees the census through the context" do
+              expect(form.file_census?).to be(true)
+              expect(form.census_fields).to eq(%w(name nationalId))
+            end
+
+            it "still refuses a file census with no identifiers chosen" do
+              expect(form).not_to be_valid
+              expect(form.errors[:identifiers]).to be_present
+            end
+          end
+
           describe ".from_model" do
             subject(:form) { described_class.from_model(election) }
 
