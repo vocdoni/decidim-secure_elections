@@ -1,0 +1,13 @@
+<%#
+  Standalone booth-launcher page. Rendered by any votes-controller action
+  when the election is Vocdoni-backed (see
+  `Vocdoni::RedirectsVoterToBooth`). Wraps the shared `_launcher.html.erb`
+  partial so the whole page is the launcher — no Decidim ballot form,
+  no per-question wizard: the voter goes straight to the Vocdoni SPA.
+%>
+<div class="wrapper">
+  <div class="row column">
+    <h1 class="title-decorator my-8"><%= decidim_sanitize_translated(election.title) %></h1>
+    <%= render "decidim/elections/vocdoni/booth/launcher", election: election %>
+  </div>
+</div>

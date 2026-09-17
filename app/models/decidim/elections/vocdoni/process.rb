@@ -123,12 +123,15 @@ module Decidim
           save!
         end
 
-        # The last census pre-flight — populated by `AfterUpdateCensus` (which
-        # runs `PushElectionJob.preview_census!` on every save of the
-        # Census tab) and read by the Dashboard to gate the Publish button.
-        # `ok: true` means the current auth-field selection produces unique,
-        # complete credentials over the current roster. Any other value —
-        # `false`, or the key absent — blocks Publish.
+        # The last census pre-flight. Deprecated in the v2 spike: the census
+        # pre-flight is no longer run on save (the Census tab is vanilla),
+        # only when the publish job runs. The methods are kept because the
+        # sidecar's `metadata["census_validation"]` may still be read by the
+        # dashboard/monitor code from earlier stages.
+        #
+        # `ok: true` means the auth-field selection produced unique, complete
+        # credentials over the current roster. Any other value blocks a
+        # meaningful publish.
         #
         # Kept as a plain metadata hash rather than as its own column so
         # future variants (per-step timings, warnings) do not need a
@@ -148,9 +151,8 @@ module Decidim
           save!
         end
 
-        # Drops the recorded validation. Called from `AfterUpdateCensus` at
-        # the *start* of a save so a slow validation cannot leave a stale
-        # `ok: true` visible while the new preflight is still running.
+        # Drops the recorded validation. Legacy hook, retained for callers
+        # that may still want to invalidate before a re-run.
         def invalidate_census_validation!
           return unless metadata.key?("census_validation")
 

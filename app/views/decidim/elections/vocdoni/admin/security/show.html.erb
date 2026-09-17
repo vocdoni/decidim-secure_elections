@@ -1,37 +1,43 @@
 <%#
-  Security tab (vocdoni_secure only). Owns the second-factor choice.
-  Two checkboxes — SMS + Email — that map to `twoFaFields` in the
-  eventual /processes payload. Any combination is valid; both ticked
-  means the SaaS lets the voter pick between them at auth time.
-
-  Saving re-runs the census pre-flight, mirroring the Census tab, so the
-  Dashboard reflects the current combination's validity immediately.
+  Security tab. Owns the Vocdoni opt-in for the election and the
+  second-factor challenge (`twoFaFields`) forwarded to the SaaS at
+  publish. Opt-in is materialised by the presence of the
+  `Vocdoni::Process` sidecar — checked by the Publish subscription
+  before enqueuing {PublishToVocdoniJob}.
 %>
 <% add_decidim_page_title(t(".title")) %>
 
-<%# Render upstream's tabs menu (admin_elections_menu), which is where the
-    phase-4 spike injects the Security item. The vocdoni admin engine has
-    its own tabs partial but the elections component routes through
-    upstream, so upstream's is the one that matches the rest of the flow. %>
+<%# Render upstream's tabs menu (admin_elections_menu), where the
+    phase-4 spike injects the Security item. %>
 <%= render "decidim/elections/admin/elections/tabs_menu" %>
 
 <div class="item__edit item__edit-1col">
   <div class="item__edit-form">
-    <%# `request.path` targets `/…/elections/:id/security`, which is exactly
-        the URL bound to `#update` when using `resource :security` (show
-        and update share the same path). Kept as a string rather than the
-        named helper because this view is rendered inside upstream's admin
-        engine, whose url_helpers do not know the injected security route
-        until Rails' method_missing resolution kicks in — a `request.path`
-        avoids a NameError in the unlucky race. %>
+    <%# `request.path` targets `/…/elections/:id/security`, which is
+        exactly the URL bound to `#update` when using `resource :security`
+        (show and update share the same path). Kept as a string rather
+        than the named helper because this view renders inside upstream's
+        admin engine, whose url_helpers do not know the injected security
+        route until Rails' method_missing resolution kicks in. %>
     <%= decidim_form_for(@form,
                          url: request.path,
                          method: :put,
                          html: { class: "form" }) do |f| %>
       <div class="card">
         <div class="card-section">
-          <h2 class="card-title h4"><%= t(".heading") %></h2>
-          <p class="help-text"><%= t(".help_html").html_safe %></p>
+          <h2 class="card-title h4"><%= t(".enable_heading") %></h2>
+          <p class="help-text"><%= t(".enable_help_html").html_safe %></p>
+
+          <div class="mt-4">
+            <%= f.check_box :enable_vocdoni, label: t(".enable_label") %>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-6">
+        <div class="card-section">
+          <h2 class="card-title h4"><%= t(".two_fa_heading") %></h2>
+          <p class="help-text"><%= t(".two_fa_help_html").html_safe %></p>
 
           <div class="mt-4">
             <div class="row">
@@ -48,7 +54,11 @@
 
       <div class="item__edit-sticky">
         <div class="item__edit-sticky-container">
-          <%= f.submit t(".save"), class: "button button__sm button__secondary" %>
+          <%# Reuse upstream's translation so the label reads the same as
+              on Questions and Census ("Save and continue"), and picks up
+              future locale updates without a fork. %>
+          <%= f.submit t("save", scope: "decidim.elections.admin.elections.form"),
+                       class: "button button__sm button__secondary" %>
         </div>
       </div>
     <% end %>

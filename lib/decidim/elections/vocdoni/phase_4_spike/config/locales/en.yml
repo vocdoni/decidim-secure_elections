@@ -3,80 +3,36 @@ en:
     admin:
       menu:
         # Injected into upstream's `admin_elections_menu` from the
-        # phase-4 spike engine; only appears for :vocdoni_secure elections.
+        # phase-4 spike engine. Appears on every election so an admin can
+        # discover the Vocdoni opt-in on the Security tab.
         elections_menu:
           security: "Security"
     elections:
-      censuses:
-        # Per-manifest override of the upstream `census_size_html`. The
-        # upstream copy ends with "(this might change on a dynamic census)",
-        # which is true for `internal_users` — new authorizations grant more
-        # eligibility during the voting window — but wrong here: the Vocdoni
-        # census is anchored on-chain at publish, so the roster is frozen
-        # from that moment on and cannot grow. The override is looked up by
-        # `admin/census/_preview.html.erb` (see our engine's copy of that
-        # partial) when `election.census_manifest == "vocdoni_secure"`.
-        vocdoni_secure:
-          label: "Registered participants (snapshot, using Vocdoni blockchain)"
-          census_size_html:
-            one: There is currently <strong>1</strong> person eligible for voting in this election (frozen at publish — the census is a snapshot).
-            other: There are currently <strong>%{count}</strong> people eligible for voting in this election (frozen at publish — the census is a snapshot).
-          credentials_title: "Voter authentication"
-          credentials_info: "Pick which identifier fields voters authenticate with. Each ballot is signed and verified in the browser; the Decidim server never sees a vote."
-          credential_fields:
-            email: "Email address"
-            phone: "Phone number"
-            member_number: "Member number"
-            national_id: "National ID"
-            name: "Full name"
-            date_of_birth: "Date of birth"
-          validation:
-            ok_title:
-              one: "Census pre-flight succeeded — 1 voter eligible."
-              other: "Census pre-flight succeeded — %{count} voters eligible."
-            ok_body: "The selected authentication fields produce unique, complete credentials over the roster. Publishing is unblocked on the Dashboard."
-            error_title: "Census pre-flight failed — the Dashboard's Publish button is blocked until this is fixed."
-            duplicates:
-              one: "1 voter would collide with another on the selected authentication fields"
-              other: "%{count} voters would collide with another on the selected authentication fields"
-            missing_data:
-              one: "1 voter is missing one of the selected fields"
-              other: "%{count} voters are missing one of the selected fields"
-            not_found:
-              one: "1 voter is not registered in the Vocdoni memberbase"
-              other: "%{count} voters are not registered in the Vocdoni memberbase"
-      admin:
-        elections:
-          dashboard:
-            # Overrides the misleading upstream copy ("Edits can still be made
-            # before publishing. Once published, you'll still be able to update
-            # the description of the election.") for Vocdoni-backed elections,
-            # where publish is irreversible and locks every editable field.
-            vocdoni_subtitle_html: >
-              <strong>This is the last step before writing the election to the blockchain.</strong>
-              Publishing anchors the process, its questions and its census on the Vocdoni chain
-              — none of it can be edited, moved or removed after that. Review everything below,
-              then use the button in the sidebar to publish.
-            publish_confirm_vocdoni: "Publish this election to the blockchain? This is irreversible: the process, its questions and its census will be anchored on chain and cannot be edited afterwards."
-            vocdoni_census_invalid_title: "This election cannot be published yet."
-            vocdoni_census_invalid_body_html: "The last census pre-flight against Vocdoni returned an error. Fix the highlighted voters or the authentication fields on the <a href=\"%{census_url}\">Census tab</a> and save again — a fresh pre-flight will run and this warning will clear."
-            vocdoni_census_pending_html: "Save the <a href=\"%{census_url}\">Census tab</a> at least once to run the pre-flight against Vocdoni. Publish is disabled until the pre-flight succeeds."
-            vocdoni_publish_disabled_title: "The last census pre-flight failed or has not been run yet. Open the Census tab and save it to try again."
       vocdoni:
         admin:
           security:
             show:
               title: "Security"
-              heading: "Second-factor authentication"
-              help_html: "Pick which one-time codes the Vocdoni CSP sends to each voter after they authenticate. Codes go to values already on file in the Vocdoni memberbase — voters do not type their address at auth time. Leave both unchecked to authenticate voters on credentials alone (weaker)."
+              enable_heading: "Vocdoni-backed secure voting"
+              enable_help_html: >
+                Route this election through the Vocdoni voting protocol so ballots
+                are signed and submitted in the voter's browser and the tally is
+                anchored on the Vocdoni blockchain.
+              enable_label: "Enable Vocdoni secure voting for this election"
+              two_fa_heading: "Second-factor authentication"
+              two_fa_help_html: >
+                Pick which one-time codes the Vocdoni CSP sends to each voter
+                after they authenticate. Codes go to values already on file in the
+                Vocdoni memberbase — voters do not type their address at auth
+                time. Leave both unchecked to authenticate voters on credentials
+                alone (weaker).
               sms_label: "SMS one-time code"
               sms_help: "Requires every voter to have a phone number on their memberbase entry."
               email_label: "Email one-time code"
               email_help: "Requires every voter to have an email address on their memberbase entry."
               both_note: "If both are checked, the voter picks which one to receive at authentication time."
-              save: "Save"
             update:
-              success: "Security settings updated. Census pre-flight is being re-run against Vocdoni."
+              success: "Security settings updated."
               invalid: "Security settings could not be saved. Please review the errors below."
         booth:
           launcher:

@@ -5,8 +5,9 @@ module Decidim
     module Vocdoni
       # Enqueued from a subscriber to
       # `decidim.elections.admin.publish_election:after` (upstream event added
-      # by vocdoni/decidim#2, integrated on `phase-4/integration`) whenever a
-      # Vocdoni-backed election is published from the Decidim admin.
+      # by vocdoni/decidim#2, integrated on `phase-4/integration`) whenever an
+      # election that has opted in to Vocdoni is published from the Decidim
+      # admin.
       #
       # Talks to the Vocdoni SaaS API through the shared {ApiClient} and lands
       # the process on chain:
@@ -17,25 +18,20 @@ module Decidim
       #
       # The Vocdoni-side state (process id, chain id, group id, per-question
       # upstream ids) is written into the {Process} sidecar row that
-      # {Admin::AfterUpdateCensus} bootstrapped in state `pending`.
+      # {Admin::UpdateElectionSecurity} bootstrapped in state `pending` when
+      # the admin ticked "Enable Vocdoni" on the Security tab.
       # `Decidim::Elections::Election` and its associated tables are read-only
       # from this job's point of view.
       #
-      # Only handles elections whose `census_manifest` is `"vocdoni_secure"`;
-      # everything else is left alone. The subscriber that enqueues it filters
-      # on the manifest, but the job double-checks so a manually enqueued run
-      # cannot publish a non-Vocdoni election.
-      #
-      # This is a Stage-B port of the legacy `PublishElectionJob` from the
-      # standalone module: same steps, same retry-safety rules, but the state
-      # it reads and writes is the upstream Election plus the sidecar Process,
-      # not a Vocdoni-owned Election model.
+      # Only handles elections that opted in — that is, those whose sidecar is
+      # already present when the publish notification fires. The subscriber
+      # filters on the same predicate, but the job double-checks so a manually
+      # enqueued run cannot publish a non-Vocdoni election.
       class PushElectionJob < ApplicationJob
         # A stg-only queue so the "main" Sidekiq (which runs the legacy
         # `PublishElectionJob` on the `:vocdoni` queue for
         # decidim.vocdoni.io) never picks up a stg-spike job it does not
-        # know how to load. The stg Sidekiq is the only one listening on
-        # `:vocdoni_spike`, so there is no cross-contamination.
+        # know how to load.
         queue_as :vocdoni_spike
 
         # Only transient failures (network flap, 5xx, 429) are retried — a
@@ -49,19 +45,11 @@ module Decidim
         # Defensive bound on the memberbase pagination walk.
         MAX_MEMBER_PAGES = 200
 
-        # Map from the Census-tab credential-field names onto the SaaS's own
-        # camelCase names used inside `authFields`. `email` and `phone` are
-        # deliberately absent: the SaaS rejects them as authFields (proven
-        # by /processes/census/validation, which 400s on any payload that
-        # names either — with or without an overlapping twoFaFields entry).
-        # They are 2FA-only from the SaaS's perspective and live in
-        # `census_settings["twofa_fields"]`, driven by the Security tab.
-        AUTH_FIELD_MAP = {
-          "member_number" => "memberNumber",
-          "national_id"   => "nationalId",
-          "date_of_birth" => "birthDate",
-          "name"          => "name"
-        }.freeze
+        # Cap on the demo roster — mirrors the phase-4 spike's original
+        # `:vocdoni_secure` `user_query`. Keeps publish + memberbase upload
+        # fast against the stg SaaS. Real deployments will replace this
+        # inline query with a proper roster picked from the admin form.
+        DEMO_ROSTER_LIMIT = 20
 
         def perform(election_id, scheduled_start_at = nil)
           return unless bootstrap!(election_id)
@@ -95,13 +83,10 @@ module Decidim
           process.update!(state: "published")
 
           # Kick off the on-chain state monitor so the sidecar keeps mirroring
-          # the SaaS while voting is open. `SyncProcessJob` re-schedules itself
-          # while the process is still ongoing.
+          # the SaaS while voting is open.
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id)
         rescue Decidim::Elections::Vocdoni::ApiError => e
           record_step_failure!(e)
-          # If a process id was already saved, the SaaS may still confirm it
-          # asynchronously — keep the monitor polling.
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?
           raise if e.transient?
         rescue StandardError => e
@@ -110,76 +95,33 @@ module Decidim
           raise
         end
 
-        # Runs only the census-preparation phase — push members, create the
-        # group, validate — and records the outcome in
-        # `process.metadata["census_validation"]`. Used by
-        # {Admin::AfterUpdateCensus} so the Census tab reflects a real
-        # dry-run status before the admin ever clicks Publish, and by the
-        # Dashboard to gate that Publish button (the guard reads
-        # `process.census_valid?`).
-        #
-        # Idempotent by construction: `ensure_members_pushed!` and
-        # `ensure_group_created!` skip work that a previous attempt (or the
-        # full publish) already did, so calling this at every census save is
-        # cheap after the first time.
-        #
-        # Never raises: a validation failure is an *answer* the admin needs to
-        # see, not a job crash. Everything is captured on the process record.
-        def self.preview_census!(election_id)
-          new.send(:run_preview!, election_id)
-        end
-
         private
 
         attr_reader :process
 
         def vocdoni_backed?
-          election.census_manifest.to_s == "vocdoni_secure"
+          election.vocdoni_process.present?
         end
 
         def published_upstream?
           process.vocdoni_process_id.present? && process.published?
         end
 
-        # Common setup for both `perform` and `preview_census!`. Returns true
-        # when there is something to do, false when the election is missing
-        # or not Vocdoni-backed. Rebinds `@election` because `ApplicationJob`'s
-        # own `attr_reader :election` is protected and shared across attempts.
+        # Rebinds `@election` because `ApplicationJob`'s own `attr_reader
+        # :election` is protected and shared across attempts.
         def bootstrap!(election_id)
           @election = Decidim::Elections::Election.find_by(id: election_id)
           return false if election.blank?
           return false unless vocdoni_backed?
 
-          @process = election.vocdoni_process || Process.create!(decidim_election_id: election.id, state: "pending")
+          @process = election.vocdoni_process
           true
         end
 
-        # The three steps that reach the point where we can *tell* whether the
-        # census works: push members, create the group, validate. Extracted
-        # so the preview path and the full publish path share the exact same
-        # code — anything that succeeds here will also succeed on Publish.
-        # On success, records `ok: true` on the process so the Dashboard's
-        # Publish gate can unblock.
         def prepare_census!
           ensure_members_pushed!
           ensure_group_created!
           ensure_census_validated!
-          process.record_census_validation!(ok: true, size: census_users.size)
-        end
-
-        # Ran by `preview_census!`. Catches errors and records them; never
-        # raises — the admin sees the result on the next page render.
-        def run_preview!(election_id)
-          return unless bootstrap!(election_id)
-          return if published_upstream?
-
-          Decidim::Elections::Vocdoni.validate_configuration!
-
-          prepare_census!
-        rescue Decidim::Elections::Vocdoni::ApiError => e
-          record_preview_failure!(e)
-        rescue StandardError => e
-          record_preview_failure!(e)
         end
 
         # SaaS 400s carry `{"error":..., "code":..., "data":{...}}` as JSON;
@@ -199,46 +141,12 @@ module Decidim
           body["data"]
         end
 
-        # Called from both rescue arms of `perform`. Persists the failure
-        # against the process (state: failed, last_error) AND, when the step
-        # that blew up was the census pre-flight, mirrors the payload into
-        # `census_validation` so the same Dashboard gate that reads a preview
-        # ok=false also reads a publish-time ok=false.
         def record_step_failure!(error)
           message = redact(error.message)
           body_data = extract_error_data(error)
           error_code = error.respond_to?(:code) ? error.try(:code) : nil
 
           process.record_failure!(message, step: @step, code: error_code, data: body_data)
-
-          return unless @step == "validate_census"
-
-          process.record_census_validation!(
-            ok: false,
-            step: @step,
-            code: error_code,
-            message: message,
-            data: body_data
-          )
-        end
-
-        # Mirror of `record_step_failure!` for the preview path — same
-        # `census_validation` shape, no state change. A preview failure at
-        # any step (add_members, create_group, validate_census) is still an
-        # actionable answer for the admin, so we surface it under the same
-        # metadata key.
-        def record_preview_failure!(error)
-          message = redact(error.message)
-          body_data = extract_error_data(error)
-          error_code = error.respond_to?(:code) ? error.try(:code) : nil
-
-          process.record_census_validation!(
-            ok: false,
-            step: @step,
-            code: error_code,
-            message: message,
-            data: body_data
-          )
         end
 
         # ---------------------------------------------------------------------
@@ -264,11 +172,8 @@ module Decidim
           # on the (censusId, loginHash) unique index because the clones all
           # hash to the same auth-field value. Filter by what is already there.
           existing = upstream_member_index
-          # Index keys are lowercased+stripped; mirror that when looking up.
           fresh = payloads.reject { |p| existing.key?("memberNumber:#{p["memberNumber"].to_s.strip.downcase}") }
           if fresh.empty?
-            # Every voter is already in the memberbase from a previous attempt
-            # — skip the POST and let ensure_group_created! reuse the ids.
             return
           end
 
@@ -314,21 +219,11 @@ module Decidim
         end
 
         # Pre-flight check that the census's authFields/twoFaFields produce
-        # unique, complete credentials over the group members. In the old API
-        # this took two steps — `POST /organizations/{addr}/groups/{gid}/
-        # validate` then `POST /census/{id}/group/{gid}/publish` — but the new
-        # multi-question API carries the census inline in `POST /processes` and
-        # publishes it as part of `POST /processes/{id}/publish`. The only
-        # thing left to do here is the pre-flight, which is `POST /processes/
-        # census/validation`. Its body accepts the very same census spec
-        # {#census_payload} builds for `POST /processes`, so we hand that in.
+        # unique, complete credentials over the group members.
         def ensure_census_validated!
           @step = "validate_census"
           client.elections.validate_census(org_address, census_payload)
         rescue Decidim::Elections::Vocdoni::ApiError => e
-          # A 400 here is an actionable answer, not a fault — the census is
-          # unable to authenticate its own members. Bubble it up so
-          # `record_failure!` catches it; it is non-transient.
           raise Decidim::Elections::Vocdoni::ApiError.new(
             e.message.to_s,
             body: e.try(:body),
@@ -416,24 +311,23 @@ module Decidim
         # Voter roster
         # ---------------------------------------------------------------------
 
-        # Runs the census-manifest's `user_query` block (registered in the
-        # module engine, see `phase_4_spike.rb`) and turns each row into an
-        # API-shaped member payload.
         def voter_payloads
           @voter_payloads ||= census_users.map { |user| user_to_member(user) }.compact_blank
         end
 
-        # Walks the census-manifest's `#users` iterator (which delegates to the
-        # `user_query` block we registered on the manifest) to build the roster
-        # for this election. `CensusManifest#users` paginates by 5 by default;
-        # we ask for the full list in one shot with an oversized limit — the
-        # spike's stg census is a handful of test users. When this grows into
-        # real deployment the loop can be turned into a proper pager.
+        # Demo roster: every registered user of the org that has an email,
+        # capped at `DEMO_ROSTER_LIMIT`. The cap is applied through a
+        # `pluck` + `where(id:)` so it survives the outer `.limit` the
+        # census-manifest paging composes on the returned relation (an outer
+        # `.limit` on ActiveRecord overrides a chained inner `.limit`).
         def census_users
-          manifest = Decidim::Elections.census_registry.find(:vocdoni_secure)
-          return [] unless manifest
-
-          Array(manifest.users(election, 0, 100_000))
+          ids = Decidim::User
+                .where(organization: election.organization)
+                .where.not(email: nil)
+                .order(id: :asc)
+                .limit(DEMO_ROSTER_LIMIT)
+                .pluck(:id)
+          Decidim::User.where(id: ids)
         end
 
         # Maps a `Decidim::User` onto the Vocdoni memberbase schema. The
@@ -550,10 +444,8 @@ module Decidim
           payload["description"] = description if description.present?
 
           # Only multichoice carries typeSetup: singlechoice ignores it, ranked
-          # and cumulative reject it (see saas-backend api/processes.go). And
-          # multichoice's typeSetup is just the bounds — `uniqueChoices` is
-          # rejected because each choice is an independent 0/1 field, so a
-          # duplicate is already impossible.
+          # and cumulative reject it. `uniqueChoices` is rejected because each
+          # choice is an independent 0/1 field, so a duplicate is impossible.
           if type == "multichoice"
             max = question.max_choices.to_i
             payload["typeSetup"] = {
@@ -569,29 +461,19 @@ module Decidim
         # Config
         # ---------------------------------------------------------------------
 
-        # The credential fields the admin ticked on the Census tab, mapped
-        # onto the SaaS's own names. `memberNumber` is always in authFields
-        # whether the admin picked it or not, because the census still needs
-        # at least one authField and every roster row we push carries a
-        # stable member number (`Decidim::User#id`).
-        def credential_field_selection
-          Array(election.census_settings["credential_fields"]).map(&:to_s)
-        end
-
+        # Fixed to `memberNumber` (the Decidim user id, which every roster row
+        # we push carries). The Security tab does not let the admin pick auth
+        # fields for the demo — `memberNumber` is a stable, unique identifier
+        # over any Decidim organisation.
         def auth_fields
-          picked = credential_field_selection
-          fields = picked.filter_map { |f| AUTH_FIELD_MAP[f] }
-          fields << "memberNumber" unless fields.include?("memberNumber")
-          fields.uniq
+          ["memberNumber"]
         end
 
-        # Second-factor selection lives on the Security tab and is written
-        # into `census_settings["twofa_fields"]` verbatim in SaaS shape
-        # (`["email"]`, `["phone"]`, `["email","phone"]` or `[]`). An
-        # election that has never visited the Security tab has no key here
-        # and the SaaS payload gets no `twoFaFields` at all — CSP auth only.
+        # Second-factor selection lives on the sidecar's settings, populated by
+        # {Admin::UpdateElectionSecurity} from the Security-tab form. Verbatim
+        # SaaS shape (`["email"]`, `["phone"]`, `["email","phone"]` or `[]`).
         def two_fa_fields
-          Array(election.census_settings["twofa_fields"]).map(&:to_s)
+          Array(process.metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
         end
 
         def org_address

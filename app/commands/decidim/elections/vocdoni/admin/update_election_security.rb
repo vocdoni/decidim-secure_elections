@@ -4,17 +4,25 @@ module Decidim
   module Elections
     module Vocdoni
       module Admin
-        # Persists the second-factor choice from the Security tab into
-        # `election.census_settings["twofa_fields"]` and re-runs the census
-        # pre-flight so the Dashboard's Publish gate reflects the new state.
+        # Persists the Security-tab choices onto the {Process} sidecar.
         #
-        # The pre-flight rerun mirrors {AfterUpdateCensus}: a change in
-        # `twoFaFields` changes what the SaaS validates (a voter with no
-        # phone will be flagged as `missingData` the moment SMS OTP is
-        # enabled), so the admin must see the result before Publish.
+        # The sidecar's presence is the opt-in signal used by the phase-4
+        # publish subscription — if it exists, publish enqueues
+        # {PublishToVocdoniJob}. Its `metadata["settings"]` hash carries the
+        # second-factor selection ({SecurityForm#two_fa_fields}) that the job
+        # forwards verbatim as `twoFaFields`.
+        #
+        # Semantics of the `enable_vocdoni` toggle:
+        #   * OFF, no sidecar    → nothing to do.
+        #   * OFF, sidecar exists, election still editable → delete sidecar
+        #     (opt out; the election reverts to a plain Decidim election).
+        #   * OFF, sidecar exists, election locked (published) → refuse:
+        #     the on-chain process cannot be un-published from here.
+        #   * ON, no sidecar     → create it in `pending`.
+        #   * ON, sidecar exists → update `metadata["settings"]`.
         class UpdateElectionSecurity < Decidim::Command
           # @param form     [AdminForms::SecurityForm]
-          # @param election [Decidim::Elections::Vocdoni::Election]
+          # @param election [Decidim::Elections::Election]
           def initialize(form, election)
             @form = form
             @election = election
@@ -24,8 +32,11 @@ module Decidim
             return broadcast(:invalid) if form.invalid?
             return broadcast(:invalid) unless election.editable?
 
-            persist_two_fa_fields!
-            rerun_preflight!
+            if form.enable_vocdoni
+              enable!
+            else
+              disable!
+            end
 
             broadcast(:ok)
           end
@@ -34,24 +45,20 @@ module Decidim
 
           attr_reader :form, :election
 
-          def persist_two_fa_fields!
-            settings = election.census_settings.to_h.merge("twofa_fields" => form.two_fa_fields)
-            election.update!(census_settings: settings)
+          def enable!
+            sidecar = election.vocdoni_process || Process.new(decidim_election_id: election.id, state: "pending")
+            sidecar.metadata = sidecar.metadata.to_h.merge(
+              "settings" => { "twofa_fields" => form.two_fa_fields }
+            )
+            sidecar.save!
           end
 
-          # Mirrors AfterUpdateCensus: drop the stale ok:true before the job
-          # runs, so a redirect that outraces the pre-flight cannot show a
-          # confirmation for the previous state. `preview_census!` never
-          # raises; its outcome lands on `process.metadata["census_validation"]`.
-          def rerun_preflight!
-            process = Vocdoni::Process.find_or_initialize_by(decidim_election_id: election.id)
-            process.state ||= "pending"
-            process.save!
-            process.invalidate_census_validation!
+          def disable!
+            sidecar = election.vocdoni_process
+            return if sidecar.blank?
+            return if sidecar.published?
 
-            return if process.published?
-
-            Decidim::Elections::Vocdoni::PushElectionJob.preview_census!(election.id)
+            sidecar.destroy!
           end
         end
       end

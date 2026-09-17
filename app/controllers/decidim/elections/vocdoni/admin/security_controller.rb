@@ -4,10 +4,12 @@ module Decidim
   module Elections
     module Vocdoni
       module Admin
-        # Security tab (vocdoni_secure only). Owns the second-factor choice
-        # — email OTP, SMS OTP, both, or none — that the publish job forwards
-        # verbatim as `twoFaFields` when it creates the process on Vocdoni's
-        # SaaS. Storage is `election.census_settings["twofa_fields"]`.
+        # Security tab. Owns the Vocdoni opt-in for the election (via the
+        # {AdminForms::SecurityForm#enable_vocdoni} checkbox) and the
+        # second-factor challenge — email OTP, SMS OTP, both, or none — that
+        # the publish job forwards verbatim as `twoFaFields` when it creates
+        # the process on Vocdoni's SaaS. Storage is the sidecar
+        # {Vocdoni::Process}; its presence is the opt-in signal.
         #
         # Inherits from upstream's `Decidim::Elections::Admin::ApplicationController`
         # rather than the Vocdoni admin base, because in the phase-4 spike
@@ -29,14 +31,16 @@ module Decidim
             @form = form(AdminForms::SecurityForm).from_params(params)
             # Captured before the Decidim::Command call because on(:ok)/on(:invalid)
             # run with `instance_eval` inside the command: `self` there is the
-            # command, not the controller, so route helpers and `request.path`
-            # would raise NoMethodError.
-            self_path = request.path
+            # command, not the controller, so route helpers would raise
+            # NoMethodError. On success continue the wizard onto Dashboard,
+            # matching the "Save and continue" label on Questions and Census.
+            next_path = Decidim::EngineRouter.admin_proxy(election.component)
+                                             .dashboard_election_path(election)
 
             UpdateElectionSecurity.call(@form, election) do
               on(:ok) do
                 flash[:notice] = I18n.t("security.update.success", scope: "decidim.elections.vocdoni.admin")
-                redirect_to self_path
+                redirect_to next_path
               end
 
               on(:invalid) do

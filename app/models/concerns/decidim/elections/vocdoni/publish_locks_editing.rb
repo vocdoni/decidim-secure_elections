@@ -20,15 +20,12 @@ module Decidim
           super
         end
 
-        # `editable?` gates the questions and census tabs
-        # (`decidim-elections/app/permissions/…/admin/permissions.rb`), the
-        # main-form `disable_fields`, and the "reorder questions" affordance.
-        # Everything downstream is derived; no need to override those too.
-
         private
 
+        # A Vocdoni-backed election is one that has opted in via the Security
+        # tab — materialised as the presence of the sidecar row.
         def vocdoni_backed?
-          census_manifest.to_s == "vocdoni_secure"
+          vocdoni_process.present?
         end
       end
     end
