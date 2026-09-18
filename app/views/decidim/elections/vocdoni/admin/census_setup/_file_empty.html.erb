@@ -1,0 +1,40 @@
+<%#
+  No list yet.
+
+  One sentence, somewhere to drop the file, and two things to open only if
+  wanted: a starter file, and what we can recognise. Everything else that used
+  to be here was advice about a file nobody had uploaded yet, and it is all
+  checked against the real one a moment later, where it can be said with the
+  admin's own numbers.
+
+  Locals: `upload_url`, `admin`, `editable`, `scope`.
+%>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<p class="vocdoni-census__lead"><%= t("empty.lead", scope:) %></p>
+
+<% if editable %>
+  <%= render "decidim/elections/vocdoni/admin/census_setup/file_drop_zone",
+             upload_url:, scope:, id: "js-census-file-input" %>
+<% else %>
+  <p class="vocdoni-census__note">
+    <%= icon "lock-2-line" %>
+    <span><%= t("status.locked", scope:) %></span>
+  </p>
+<% end %>
+
+<div class="vocdoni-census__actions">
+  <%= link_to t("empty.download_template", scope:), admin.template_election_census_file_path(election),
+              class: "button button__sm button__transparent-secondary" %>
+</div>
+
+<details class="vocdoni-census__details">
+  <summary class="vocdoni-census__details-summary"><%= t("empty.fields_title", scope:) %></summary>
+  <ul class="vocdoni-census__fields-grid">
+    <% fields_mod::TARGETS.each do |field| %>
+      <li class="vocdoni-census__fields-grid-item">
+        <strong><%= fields_mod.label(field) %></strong>
+        <span class="help-text"><%= fields_mod.hint(field) %></span>
+      </li>
+    <% end %>
+  </ul>
+</details>

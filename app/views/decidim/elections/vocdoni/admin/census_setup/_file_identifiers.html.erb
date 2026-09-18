@@ -1,0 +1,82 @@
+<%#
+  The checkboxes behind "Change".
+
+  Only opened by an admin who disagrees with what the columns implied, so it
+  leads with the rule they are working to rather than an explanation of the
+  feature: pick up to three, and each person has to be told apart by them.
+
+  Three kinds of detail, and each box says which it is:
+    - checked against the list (member number, ID number, name…);
+    - a contact detail (email, phone): the secure voting service will not
+      check those against anything, so choosing one sends a one-time code
+      there instead, and that code is what proves the person;
+    - an access code we hand out: fine for a simple vote, and the only thing
+      a secret one cannot use at all.
+
+  Every detail also says how many people on the list do not have it, because
+  a list is usually missing a few emails and those people would silently lose
+  their vote.
+
+  Locals: `form` (any form including `ChoosesIdentifiers`), `name` (the
+  parameter name to submit under), and optionally `options`, the details to
+  render rows for. In the review state that is every detail a list can carry,
+  because the columns are still being decided and the rows follow them live;
+  rows for columns that are not kept are hidden.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.identifiers" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<fieldset id="js-census-identifiers"
+          class="vocdoni-census-file__fieldset vocdoni-identifiers"
+          aria-describedby="census-identifiers-lead"
+          data-weak="<%= fields_mod::WEAK.join(" ") %>">
+  <legend class="sr-only"><%= t("legend", scope:) %></legend>
+  <p class="help-text" id="census-identifiers-lead"><%= t("lead", scope:) %></p>
+
+  <% available = form.identifier_options %>
+  <% rows = local_assigns[:options] || available %>
+  <p class="vocdoni-identifiers__empty" data-identifiers-empty <%= "hidden" if available.any? %>>
+    <%= t("none_available", scope:) %>
+  </p>
+
+  <input type="hidden" name="<%= name %>[identifiers][]" value="">
+  <ul class="vocdoni-identifiers__list">
+    <% rows.each do |field| %>
+      <%
+        sends_code = form.sends_code?(field)
+        secure_ok = form.usable_for_secure?(field)
+        missing = form.people_without(field)
+      %>
+      <li class="vocdoni-identifiers__item"
+          data-identifier="<%= field %>"
+          data-identifier-sentence="<%= fields_mod.in_sentence(field) %>"
+          <%= "hidden" unless available.include?(field) %>>
+        <label class="vocdoni-identifiers__label" for="census_identifiers_<%= field %>">
+          <input type="checkbox"
+                 name="<%= name %>[identifiers][]"
+                 id="census_identifiers_<%= field %>"
+                 value="<%= field %>"
+                 aria-describedby="census-identifiers-<%= field %>-hint"
+                 <%= "checked" if form.identifier_selected?(field) %>>
+          <span><%= fields_mod.label(field) %></span>
+          <% if sends_code %>
+            <span class="label success vocdoni-identifiers__badge"><%= t("sends_code", scope:) %></span>
+          <% elsif !secure_ok %>
+            <span class="label vocdoni-identifiers__badge"><%= t("simple_only", scope:) %></span>
+          <% end %>
+        </label>
+        <p class="help-text vocdoni-identifiers__hint" id="census-identifiers-<%= field %>-hint">
+          <span><%= t("options.#{field}", scope:, default: fields_mod.hint(field)) %></span>
+          <%# The answer to "what happens to the members who don't have one?",
+              with their own number, before they choose rather than after. %>
+          <% if missing.positive? %>
+            <span class="vocdoni-identifiers__missing"><%= t("missing", scope:, count: missing) %></span>
+          <% end %>
+        </p>
+      </li>
+    <% end %>
+  </ul>
+
+  <div class="vocdoni-identifiers__weak" data-identifiers-weak <%= "hidden" unless form.weak_identifiers? %>>
+    <%= cell "decidim/announcement", t("weak", scope:), callout_class: "warning" %>
+  </div>
+</fieldset>

@@ -12,8 +12,9 @@ module Decidim
         # any line is wrong the command broadcasts `:invalid_rows` with every
         # problem and changes nothing.
         #
-        # Identifiers chosen earlier on the Security tab are kept when the new
-        # file still has those columns, and dropped otherwise.
+        # The details voters type to be found on the list are chosen in the
+        # same step and stored with it, so a list is never left with people in
+        # it that nobody can be identified by.
         #
         # Broadcasts:
         #   :ok, count              imported
@@ -37,7 +38,9 @@ module Decidim
           def call
             return broadcast(:invalid) if form.invalid? || !election.editable?
 
-            outcome = CensusCsv::RowMapper.new(form.reader, form.mapping).call
+            # Mapped once, by the form, which needed the rows to check that the
+            # chosen identifiers tell every person apart.
+            outcome = form.outcome
             return broadcast(:invalid_rows, outcome) if outcome.failed?
             return broadcast(:no_rows, outcome) if outcome.rows.empty?
 
@@ -74,13 +77,10 @@ module Decidim
           end
 
           def settings(count, now)
-            previous = election.census_manifest.to_s == "token_csv" ? election.census_settings.to_h : {}
-            identifiers = Array(previous["identifiers"]) & form.fields
-
             {
               "columns" => form.settings_columns,
               "fields" => form.fields,
-              "identifiers" => identifiers,
+              "identifiers" => form.chosen_identifiers,
               "file" => {
                 "name" => form.file.filename.to_s,
                 "rows" => count,

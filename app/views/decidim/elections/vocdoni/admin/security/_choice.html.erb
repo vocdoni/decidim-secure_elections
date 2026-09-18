@@ -3,7 +3,7 @@
 
   Each option is a card whose radio is labelled by the card title only; the
   rest of the card describes it (`aria-describedby`), so a screen reader
-  announces "Simple vote, radio" rather than the whole card. `security.js`
+  announces "Poll without guarantees, radio" rather than the whole card. `security.js`
   makes the rest of the card clickable too; the text stays selectable, as
   admins copy these points into board papers.
 
@@ -16,14 +16,12 @@
     "simple" => { icon: "computer-line", points: {
       "stored" => "database-2-line",
       "readable" => "eye-line",
-      "unverifiable" => "search-eye-line",
-      "editable" => "pencil-line"
+      "unverifiable" => "search-eye-line"
     } },
     "secure" => { icon: "shield-check-line", points: {
       "anonymous" => "eye-off-line",
       "tamper" => "search-eye-line",
-      "minimal" => "file-shield-2-line",
-      "locked" => "lock-2-line"
+      "minimal" => "file-shield-2-line"
     } }
   }
 %>
@@ -73,7 +71,12 @@
                 <% if unavailable %>
                   <p class="vocdoni-choice__unavailable">
                     <%= icon "error-warning-line" %>
-                    <span><%= t("too_large", scope:, count: @form.census_size, limit: @form.max_roster) %></span>
+                    <%# The only thing that puts a secret vote out of reach
+                        before it is tried. How many people the organisation's
+                        plan covers is the service's answer to give, not ours
+                        to guess, so it is reported by the pre-flight below
+                        rather than pre-empted here. %>
+                    <span><%= t("refused_identifiers", scope:) %></span>
                   </p>
                 <% end %>
 
@@ -104,11 +107,6 @@
             </div>
           <% end %>
         </div>
-
-        <p class="vocdoni-security__note">
-          <%= icon "information-line" %>
-          <span><%= t("good_to_know_html", scope:) %></span>
-        </p>
       </fieldset>
     </div>
 

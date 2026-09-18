@@ -501,8 +501,22 @@ module Decidim
         # Vocdoni's memberbase needs at least one of these to identify a voter.
         IDENTITY = %w(memberNumber nationalId email phone).freeze
 
-        # Usable as Vocdoni `authFields`.
+        # Usable as Vocdoni `authFields` — details a voter types and the
+        # service checks against the member list.
         AUTH = %w(memberNumber nationalId name surname birthDate).freeze
+
+        # Contact details. The service refuses these as `authFields` (verified
+        # against saas-api-dev: `authFields: ["email"]` is a 400), but takes
+        # them as `twoFaFields`, where the one-time code sent there is what
+        # proves the person. So they identify a voter of a secret vote too —
+        # by a different mechanism, which is why choosing one turns the code
+        # on rather than being refused.
+        TWO_FA = %w(email phone).freeze
+
+        # Everything a voter of a secret, verifiable vote can be asked for,
+        # one way or the other. Only an access code we hand out is left: the
+        # service has nowhere to put it.
+        SECURE_IDENTIFIERS = (AUTH + TWO_FA).freeze
 
         # Usable to sign in to a simple (non-Vocdoni) vote.
         SIMPLE_IDENTIFIERS = (TARGETS - %w(weight)).freeze
@@ -510,8 +524,6 @@ module Decidim
         # Guessable on their own, so not enough by themselves to identify a
         # voter with any confidence.
         WEAK = %w(name surname birthDate).freeze
-
-        MAX_IDENTIFIERS = 3
 
         EXAMPLES = {
           "memberNumber" => "000123",
@@ -549,6 +561,16 @@ module Decidim
         # @return [String] human label, e.g. "Member number".
         def self.label(field)
           I18n.t(field, scope: "decidim.elections.vocdoni.admin.census_file.fields", default: field.to_s)
+        end
+
+        # The same detail as it reads inside a sentence. The labels are
+        # titles ("National ID number"), and downcasing one mid-sentence gives
+        # "national id number", so the inline wording is written out.
+        #
+        # @param field [String]
+        # @return [String]
+        def self.in_sentence(field)
+          I18n.t(field, scope: "decidim.elections.vocdoni.admin.census_file.fields_in_sentence", default: label(field).downcase)
         end
 
         # @param field [String]
@@ -710,6 +732,96 @@ module Decidim
         def self.row_error(key, value)
           I18n.t(key, scope: "decidim.elections.vocdoni.admin.census_file.rows", value: value.to_s.truncate(40))
         end
+      end
+
+      # Picks what a voter types to be found on the list, from the columns the
+      # list actually has.
+      #
+      # This used to be a question put to the admin. It is a question they have
+      # no better information to answer than we do: the answer follows from the
+      # columns, and getting it wrong is invisible until somebody cannot vote.
+      # So it is decided here and shown as a sentence they can overrule.
+      #
+      # Pure, and deliberately so: the two callers count duplicates and blanks
+      # very differently (one over rows it is about to import, one with a
+      # GROUP BY over rows already imported), and neither belongs in a rule
+      # that is really about which detail is the better question to ask.
+      module Identifiers
+        # Best first. Ahead of anything else, a detail that is unique to one
+        # person by definition; then a contact detail, which is unique in
+        # practice and, in a secret vote, doubles as the address the one-time
+        # code goes to; then the combinations, shortest first, that only
+        # identify somebody because taken together they are rare.
+        CANDIDATES = [
+          %w(memberNumber),
+          %w(nationalId),
+          %w(email),
+          %w(phone),
+          %w(name surname),
+          %w(name surname birthDate),
+          %w(surname birthDate),
+          %w(name birthDate),
+          %w(surname),
+          %w(name),
+          %w(birthDate)
+        ].freeze
+
+        # @param available [Array<String>] the columns kept, in file order.
+        # @param duplicates [#call] fields -> how many people share those values.
+        # @param blanks [#call] field -> how many people have nothing in it.
+        # @return [Array<String>] the details a voter will be asked for.
+        def self.derive(available, duplicates:, blanks:)
+          pool = Array(available) & Fields::SIMPLE_IDENTIFIERS
+          others = pool - %w(token)
+          # An access code and nothing else: the only case where the choice
+          # costs the admin a secret vote, and still the only way anyone signs
+          # in, so it is made and said rather than left empty. With nothing at
+          # all to go on, the card says nobody can vote yet.
+          return pool & %w(token) if others.empty?
+
+          with_token(best(others, pool, duplicates:, blanks:), pool)
+        end
+
+        # Every candidate the list can actually answer, in preference order.
+        def self.usable(others)
+          CANDIDATES.select { |fields| (fields - others).empty? }
+        end
+        private_class_method :usable
+
+        # The best the list can do. `max_by` keeps the first of equals, so
+        # where two candidates are as good as each other the preference order
+        # in {CANDIDATES} is what decides.
+        def self.best(others, pool, duplicates:, blanks:)
+          candidates = usable(others)
+          return [] if candidates.empty?
+
+          candidates.max_by { |fields| rank(fields, pool, duplicates:, blanks:) }
+        end
+        private_class_method :best
+
+        # Uniqueness first: two people the list cannot tell apart is the one
+        # failure that stops the import outright. Then completeness, because a
+        # blank cell silently disenfranchises exactly the people in it. A list
+        # that can manage neither still gets our best guess, and the form's own
+        # validation is what tells the admin about it.
+        def self.rank(fields, pool, duplicates:, blanks:)
+          unique = duplicates.call(with_token(fields, pool)).to_i.zero?
+          complete = fields.all? { |field| blanks.call(field).to_i.zero? }
+
+          (unique ? 2 : 0) + (complete ? 1 : 0)
+        end
+        private_class_method :rank
+
+        # The access code rides along with whatever identifies the person: on
+        # its own it cannot be checked by a secret vote, but next to a name it
+        # is the one detail an impersonator does not have.
+        def self.with_token(fields, pool)
+          return fields unless pool.include?("token")
+          return fields if fields.empty?
+
+          fields + %w(token)
+        end
+        private_class_method :with_token
       end
 
       # Reads a CSV file once — decoded via {Source}, separator detected,

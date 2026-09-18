@@ -13,12 +13,10 @@ module Decidim
           # The controller never passes the election as an attribute: it calls
           # `from_params(params, election:)`, which puts it in the context. A
           # form that only looks at its attributes finds nothing there, every
-          # predicate answers "no", and the identifier rules below are skipped
-          # exactly when they matter — on save.
+          # predicate answers "no", and the rules this form exists to enforce
+          # are skipped exactly when they matter: on save.
           describe "built the way the controller builds it" do
-            subject(:form) do
-              described_class.from_params({ security: { enable_vocdoni: "1", identifiers: [] } }, election:)
-            end
+            subject(:form) { described_class.from_params({ security: { enable_vocdoni: "1" } }, election:) }
 
             let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "fields" => %w(name nationalId) }) }
 
@@ -27,11 +25,6 @@ module Decidim
             it "sees the census through the context" do
               expect(form.file_census?).to be(true)
               expect(form.census_fields).to eq(%w(name nationalId))
-            end
-
-            it "still refuses a file census with no identifiers chosen" do
-              expect(form).not_to be_valid
-              expect(form.errors[:identifiers]).to be_present
             end
           end
 
@@ -115,110 +108,143 @@ module Decidim
 
           describe "for a file census" do
             let(:fields) { %w(name surname email token) }
-            let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "fields" => fields }) }
+            let(:identifiers) { %w(name surname) }
+            let(:election) do
+              create(:election, census_manifest: "token_csv",
+                                census_settings: { "fields" => fields, "identifiers" => identifiers })
+            end
             let(:enable_vocdoni) { false }
-            let(:identifiers) { [] }
-            let(:form) { described_class.new(election:, enable_vocdoni:, identifiers:) }
+            let(:form) { described_class.new(election:, enable_vocdoni:) }
 
-            describe "#identifier_options" do
-              it "follows the file's own mapped columns, in file order" do
-                expect(form.identifier_options).to eq(%w(name surname email token))
+            describe "#identifiers" do
+              it "reads the details chosen on the Census tab" do
+                expect(form.identifiers).to eq(%w(name surname))
               end
 
-              context "when the file was not mapped to any identifying column" do
-                let(:fields) { %w(weight) }
+              context "when the file no longer maps a column that was chosen" do
+                let(:fields) { %w(name) }
 
-                it "is empty" do
-                  expect(form.identifier_options).to eq([])
+                it "keeps only the ones the file still maps" do
+                  expect(form.identifiers).to eq(%w(name))
                 end
               end
             end
 
-            describe "#allowed_identifiers" do
-              context "when it is a simple vote" do
-                let(:enable_vocdoni) { false }
-
-                it "allows every mapped column, including token and email" do
-                  expect(form.allowed_identifiers).to include("token", "email")
-                end
+            describe "#identifier_labels" do
+              it "labels every chosen detail" do
+                expect(form.identifier_labels).to eq(%w(name surname).map { |field| CensusCsv::Fields.label(field) })
               end
+            end
 
-              context "when it is a secure vote" do
-                let(:enable_vocdoni) { true }
+            describe "#secure_identifiers" do
+              context "when some chosen details prove identity to the SaaS and some do not" do
+                let(:identifiers) { %w(name email) }
 
-                it "refuses token and email, which the SaaS cannot use as auth fields" do
-                  expect(form.allowed_identifiers).not_to include("token", "email")
-                  expect(form.allowed_identifiers).to include("name", "surname")
+                it "keeps only the ones usable as authFields" do
+                  expect(form.secure_identifiers).to eq(%w(name))
                 end
               end
             end
 
-            context "when a secure vote picks token and email as identifiers" do
-              let(:enable_vocdoni) { true }
-              let(:identifiers) { %w(email token) }
-
-              it "is invalid: neither can prove identity to the SaaS" do
-                expect(form).to be_invalid
-                expect(form.errors[:identifiers].to_sentence).to match(/can't be used for a secret, verifiable vote/i)
-              end
-            end
-
-            context "when no identifier is chosen" do
-              let(:identifiers) { [] }
-
-              it "is invalid: at least one is required" do
-                expect(form).to be_invalid
-                expect(form.errors[:identifiers]).to be_present
-              end
-            end
-
-            context "when more than the maximum number of identifiers is chosen" do
-              let(:identifiers) { %w(name surname email token) }
-
-              it "is invalid: at most 3 are accepted" do
-                expect(form).to be_invalid
-                expect(form.errors[:identifiers].to_sentence).to match(/at most 3/i)
-              end
-            end
-
-            context "when two people in the list share the same identifier, case and spacing aside" do
-              let(:identifiers) { %w(name) }
-
-              before do
-                Decidim::Elections::Voter.create!(election:, data: { "name" => "Ada" })
-                Decidim::Elections::Voter.create!(election:, data: { "name" => "ada" })
-              end
-
-              it "is invalid: they could not be told apart" do
-                expect(form).to be_invalid
-                expect(form.errors[:identifiers].to_sentence).to match(/can't be told apart/i)
-              end
-            end
-
-            describe "#weak_identifiers?" do
-              context "with only guessable details and no one-time code" do
-                let(:identifiers) { %w(name) }
+            describe "#secure_blocked_by_identifiers?" do
+              context "when the list is identified only by the access code, which a secret vote cannot use" do
+                let(:identifiers) { %w(token) }
 
                 it "is true" do
-                  expect(form.weak_identifiers?).to be(true)
+                  expect(form.secure_blocked_by_identifiers?).to be(true)
                 end
               end
 
-              context "with a detail that is not guessable" do
+              context "when at least one chosen detail can prove identity to the SaaS" do
+                let(:identifiers) { %w(name email) }
+
+                it "is false" do
+                  expect(form.secure_blocked_by_identifiers?).to be(false)
+                end
+              end
+
+              context "when the census is identified by email alone: usable as a two-factor code, not blocked" do
                 let(:identifiers) { %w(email) }
 
                 it "is false" do
-                  expect(form.weak_identifiers?).to be(false)
+                  expect(form.secure_blocked_by_identifiers?).to be(false)
                 end
               end
 
-              context "with only guessable details but a one-time code enabled" do
-                let(:enable_vocdoni) { true }
-                let(:identifiers) { %w(name) }
-                let(:form) { described_class.new(election:, enable_vocdoni:, identifiers:, email: true) }
+              context "when no identifier has been chosen yet" do
+                let(:identifiers) { [] }
 
-                it "is false: the code makes up for it" do
-                  expect(form.weak_identifiers?).to be(false)
+                it "is false: nothing to refuse yet" do
+                  expect(form.secure_blocked_by_identifiers?).to be(false)
+                end
+              end
+
+              context "when it is not a file census" do
+                let(:election) { create(:election, :with_internal_users_census) }
+
+                it "is false: the question does not apply" do
+                  expect(form.secure_blocked_by_identifiers?).to be(false)
+                end
+              end
+            end
+
+            # There used to be a `#refused_identifier_labels` here, naming the
+            # details a secret vote would drop. Only an access code is ever in
+            # that list, and only a list identified by nothing else is worth
+            # saying anything about, so the page names it in a sentence and
+            # `#secure_blocked_by_identifiers?` above is the whole rule.
+
+            describe "#secure_available?" do
+              let(:identifiers) { %w(name) }
+
+              context "when the census holds people this platform can identify" do
+                before { Decidim::Elections::Voter.create!(election:, data: { "name" => "Ada" }) }
+
+                it "is true" do
+                  expect(form.secure_available?).to be(true)
+                end
+              end
+
+              # How many people a secret vote may hold belongs to the
+              # organisation's plan with the secure voting service, which this
+              # platform cannot read. It used to be guessed here and enforced
+              # as fact, which refused lists the service would have accepted;
+              # now the census is pushed and the service answers for itself.
+              context "when the census is larger than the roster this platform would push in one go" do
+                around do |example|
+                  previous = ENV.fetch("VOCDONI_MAX_ROSTER", nil)
+                  ENV["VOCDONI_MAX_ROSTER"] = "1"
+                  example.run
+                  ENV["VOCDONI_MAX_ROSTER"] = previous
+                end
+
+                before do
+                  Decidim::Elections::Voter.create!(election:, data: { "name" => "Ada" })
+                  Decidim::Elections::Voter.create!(election:, data: { "name" => "Grace" })
+                end
+
+                it "is still true: size is the voting service's answer to give, not this page's" do
+                  expect(form.secure_available?).to be(true)
+                end
+              end
+
+              context "when the list is identified only by the access code, which a secret vote cannot use" do
+                let(:identifiers) { %w(token) }
+
+                before { Decidim::Elections::Voter.create!(election:, data: { "token" => "A1B2C3" }) }
+
+                it "is false even though the census is small" do
+                  expect(form.secure_available?).to be(false)
+                end
+              end
+
+              context "when the list is identified by email alone: usable via the one-time code" do
+                let(:identifiers) { %w(email) }
+
+                before { Decidim::Elections::Voter.create!(election:, data: { "email" => "ada@example.org" }) }
+
+                it "is true: email is a secure identifier" do
+                  expect(form.secure_available?).to be(true)
                 end
               end
             end
@@ -260,6 +286,48 @@ module Decidim
 
                 it "is true" do
                   expect(form.sms_code_available?).to be(true)
+                end
+              end
+            end
+
+            describe "#code_required?" do
+              context "when the census identifies people by that detail" do
+                let(:identifiers) { %w(name email) }
+
+                it "is required for the identifying detail" do
+                  expect(form.code_required?("email")).to be(true)
+                end
+
+                it "is not required for a detail the census does not identify people by" do
+                  expect(form.code_required?("phone")).to be(false)
+                end
+              end
+
+              context "when it is not a file census" do
+                let(:election) { create(:election, :with_internal_users_census) }
+
+                it "is false: the question does not apply" do
+                  expect(form.code_required?("email")).to be(false)
+                end
+              end
+            end
+
+            describe "#two_fa_fields" do
+              context "when the census identifies people by email, without the admin ticking the email box" do
+                let(:identifiers) { %w(name email) }
+                let(:form) { described_class.new(election:, enable_vocdoni: true) }
+
+                it "turns the email channel on anyway: the code is what proves the person" do
+                  expect(form.two_fa_fields).to eq(%w(email))
+                end
+              end
+
+              context "when the census does not identify by a contact detail and no box is ticked" do
+                let(:identifiers) { %w(name) }
+                let(:form) { described_class.new(election:, enable_vocdoni: true) }
+
+                it "sends no code" do
+                  expect(form.two_fa_fields).to eq([])
                 end
               end
             end

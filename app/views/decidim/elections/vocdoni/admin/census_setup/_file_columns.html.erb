@@ -1,0 +1,56 @@
+<%#
+  A table of columns to place: the heading, a few of its values, and what it
+  means. Rendered twice on the page with different `indexes`: the columns we
+  could not place, and (behind a disclosure) the ones we could, so every
+  column's select exists exactly once.
+
+  Locals: `form`, `indexes` (which columns to show), `target_options`,
+  `table_id`.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_file.review" %>
+<div class="table-stacked vocdoni-census-file__mapping-table"
+     id="<%= table_id %>"
+     data-column-table
+     data-identity-fields="<%= Decidim::Elections::Vocdoni::CensusCsv::Fields::IDENTITY.join(" ") %>">
+  <table>
+    <caption class="sr-only"><%= t("table_caption", scope:) %></caption>
+    <thead>
+      <tr>
+        <th scope="col"><%= t("column_header", scope:) %></th>
+        <th scope="col"><%= t("examples_header", scope:) %></th>
+        <th scope="col"><%= t("meaning_header", scope:) %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% indexes.each do |index| %>
+        <%
+          header = form.headers[index]
+          label_text = header.presence || t("column_placeholder", scope:, number: index + 1)
+          select_id = "census_file_columns_#{index}"
+          samples = form.reader.column_samples(index, 3)
+        %>
+        <tr data-column-row="<%= index %>">
+          <td data-label="<%= t("column_header", scope:) %>"><strong><%= label_text %></strong></td>
+          <td data-label="<%= t("examples_header", scope:) %>">
+            <% if samples.present? %>
+              <span class="vocdoni-census-file__samples"><%= samples.join(", ") %></span>
+            <% else %>
+              <span class="vocdoni-census-file__samples vocdoni-census-file__samples--empty">
+                <span aria-hidden="true">-</span>
+                <span class="sr-only"><%= t("no_examples", scope:) %></span>
+              </span>
+            <% end %>
+          </td>
+          <td data-label="<%= t("meaning_header", scope:) %>">
+            <label class="sr-only" for="<%= select_id %>"><%= t("meaning_select_label", scope:, column: label_text) %></label>
+            <%= select_tag "census_file[columns][#{index}]",
+                           options_for_select(target_options, form.selected(index)),
+                           id: select_id,
+                           class: "vocdoni-census-file__select",
+                           data: { column_select: index } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

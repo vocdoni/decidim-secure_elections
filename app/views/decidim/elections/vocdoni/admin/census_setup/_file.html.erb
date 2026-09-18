@@ -1,0 +1,55 @@
+<%#
+  "Participants from a file", the whole of it, in one card.
+
+  Three states, decided in this order:
+
+    review  a file has just been uploaded and read. What it holds, what we
+            made of its columns, who its voters will say they are, and one
+            button to take it.
+    list    a list is imported. Who is on it, how they are identified, and
+            how to replace or remove it.
+    empty   no list yet: somewhere to drop the file.
+
+  Every form here is the card's own, which is why the card sits outside the
+  tab's form: HTML has no nested forms. The tab's Save is a separate button
+  tied back to that form by `form:`, so the two never collide.
+
+  Locals: `chosen`. `mapping_form`, `identifiers_form`, `import_outcome` and
+  `census_voters_count` come from `CensusTabData`.
+%>
+<% scope = "decidim.elections.vocdoni.admin.census_setup.file" %>
+<% shown = chosen == "token_csv" %>
+<%
+  review = mapping_form if mapping_form&.reader.present?
+  # The real count, not the figure stored at import time, which goes stale.
+  people_count = census_voters_count
+  # This engine's own routes only resolve inside upstream's admin engine;
+  # the proxy builds them from the component wherever this renders.
+  admin = Decidim::EngineRouter.admin_proxy(election.component)
+  upload_url = admin.election_census_file_path(election)
+  editable = election.editable?
+%>
+<div class="card vocdoni-census__card vocdoni-census-file"
+     data-census-block="token_csv"
+     <%= "hidden" unless shown %>>
+  <div class="card-divider">
+    <h2 class="card-title">
+      <%= review ? review.file&.filename.to_s.presence || t("legend", scope:) : t("legend", scope:) %>
+    </h2>
+  </div>
+
+  <div class="card-section">
+    <div class="row column">
+      <% if review %>
+        <%= render "decidim/elections/vocdoni/admin/census_setup/file_review",
+                   form: review, outcome: import_outcome, upload_url:, people_count:, scope: %>
+      <% elsif people_count.positive? %>
+        <%= render "decidim/elections/vocdoni/admin/census_setup/file_list",
+                   people_count:, upload_url:, admin:, editable:, scope: %>
+      <% else %>
+        <%= render "decidim/elections/vocdoni/admin/census_setup/file_empty",
+                   upload_url:, admin:, editable:, scope: %>
+      <% end %>
+    </div>
+  </div>
+</div>

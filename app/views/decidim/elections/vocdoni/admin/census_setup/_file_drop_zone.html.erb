@@ -1,0 +1,40 @@
+<%#
+  Where the file goes in.
+
+  A plain file input in a labelled drop zone, posting multipart to
+  `CensusFileController#create`. Deliberately not Decidim's upload modal: that
+  dialog is built for images, says so in its own help text, and put three
+  clicks and a layer of chrome between an admin and the one thing this card is
+  for.
+
+  The label *is* the control: clicking anywhere in the zone opens the picker,
+  and the input keeps its own focus ring for the keyboard. `census_file.js`
+  submits on choose and handles the drag; the button below it is what makes
+  the same thing work with no JavaScript at all, so it is hidden only once the
+  script is running.
+
+  Locals: `upload_url`, `scope`, `id` (unique per rendering: the empty card and
+  the "Replace" disclosure can both be on the page).
+%>
+<%= form_tag upload_url, multipart: true, class: "vocdoni-census-file__upload", data: { upload_form: true } do %>
+  <div class="vocdoni-census-file__dropzone" data-dropzone>
+    <label class="vocdoni-census-file__dropzone-label" for="<%= id %>">
+      <%= icon "upload-cloud-2-line", class: "vocdoni-census-file__dropzone-icon" %>
+      <span class="vocdoni-census-file__dropzone-title"><%= t("drop_zone.title", scope:) %></span>
+      <span class="vocdoni-census-file__dropzone-hint"><%= t("drop_zone.hint", scope:) %></span>
+    </label>
+    <input type="file"
+           name="census_import[file]"
+           id="<%= id %>"
+           accept=".csv,text/csv"
+           class="vocdoni-census-file__file-input"
+           data-upload-input>
+  </div>
+
+  <%# The no-JavaScript path: choosing a file leaves it sitting there until
+      something submits the form, and without a script that something is a
+      button. %>
+  <div class="vocdoni-census-file__upload-actions" data-upload-fallback>
+    <%= submit_tag t("drop_zone.submit", scope:), class: "button button__sm button__secondary" %>
+  </div>
+<% end %>

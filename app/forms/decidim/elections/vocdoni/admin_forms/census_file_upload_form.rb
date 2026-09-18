@@ -6,12 +6,13 @@ module Decidim
   module Elections
     module Vocdoni
       module AdminForms
-        # Step 1 of the census file wizard: the file.
+        # The file itself, posted straight from the drop zone on the Census
+        # tab: a plain multipart upload, not Decidim's upload modal.
         #
         # Reuses the legacy importer's upload rules and messages (CSV only,
         # a friendlier answer for spreadsheets, a size ceiling), which is why
-        # it mimics `census_import`. Only checks the file can be read here; the
-        # columns are looked at in step 2.
+        # it mimics `census_import`. Only checks the file can be read here;
+        # what its columns mean is answered on the card, once it has been read.
         class CensusFileUploadForm < Decidim::Form
           include Decidim::HasUploadValidations
           include Decidim::ProcessesFileLocally
@@ -29,10 +30,40 @@ module Decidim
                          if: ->(form) { form.file.present? }
           validate :readable, if: ->(form) { form.file.present? && form.errors[:file].empty? }
 
+          # The file in storage, where the review that follows can find it
+          # again by signed id.
+          #
+          # Created only when asked for, which is after the file has been
+          # checked and read: a spreadsheet, an empty file or something that is
+          # not a CSV at all is refused without ever being stored. The uploaded
+          # tempfile is gone at the end of the request, so this is what makes
+          # the file outlive it.
+          def blob
+            @blob ||=
+              if file.is_a?(ActiveStorage::Blob)
+                file
+              else
+                ActiveStorage::Blob.create_and_upload!(
+                  io: file.tempfile.tap(&:rewind),
+                  filename: file.original_filename,
+                  content_type: file.content_type
+                )
+              end
+          end
+
           private
 
+          # Wherever the file is right now. A multipart upload is already a
+          # local tempfile and can be read where it lies; only a blob has to be
+          # fetched out of storage.
+          def with_local_path(&)
+            return process_file_locally(file, &) if file.is_a?(ActiveStorage::Blob)
+
+            yield file.tempfile.path
+          end
+
           def readable
-            process_file_locally(file) do |path|
+            with_local_path do |path|
               reader = CensusCsv::Reader.new(path).load!
               errors.add(:file, :no_known_columns) if reader.column_count.zero? || reader.row_count.zero?
             end

@@ -4,79 +4,81 @@ module Decidim
   module Elections
     module Vocdoni
       module Admin
-        # The "Participants from a file" wizard, reached from the Census tab:
+        # The forms inside the "Your list" card on the Census tab.
         #
-        #   new    → upload a CSV          (create)
-        #   edit   → say what each column means (update → import)
-        #   errors → the lines to fix, when the import is refused
+        # This controller has no pages of its own. Every action answers a form
+        # the admin submitted from the card and puts them back on the tab:
         #
-        # plus `destroy` (remove the list) and `template` (a starter file).
+        #   create              → the file, read; back to the tab with `?blob=`
+        #                         so the card shows what we made of it
+        #   update              → import it, or the tab again with the lines
+        #                         to fix and the file still on it
+        #   update_identifiers  → change the details voters type, later
+        #   destroy             → remove the list
+        #   template            → a starter file to download
+        #
+        # Redirect after a success, render after a refusal: a refused form has
+        # state worth keeping on screen, a successful one must not be posted
+        # twice by a reload.
         #
         # Every action needs the same permission as the Census tab itself, so
-        # the wizard closes once the election can no longer be edited.
+        # the card closes once the election can no longer be edited.
         class CensusFileController < ::Decidim::Elections::Admin::ApplicationController
-          helper_method :election, :census_path, :wizard_path, :template_path
+          include Decidim::Elections::Vocdoni::CensusTabData
 
-          UPLOAD_LIFETIME = 2.hours
+          helper_method :election, :census_path, :census_file_path, :template_path
 
           before_action { enforce_permission_to(:update, :census, election:) }
 
-          def new
-            @form = form(AdminForms::CensusFileUploadForm).instance
-          end
-
           def create
-            @form = form(AdminForms::CensusFileUploadForm).from_params(params)
+            @upload_form = form(AdminForms::CensusFileUploadForm).from_params(params)
 
-            if @form.valid?
-              # The file holds personal data and is only needed while the admin
-              # matches its columns: its link expires and the file is removed
-              # after a while even if the wizard is abandoned (a successful
-              # import removes it straight away).
-              ActiveStorage::PurgeJob.set(wait: UPLOAD_LIFETIME).perform_later(@form.file)
-              redirect_to wizard_path(:edit, blob: @form.file.signed_id(expires_in: UPLOAD_LIFETIME))
-            else
-              flash.now[:alert] = I18n.t("census_file.create.invalid", scope: "decidim.elections.vocdoni.admin")
-              render :new, status: :unprocessable_content
+            unless @upload_form.valid?
+              flash[:alert] = @upload_form.errors[:file].to_sentence.presence ||
+                              I18n.t("census_file.create.invalid", scope: "decidim.elections.vocdoni.admin")
+              # A file input cannot be refilled from the server, so there is
+              # nothing on the page worth preserving: the card goes back to its
+              # drop zone with the reason above it.
+              return redirect_to census_path
             end
-          end
 
-          def edit
-            @form = form(AdminForms::CensusFileMappingForm).from_params(blob: params[:blob])
-            return redirect_to_upload if @form.reader.blank?
-
-            @form.columns = AdminForms::CensusFileMappingForm.suggested_columns(@form.reader) if params[:census_file].blank?
-            @form.columns = params.dig(:census_file, :columns)&.to_unsafe_h || {} if params[:census_file].present?
+            ActiveStorage::PurgeJob.set(wait: UPLOAD_LIFETIME).perform_later(@upload_form.blob)
+            redirect_to census_path(manifest: "token_csv", blob: @upload_form.blob.signed_id(expires_in: UPLOAD_LIFETIME))
           end
 
           def update
-            @form = form(AdminForms::CensusFileMappingForm).from_params(params)
-            return redirect_to_upload if @form.file.blank?
+            @mapping_form = form(AdminForms::CensusFileMappingForm).from_params(params)
+            return redirect_to_drop_zone if @mapping_form.file.blank?
 
-            # Captured before the command: its `on` blocks run with the
-            # command as `self`, where the controller's helpers do not exist.
+            # Captured before the command: its `on` blocks run with the command
+            # as `self`, where the controller's helpers do not exist.
             done_path = census_path
-            errors_view = method(:render_row_errors)
-            empty_view = method(:render_no_rows)
+            refused = method(:render_refused_import)
 
-            ImportCensusFile.call(@form, election, current_user) do
+            ImportCensusFile.call(@mapping_form, election, current_user) do
               on(:ok) do |count|
                 flash[:notice] = I18n.t("census_file.update.success", scope: "decidim.elections.vocdoni.admin", count:)
                 redirect_to done_path
               end
 
-              on(:invalid_rows) do |outcome|
-                errors_view.call(outcome)
+              on(:invalid_rows) { |outcome| refused.call(outcome) }
+              on(:no_rows) { |outcome| refused.call(outcome, empty: true) }
+              on(:invalid) { refused.call(nil) }
+            end
+          end
+
+          def update_identifiers
+            @identifiers_form = form(AdminForms::CensusIdentifiersForm).from_params(params, election:)
+            done_path = census_path
+            refused = method(:render_census_tab)
+
+            UpdateCensusIdentifiers.call(@identifiers_form, election, current_user) do
+              on(:ok) do
+                flash[:notice] = I18n.t("census_file.update_identifiers.success", scope: "decidim.elections.vocdoni.admin")
+                redirect_to done_path
               end
 
-              on(:no_rows) do |outcome|
-                empty_view.call(outcome)
-              end
-
-              on(:invalid) do
-                flash.now[:alert] = I18n.t("census_file.update.invalid", scope: "decidim.elections.vocdoni.admin")
-                render :edit, status: :unprocessable_content
-              end
+              on(:invalid) { refused.call }
             end
           end
 
@@ -115,43 +117,53 @@ module Decidim
             @admin_proxy ||= Decidim::EngineRouter.admin_proxy(current_component)
           end
 
-          # Upstream's named routes are not helpers here — this controller
-          # lives outside `Decidim::Elections::Admin` — so they are reached
-          # through the component's admin proxy.
-          def census_path
-            admin_proxy.census_election_path(election)
+          # Upstream's named routes are not helpers here (this controller lives
+          # outside `Decidim::Elections::Admin`), so they are reached through
+          # the component's admin proxy.
+          def census_path(**query)
+            admin_proxy.census_election_path(election, **query)
           end
 
-          def wizard_path(action = :new, **query)
-            case action
-            when :new then admin_proxy.new_election_census_file_path(election, **query)
-            when :edit then admin_proxy.edit_election_census_file_path(election, **query)
-            else admin_proxy.election_census_file_path(election, **query)
-            end
+          def census_file_path(**query)
+            admin_proxy.election_census_file_path(election, **query)
           end
 
           def template_path(**query)
             admin_proxy.template_election_census_file_path(election, **query)
           end
 
-          def redirect_to_upload
-            flash[:alert] = I18n.t("census_file.edit.file_missing", scope: "decidim.elections.vocdoni.admin")
-            redirect_to wizard_path(:new)
+          # The Census tab, rendered from here rather than redirected to,
+          # because what was refused is on the page and would be lost.
+          #
+          # The type is set in memory only: a file census that has never been
+          # imported has not saved one yet, and without it the card the admin
+          # is looking at would be the hidden one.
+          def render_census_tab(status: :unprocessable_content)
+            election.census_manifest = "token_csv"
+            render "decidim/elections/admin/census/edit", status:
           end
 
-          def render_row_errors(outcome)
-            @outcome = outcome
-            render :errors, status: :unprocessable_content
+          # An import that changed nothing, with the file still on screen: the
+          # lines to fix, or the news that there was nobody in it.
+          def render_refused_import(outcome, empty: false)
+            @import_outcome = outcome
+
+            if empty
+              key = outcome.skipped_examples.to_i.positive? ? "only_example" : "no_people"
+              flash.now[:alert] = I18n.t("census_file.update.#{key}", scope: "decidim.elections.vocdoni.admin")
+            elsif outcome.blank?
+              flash.now[:alert] = I18n.t("census_file.update.invalid", scope: "decidim.elections.vocdoni.admin")
+            end
+
+            render_census_tab
           end
 
-          # Nothing was wrong with the file — there was simply nobody in it to
-          # import. The "lines to fix" page would have an empty table, so the
-          # admin goes back to the matching step, which keeps their file and
-          # their choices and says what the file is missing.
-          def render_no_rows(outcome)
-            key = outcome.skipped_examples.to_i.positive? ? "only_example" : "no_people"
-            flash.now[:alert] = I18n.t("census_file.update.#{key}", scope: "decidim.elections.vocdoni.admin")
-            render :edit, status: :unprocessable_content
+          # The signed link to the file expired, or the file was cleared up
+          # while the admin was reading the page: there is nothing to import
+          # any more, so the card asks for it again.
+          def redirect_to_drop_zone
+            flash[:alert] = I18n.t("census_file.file_missing", scope: "decidim.elections.vocdoni.admin")
+            redirect_to census_path(manifest: "token_csv")
           end
 
           # A header row plus one example line, with the separator Spanish
@@ -162,7 +174,7 @@ module Decidim
               rows << fields.map { |field| CensusCsv::Fields.example(field) }
             end
             # The byte-order mark makes Excel on Windows read the file as UTF-8.
-            "\uFEFF#{csv}"
+            "﻿#{csv}"
           end
         end
       end

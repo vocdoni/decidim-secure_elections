@@ -1,7 +1,7 @@
 <%#
   Security tab, shown on every election between Census and Dashboard.
 
-  1. How the vote runs — a simple Decidim vote or a secret, verifiable one
+  1. How the vote runs: a simple Decidim vote or a secret, verifiable one
      on Vocdoni (`enable_vocdoni`; opting in creates the `Vocdoni::Process`
      sidecar), with the reasons an organisation would pick one or the other.
   2. How voters prove who they are (file census: 1–3 of its columns).
@@ -24,7 +24,9 @@
     injects the Security item. %>
 <%= render "decidim/elections/admin/elections/tabs_menu" %>
 
-<div class="item__edit-form vocdoni-security 2xl:mr-80">
+<%# `vocdoni-cards` carries the selectable-card styles this page shares with
+    the Census tab; `vocdoni-security` everything that is only this page's. %>
+<div class="item__edit-form vocdoni-security vocdoni-cards 2xl:mr-80">
   <%# `request.path` is the URL bound to both #show and #update
       (`resource :security`). A string rather than the named helper because
       this view renders inside upstream's admin engine, whose url_helpers

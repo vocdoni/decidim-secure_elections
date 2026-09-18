@@ -9,9 +9,9 @@
  *    and the card title still do.
  * 2. The one-time code card is only usable while the secret vote is
  *    selected.
- * 3. The identifiers of a file census follow the vote type (the secure
- *    service accepts fewer details), stop at the maximum, and warn when the
- *    choice is easy to guess.
+ * 3. What registered participants will be asked for depends on the vote
+ *    type, so the sentence follows it. The details a file census asks for
+ *    are chosen with the census, on the Census tab, and only shown here.
  * 4. The summary line follows the selection.
  *
  * All copy comes from the page; selectors are ids with a `js-` prefix or
@@ -21,7 +21,6 @@
 const CHOICE_ID = "js-security-choice";
 const TWO_FACTOR_ID = "js-security-two-factor";
 const SUMMARY_ID = "js-security-summary";
-const IDENTIFIERS_ID = "js-security-identifiers";
 
 /**
  * Mirrors `SecurityForm#level`.
@@ -52,10 +51,6 @@ const setupSecurity = () => {
   const codes = Array.from(twoFactor.querySelectorAll("[data-security-code]"));
   const notes = Array.from(twoFactor.querySelectorAll("[data-two-factor-note]"));
 
-  const identifiers = document.getElementById(IDENTIFIERS_ID);
-  const identifierItems = identifiers
-    ? Array.from(identifiers.querySelectorAll("[data-identifier]"))
-    : [];
   const registeredNotes = Array.from(document.querySelectorAll("[data-identifiers-note]"));
 
   const selected = () => {
@@ -78,55 +73,14 @@ const setupSecurity = () => {
       element.hidden = usable;
     });
 
-    return usable && codes.some((box) => box.checked && !box.disabled);
+    // A required channel is rendered checked and disabled: the code is sent
+    // either way, so `checked` alone is the question.
+    return usable && codes.some((box) => box.checked);
   };
 
-  // Which boxes the vote type allows, then the maximum: once it is reached
-  // the other allowed boxes are disabled too, so the limit explains itself.
-  const syncIdentifiers = (value, oneTimeCode) => {
+  const syncRegisteredNotes = (value) => {
     registeredNotes.forEach((element) => {
       element.hidden = element.dataset.identifiersNote !== value;
-    });
-
-    if (!identifiers) {
-      return;
-    }
-
-    const max = parseInt(identifiers.dataset.max, 10) || 3;
-    const weakFields = (identifiers.dataset.weak || "").split(" ");
-    const allowed = (item) => item.dataset[value === "secure"
-      ? "secureOk"
-      : "simpleOk"] === "true";
-
-    // A detail the secret vote refuses is unticked while it is refused and
-    // ticked again when the admin goes back to a simple vote.
-    identifierItems.forEach((item) => {
-      const box = item.querySelector("input[type=checkbox]");
-      const ok = allowed(item);
-      if (!ok && box.checked) {
-        box.checked = false;
-        item.dataset.wasChecked = "true";
-      } else if (ok && item.dataset.wasChecked === "true") {
-        box.checked = true;
-        Reflect.deleteProperty(item.dataset, "wasChecked");
-      }
-      item.classList.toggle("is-unavailable", !ok);
-      item.querySelectorAll("[data-identifier-hint=refused]").forEach((hint) => {
-        hint.hidden = ok;
-      });
-    });
-
-    const chosen = identifierItems.filter((item) => item.querySelector("input[type=checkbox]").checked);
-    identifierItems.forEach((item) => {
-      const box = item.querySelector("input[type=checkbox]");
-      box.disabled = !allowed(item) || (!box.checked && chosen.length >= max);
-    });
-
-    const weak = chosen.length > 0 &&
-      chosen.every((item) => weakFields.includes(item.dataset.identifier)) &&
-      !oneTimeCode;
-    identifiers.querySelectorAll("[data-identifiers-weak]").forEach((element) => {
-      element.hidden = !weak;
     });
   };
 
@@ -146,7 +100,7 @@ const setupSecurity = () => {
     const value = selected();
     syncCards(value);
     const oneTimeCode = syncTwoFactor(value);
-    syncIdentifiers(value, oneTimeCode);
+    syncRegisteredNotes(value);
     syncSummary(securityLevel(value, oneTimeCode));
   };
 
@@ -167,9 +121,6 @@ const setupSecurity = () => {
 
   radios.forEach((radio) => radio.addEventListener("change", sync));
   codes.forEach((box) => box.addEventListener("change", sync));
-  identifierItems.forEach((item) => {
-    item.querySelector("input[type=checkbox]").addEventListener("change", sync);
-  });
 
   // Form state survives a back-navigation, so start in step with it.
   sync();

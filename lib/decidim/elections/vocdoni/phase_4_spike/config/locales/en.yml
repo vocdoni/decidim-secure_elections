@@ -1,21 +1,4 @@
 en:
-  activemodel:
-    attributes:
-      security:
-        identifiers: "Details people type to vote"
-    errors:
-      models:
-        security:
-          attributes:
-            enable_vocdoni:
-              roster_too_large: "Your list has %{count} people. Secret, verifiable votes accept up to %{limit} for now; run this one as a simple vote."
-            identifiers:
-              blank: "Choose at least one detail people type to vote."
-              too_many: "Choose at most %{count} details."
-              not_for_secure: "%{fields} can't be used for a secret, verifiable vote."
-              not_unique:
-                one: "1 person can't be told apart with %{fields}. Add another detail."
-                other: "%{count} people in your list share the same %{fields}, so they can't be told apart. Add another detail."
   decidim:
     admin:
       menu:
@@ -29,8 +12,10 @@ en:
         admin:
           # The Security tab. Written for the person running the vote, not for
           # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
-          # vote types are "Simple vote" (any standard Decidim census) and
-          # "Secret, verifiable vote" (`enable_vocdoni`, the Vocdoni opt-in).
+          # vote types are "Poll without guarantees" (any standard Decidim
+          # census) and "Vote with guarantees" (`enable_vocdoni`, the Vocdoni
+          # opt-in). Running prose uses those short forms; the cards carry the
+          # full titles.
           security:
             show:
               title: "Security"
@@ -41,77 +26,52 @@ en:
                 best_for: "Best for:"
                 selected: "Selected"
                 simple:
-                  title: "Simple vote"
-                  summary: "Runs on this platform, like a survey."
+                  title: "Poll without guarantees"
+                  summary: "Run the vote like a survey without cryptographic guarantees. Not anonymous, and not end-end verifiable, so it does not meet what annual general meetings, board elections and other statutory decisions normally require."
                   points:
                     stored: "Ballots are stored in this platform's database."
                     readable: "Platform administrators can technically read them."
-                    unverifiable: "Results are computed by this server; nobody outside can check them."
-                    editable: "Can be edited until the vote starts."
+                    unverifiable: "Results are computed by this server; nobody outside can verify them."
                   best_for: "Informal polls, quick consultations, decisions nobody is likely to contest."
                 secure:
-                  title: "Secret, verifiable vote"
-                  summary: "Ballots are sealed so nobody can read them, and the count can be checked independently."
+                  title: "Vote with guarantees"
+                  summary: "Anonymous and verifiable: ballots are sealed so nobody can read them, and anyone can check the count independently. This is what statutes and regulations normally require of a binding vote."
                   points:
-                    anonymous: "Nobody — not even administrators — can link a ballot to a voter."
+                    anonymous: "Nobody, not even administrators, can link a ballot to a voter."
                     tamper: "Any tampering is detectable: each voter gets a receipt they can check on a public website, and the results export links there too."
                     minimal: "Only the details needed to check who may vote are used; ballots hold no personal data."
-                    locked: "Locked once published — that is what makes it trustworthy."
-                  best_for: "Elections of officers, statutory votes, budgets — anything that must stand up to challenge."
+                  best_for: "Elections of officers, statutory votes, budgets: anything that must stand up to challenge."
                   powered_by: "Powered by the Vocdoni voting protocol."
                   # Leave empty until the admin guide exists: the link is only
                   # rendered when this has a value.
                   guide_url: ""
                   guide_link: "Read the full guide"
-                too_large: "Your list has %{count} people. Secret, verifiable votes accept up to %{limit} for now, so this vote can only run as a simple vote."
-                good_to_know_html: "<strong>Good to know:</strong> you can change this choice until the election is published. Voters won't notice any difference, except the one-time code if you enable it."
+                refused_identifiers: "Your list identifies people only by an access code, which a vote with guarantees cannot check. Add another detail on the Census tab to run this as a vote with guarantees."
               why:
-                title: "Why it matters for organisations and public bodies"
+                title: "Why organizing a verifiable secure vote matters for organisations and public bodies"
                 secrecy:
                   title: "Ballot secrecy and anonymity"
-                  body: "A secret ballot is the baseline of a legitimate vote. With a secret, verifiable vote it is guaranteed by cryptography, not by trust in whoever runs the platform."
+                  body: "A secret ballot is the baseline of a legitimate vote. In a vote with guarantees it rests on cryptography, not on trust in whoever runs the platform."
                 leaks:
                   title: "Fewer leaks, less liability"
                   body: "The platform never holds a readable ballot, so a data breach or a mistaken administrator cannot reveal how anyone voted."
                 gdpr:
                   title: "GDPR and data minimisation"
-                  body: "How someone voted is sensitive personal data. With a secret vote, the platform never stores it, so there is far less to protect and ballots contain no personal data. Only the identifiers needed to check who may vote are processed."
+                  body: "How someone voted is sensitive personal data. In a vote with guarantees, the platform never stores it, so there is far less to protect and ballots contain no personal data. Only the identifiers needed to check who may vote are processed."
                 statutes:
                   title: "Regulation and your own statutes"
                   body: "Beyond national law, the statutes and bylaws of associations, cooperatives, professional bodies and councils often require a secret ballot for elections and binding decisions. This option lets you guarantee it, and prove it."
-                table:
-                  title: "At a glance"
-                  caption: "Comparison between a simple vote and a secret, verifiable vote"
-                  feature: "Feature"
-                  "yes": "Yes"
-                  "no": "No"
-                  rows:
-                    secrecy:
-                      label: "Ballot secrecy"
-                      simple: "Relies on administrators"
-                      secure: "Guaranteed"
-                    readers:
-                      label: "Who can read ballots"
-                      simple: "Platform administrators"
-                      secure: "Nobody"
-                    tamper:
-                      label: "Tampering is detectable"
-                    verification:
-                      label: "Anyone can verify the count"
-                    personal_data:
-                      label: "Personal data kept with the ballot"
-                      simple: "A reference to the voter"
-                      secure: "None"
-                    locked:
-                      label: "Locked once published"
+              # Shown, not chosen: the details belong to the census, so they
+              # are picked on the Census tab and only reported here.
               identifiers:
                 legend: "How people prove who they are"
-                lead: "Choose up to %{max} details from your list that each person will type to vote. Pick details your people know by heart and that others are unlikely to know."
-                not_for_secure:
-                  other: "The secure voting service doesn't accept this detail as proof of identity. Turn on a one-time code below instead."
-                  token: "The secure voting service only accepts details that identify a person, so it can't take a free-form code. To let people vote with a code you hand out, match that column as “Member number” when you upload your list."
-                weak: "Anyone who knows these details could vote on someone else's behalf. Add an ID number, a member number or an access code, or turn on a one-time code."
-                no_list_html: "Upload your list on the <a href=\"%{url}\">Census tab</a> first; then choose here which of its details people type to vote."
+                chosen: "Voters type their %{fields} to be found on your list."
+                change_html: "You choose these together with your list, on the <a href=\"%{url}\">Census tab</a>."
+                by_code: "In a vote with guarantees their %{fields} is not checked against the list: a one-time code is sent there instead, and that is what proves them (see below)."
+                refused:
+                  title: "A vote with guarantees can't use these details"
+                  body: "Your list identifies people only by an access code, which a vote with guarantees can neither check nor send a code to. On the Census tab, add a member number, ID number, name, date of birth, email address or phone number."
+                none_html: "Nobody can vote yet: choose on the <a href=\"%{url}\">Census tab</a> which details people type to be found on your list."
                 no_census_html: "Choose who can vote on the <a href=\"%{url}\">Census tab</a> first."
                 registered:
                   lead: "Your census is made of people registered on this platform."
@@ -120,15 +80,17 @@ en:
               two_factor:
                 legend: "Confirm voters' identity with a one-time code"
                 lead: "Each voter receives a one-time code when they open the ballot and types it in before voting. It stops someone voting on behalf of another person and makes the result harder to dispute."
-                simple_note: "Available for secret, verifiable votes."
+                simple_note: "Available for votes with guarantees."
                 email:
                   label: "Email code"
                   help: "The code goes to each person's email address."
+                  required: "Your list identifies people by their email address, so this code is how they prove who they are. It is always on."
                   needs_column: "Your list has no email column, so there is nowhere to send this code."
                   not_for_registered: "Not available."
                 sms:
                   label: "SMS code"
                   help: "The code goes by text message to each person's phone number."
+                  required: "Your list identifies people by their phone number, so this code is how they prove who they are. It is always on."
                   needs_column: "Your list has no phone column, so there is nowhere to send this code."
                   not_for_registered: "Registered participants have no phone number on this platform, so this code can't be sent."
                 both_note: "If both are on, each voter chooses how to receive the code."
@@ -146,10 +108,10 @@ en:
                     other: "Your list is ready: %{count} people can vote."
                   body: "Everyone can be told apart with the details you chose. You can publish the election."
                 failed:
-                  title: "Your list isn't ready for a secret vote yet"
-                  generic: "The secure voting service couldn't accept the list. Check the details below, fix the list or your choices, and save again."
+                  title: "Your list isn't ready for a vote with guarantees yet"
+                  generic: "The secure voting service couldn't accept this list. Its own words are under \"Technical details\" below. For a large list the usual cause is your Vocdoni plan, which limits how many people your organisation can hold across all its elections, not just this one; Vocdoni can raise it for you."
                   codes:
-                    roster_too_large: "The secure voting service accepts up to %{limit} people per organisation. Reduce the list or contact support."
+                    roster_over_ceiling: "This list is larger than this platform sends in one go (%{limit} people). That limit is this platform's own, not your Vocdoni plan's. Ask whoever runs this platform to raise it, or run this as a poll without guarantees."
                     no_identifiers: "Choose above which details people type to vote."
                     no_identity: "Some people have no member number, ID number, email or phone. The secure voting service needs at least one of them for every person: add one of those columns to your file."
                   problems:
@@ -168,9 +130,9 @@ en:
               summary:
                 title: "Your configuration"
                 levels:
-                  basic: "Simple"
-                  strong: "Secret & verifiable"
-                  strongest: "Secret, verifiable + one-time code"
+                  basic: "Without guarantees"
+                  strong: "With guarantees"
+                  strongest: "With guarantees + one-time code"
                 sentences:
                   basic: "Ballots are kept on this platform. Suitable for informal consultations."
                   strong: "Anonymous ballots, result checkable by anyone."

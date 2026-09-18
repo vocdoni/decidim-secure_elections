@@ -6,13 +6,19 @@ module Decidim
   module Elections
     module Vocdoni
       module AdminForms
-        # Step 2 of the census file wizard: what each column means.
+        # The file as read, ready to import: what each column means, and which
+        # of those details a voter types to be found on the list.
         #
         # `columns` maps a column position ("0", "1", …) to a field of
         # {CensusCsv::Fields::TARGETS}, or "" to leave the column out. The
-        # uploaded file travels as a signed blob id between steps.
+        # uploaded file travels as a signed blob id, so the review the admin is
+        # looking at survives a reload without the file being posted twice.
+        #
+        # The identifiers follow from those columns ({ChoosesIdentifiers}), so
+        # an admin who agrees with the mapping has nothing left to answer.
         class CensusFileMappingForm < Decidim::Form
           include Decidim::ProcessesFileLocally
+          include ChoosesIdentifiers
 
           mimic :census_file
 
@@ -66,6 +72,57 @@ module Decidim
             mapping.compact
           end
 
+          alias available_fields fields
+
+          # The rows this import would create, mapped and cleaned once: the
+          # identifier check needs them here, and {Admin::ImportCensusFile}
+          # reuses the same outcome instead of parsing the file twice.
+          def outcome
+            @outcome ||= CensusCsv::RowMapper.new(reader, mapping).call
+          end
+
+          def identifiers_checkable?
+            reader.present? && errors[:blob].empty? && errors[:columns].empty?
+          end
+
+          # Columns whose heading the importer recognised by itself. Only the
+          # others are worth an admin's attention: re-asking about the ones it
+          # already knows turns a moment's confirmation into nine decisions,
+          # all looking equally certain.
+          def guessed?(index)
+            CensusCsv::Fields.suggest(headers[index]).present?
+          end
+
+          def guessed_indexes
+            headers.each_index.select { |index| guessed?(index) }
+          end
+
+          def unknown_indexes
+            headers.each_index.reject { |index| guessed?(index) }
+          end
+
+          # Columns being kept, as "heading → detail" pairs, in file order.
+          def kept_pairs
+            headers.each_with_index.filter_map do |header, index|
+              field = mapping[index]
+              [header, CensusCsv::Fields.label(field)] if field
+            end
+          end
+
+          def dropped_headers
+            headers.each_with_index.filter_map { |header, index| header if mapping[index].nil? }
+          end
+
+          # How many of the people in this file have nothing in that column.
+          # Asked about email and phone before the admin picks one as the way
+          # people identify themselves, because those are the ones a list
+          # tends to be missing.
+          def people_without(field)
+            return 0 unless identifiers_checkable?
+
+            outcome.rows.count { |row| row[field].blank? }
+          end
+
           def settings_columns
             headers.each_with_index.map { |header, index| { "header" => header, "field" => mapping[index] } }
           end
@@ -94,6 +151,17 @@ module Decidim
 
           def something_kept
             errors.add(:columns, :empty) if fields.empty?
+          end
+
+          # Counted on the rows about to be imported: two people the chosen
+          # details cannot tell apart would both be refused at sign-in, and
+          # neither would know why.
+          def identifier_duplicates(chosen)
+            return 0 if chosen.empty? || outcome.failed? || outcome.rows.empty?
+
+            outcome.rows
+                   .group_by { |row| chosen.map { |field| CensusCsv::Fields.comparable(field, row[field]) } }
+                   .sum { |_key, rows| rows.size > 1 ? rows.size : 0 }
           end
         end
       end

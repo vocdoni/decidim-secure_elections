@@ -11,7 +11,7 @@ module Decidim
         #      the {Process} sidecar row.
         #
         #   2. The second-factor challenge for CSP authentication. Two
-        #      independent booleans — SMS and Email — that map onto the
+        #      independent booleans (SMS and Email) that map onto the
         #      Vocdoni SaaS `twoFaFields` array (`"phone"` and `"email"`
         #      respectively). All four combinations are valid:
         #
@@ -20,11 +20,9 @@ module Decidim
         #        [] [x] → Email OTP only
         #        [x] [x] → voter picks at auth time (SaaS OR)
         #
-        #   3. For a "Participants from a file" census, the details voters type
-        #      to prove who they are (`identifiers`, 1–3 of the file's
-        #      columns). They matter for both vote types, so they are stored
-        #      with the census (`census_settings["identifiers"]`), not on the
-        #      sidecar.
+        # The details voters type to prove who they are belong to the census,
+        # and a simple vote needs them too, so they are chosen on the Census tab
+        # and only read here, to say whether a secret vote can accept them.
         #
         # Persisted through {Admin::UpdateElectionSecurity} onto the sidecar's
         # `metadata["settings"]` hash. The Publish subscription checks
@@ -38,11 +36,7 @@ module Decidim
           attribute :enable_vocdoni, Boolean, default: false
           attribute :sms, Boolean, default: false
           attribute :email, Boolean, default: false
-          attribute :identifiers, Array[String], default: [] # rubocop:disable Style/RedundantArrayConstructor -- Decidim attribute type
           attribute :election, Object
-
-          validate :identifiers_count, :identifiers_allowed, :identifiers_unique, if: :file_census_with_list?
-          validate :roster_within_limit, if: :enable_vocdoni
 
           # Reconstructs a form from the sidecar and the census. An election
           # that has never visited the Security tab has no sidecar; every
@@ -54,15 +48,14 @@ module Decidim
             new(election:,
                 enable_vocdoni: sidecar.present?,
                 sms: two_fa.include?("phone"),
-                email: two_fa.include?("email"),
-                identifiers: Array(election.census_settings.to_h["identifiers"]).map(&:to_s))
+                email: two_fa.include?("email"))
           end
 
           # {.from_model} passes the election as an attribute, while the
           # controller's `from_params(params, election:)` puts it in the
           # form's context instead. Read both: with a nil election every
-          # predicate below answers "no", and the identifier rules this form
-          # exists to enforce are silently skipped on save.
+          # predicate below answers "no", and the rules this form exists to
+          # enforce are silently skipped on save.
           def election
             super || (context[:election] if context)
           end
@@ -75,22 +68,63 @@ module Decidim
             election&.census_manifest.to_s == "internal_users"
           end
 
-          # How many people the census holds, as the secure voting service
-          # would receive them.
-          def census_size
-            return 0 if election&.census.blank?
-
-            @census_size ||= election.census.count(election).to_i
-          end
-
-          def max_roster
-            PublishToVocdoniJob.max_roster
-          end
-
-          # A secret vote cannot be set up for a list the secure voting service
-          # will refuse; the page says so before the admin chooses it.
+          # How many people a secret vote may hold is the organisation's own
+          # quota with the secure voting service, which this platform cannot
+          # read. Guessing it here only ever refused lists the service would
+          # have accepted, so size is no longer judged before the fact: the
+          # census is pushed and the service answers, and its answer is what
+          # the pre-flight on this page reports.
+          #
+          # What is left is the one thing this platform does know: a list the
+          # service cannot authenticate at all.
           def secure_available?
-            census_size <= max_roster || election&.vocdoni_process.present?
+            !secure_blocked_by_identifiers?
+          end
+
+          # The details voters type, chosen with the census on the Census tab.
+          def identifiers
+            return [] unless file_census?
+
+            @identifiers ||= census_fields & Array(election.census_settings.to_h["identifiers"]).map(&:to_s)
+          end
+
+          # Titles, for a list of boxes.
+          def identifier_labels
+            identifiers.map { |field| Fields.label(field) }
+          end
+
+          # The same details as they read inside a sentence, which is how this
+          # tab reports them and how the Census tab states them.
+          def identifier_names
+            identifiers.map { |field| Fields.in_sentence(field) }
+          end
+
+          # What a secret vote would send as its `authFields`.
+          def secure_identifiers
+            identifiers & Fields::AUTH
+          end
+
+          # The list is identified only by details the secure voting service
+          # cannot use at all: in practice an access code we hand out, which
+          # it will neither check nor deliver a code to. Nothing here can fix
+          # that (the choice belongs to the census), so the card says where.
+          def secure_blocked_by_identifiers?
+            file_census? && identifiers.any? && !identifiers.intersect?(Fields::SECURE_IDENTIFIERS)
+          end
+
+          # A contact detail chosen as the way people identify themselves is
+          # not a preference: the code sent there is what proves the person,
+          # so the channel is on and cannot be turned off here.
+          def code_required?(field)
+            file_census? && identifiers.include?(field.to_s)
+          end
+
+          def required_code_labels
+            code_identifiers.map { |field| Fields.in_sentence(field) }
+          end
+
+          def code_identifiers
+            identifiers & Fields::TWO_FA
           end
 
           # The columns the uploaded file was mapped to. A list uploaded with
@@ -103,38 +137,6 @@ module Decidim
               fields = election.voters.first&.data.to_h.keys.map(&:to_s) if fields.empty?
               fields & Fields::TARGETS
             end
-          end
-
-          def file_census_with_list?
-            census_fields.any?
-          end
-
-          # Every column that can ever be an identifier, in file order.
-          def identifier_options
-            census_fields & Fields::SIMPLE_IDENTIFIERS
-          end
-
-          def allowed_for_simple?(field) = Fields::SIMPLE_IDENTIFIERS.include?(field)
-
-          def allowed_for_secure?(field) = Fields::AUTH.include?(field)
-
-          def allowed_identifiers
-            identifier_options.select { |field| enable_vocdoni ? allowed_for_secure?(field) : allowed_for_simple?(field) }
-          end
-
-          # What gets stored: the chosen columns the file has, in file order.
-          def chosen_identifiers
-            identifier_options & Array(identifiers).map(&:to_s)
-          end
-
-          def identifier_selected?(field)
-            chosen_identifiers.include?(field)
-          end
-
-          # Only name, surname or date of birth, and no one-time code.
-          def weak_identifiers?
-            chosen = chosen_identifiers
-            chosen.any? && (chosen - Fields::WEAK).empty? && !(enable_vocdoni && two_fa_fields.any?)
           end
 
           # The one-time code needs somewhere to go: a file census needs the
@@ -167,53 +169,14 @@ module Decidim
             two_fa_fields.any? ? "strongest" : "strong"
           end
 
-          # SaaS-shape array — the same value we forward verbatim as
+          # SaaS-shape array: the same value we forward verbatim as
           # `twoFaFields` in the process-creation payload. Kept sorted so
           # two equivalent selections do not appear as different diffs.
           def two_fa_fields
             fields = []
-            fields << "email" if email && email_code_available?
-            fields << "phone" if sms && sms_code_available?
+            fields << "email" if (email || code_required?("email")) && email_code_available?
+            fields << "phone" if (sms || code_required?("phone")) && sms_code_available?
             fields.sort
-          end
-
-          private
-
-          def roster_within_limit
-            return if census_size <= max_roster
-
-            errors.add(:enable_vocdoni, :roster_too_large, count: census_size, limit: max_roster)
-          end
-
-          def identifiers_count
-            count = chosen_identifiers.size
-            return if count.between?(1, Fields::MAX_IDENTIFIERS)
-
-            errors.add(:identifiers, count.zero? ? :blank : :too_many, count: Fields::MAX_IDENTIFIERS)
-          end
-
-          def identifiers_allowed
-            refused = chosen_identifiers - allowed_identifiers
-            return if refused.empty?
-
-            errors.add(:identifiers, :not_for_secure, fields: labels(refused))
-          end
-
-          # The chosen details must tell every person in the list apart.
-          def identifiers_unique
-            chosen = chosen_identifiers & allowed_identifiers
-            return if chosen.empty? || errors[:identifiers].any?
-
-            connection = Decidim::Elections::Voter.connection
-            keys = chosen.map { |field| "lower(data->>#{connection.quote(field)})" }
-            groups = Decidim::Elections::Voter.where(election:).group(Arel.sql(keys.join(", "))).having("count(*) > 1").count
-            return if groups.empty?
-
-            errors.add(:identifiers, :not_unique, count: groups.values.sum, fields: labels(chosen))
-          end
-
-          def labels(fields)
-            fields.map { |field| Fields.label(field) }.to_sentence
           end
         end
       end

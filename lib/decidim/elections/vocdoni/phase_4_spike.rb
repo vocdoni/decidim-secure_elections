@@ -58,7 +58,7 @@ module Decidim
           app.config.after_initialize do
             ActiveSupport::Reloader.to_prepare do
               model = Decidim::Elections::Election
-              next if model.defined_enums.key?("results_availability")
+              next if model.defined_enums.has_key?("results_availability")
 
               begin
                 model.enum :results_availability, Decidim::Elections.results_availability_options.index_with(&:to_s)
@@ -104,6 +104,15 @@ module Decidim
               Decidim::Elections::Vocdoni::CensusRedirectsToSecurity
             )
 
+            # The Census tab is rendered by this engine instead of upstream:
+            # one page where the census type is chosen as a card and set up in
+            # place, rather than a reloading select plus whatever form the type
+            # brings. The concern carries the data that page needs and makes
+            # sure our template is the one found.
+            Decidim::Elections::Admin::CensusController.include(
+              Decidim::Elections::Vocdoni::CensusPage
+            )
+
             # Voter-side: whichever action of the votes controller the
             # voter lands on, hand them off to the Vocdoni booth SPA when
             # the election opted in. Otherwise the upstream per-question
@@ -136,9 +145,13 @@ module Decidim
         initializer "phase_4_spike.census_file" do |app|
           Decidim::Elections::AdminEngine.routes.append do
             resources :elections, only: [] do
-              resource :census_file, only: [:new, :create, :edit, :update, :destroy],
+              # No `new`: the list is uploaded, reviewed and changed inside the
+              # "Your list" card on the Census tab, so every route here answers
+              # a form and hands the admin straight back to that tab.
+              resource :census_file, only: [:create, :update, :destroy],
                                      controller: "/decidim/elections/vocdoni/admin/census_file" do
                 get :template
+                patch :identifiers, action: :update_identifiers
               end
             end
           end
@@ -148,7 +161,10 @@ module Decidim
             next if manifest.blank?
 
             manifest.admin_form = "Decidim::Elections::Vocdoni::AdminForms::CensusFileSettingsForm"
-            manifest.admin_form_partial = "decidim/elections/vocdoni/admin/censuses/token_csv_form"
+            # The Census tab renders its own set-up block for this census
+            # (`census_setup/_file`), so the manifest no longer carries a
+            # partial for upstream's page to render inside its form.
+            manifest.admin_form_partial = nil
             manifest.after_update_command = nil
             manifest.user_presenter = "Decidim::Elections::Vocdoni::CensusFileVoterPresenter"
             manifest.voter_form = "Decidim::Elections::Vocdoni::VoterForms::CensusFileForm"

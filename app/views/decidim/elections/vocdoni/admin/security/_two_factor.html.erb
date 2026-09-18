@@ -9,13 +9,17 @@
   Each channel needs somewhere to send the code: a file census needs the
   matching column, and registered participants have an email address but no
   phone number. An unavailable channel is disabled and says why.
+
+  A channel can also be *required* rather than chosen: when the census
+  identifies people by their email or phone, the code sent there is what
+  proves who they are, so it is on and cannot be turned off from here.
 %>
 <% scope = "decidim.elections.vocdoni.admin.security.show.two_factor" %>
 <% enabled = @form.enable_vocdoni %>
 <%
   channels = [
-    { field: :email, icon: "mail-lock-line", available: @form.email_code_available? },
-    { field: :sms, icon: "smartphone-line", available: @form.sms_code_available? }
+    { field: :email, census_field: "email", icon: "mail-lock-line", available: @form.email_code_available? },
+    { field: :sms, census_field: "phone", icon: "smartphone-line", available: @form.sms_code_available? }
   ]
 %>
 <div class="card vocdoni-security__card">
@@ -40,12 +44,18 @@
         <div class="vocdoni-two-factor__options">
           <% channels.each do |channel| %>
             <% field = channel[:field] %>
+            <% required = @form.code_required?(channel[:census_field]) %>
             <div class="vocdoni-two-factor__option<%= " is-unavailable" unless channel[:available] %>">
               <div class="vocdoni-two-factor__control">
+                <%# Required: rendered on and disabled, with a hidden field so
+                    the choice still reaches the server. No id of its own:
+                    it would collide with the checkbox's and steal its label. %>
+                <%= hidden_field_tag "security[#{field}]", "1", id: nil if required %>
                 <%= f.check_box field,
                                 label: false,
                                 id: "security_#{field}",
-                                disabled: !channel[:available],
+                                checked: required || nil,
+                                disabled: required || !channel[:available],
                                 aria: { describedby: "security-#{field}-help" },
                                 data: { security_code: true } %>
                 <label for="security_<%= field %>" class="vocdoni-two-factor__label">
@@ -54,7 +64,9 @@
                 </label>
               </div>
               <p class="help-text vocdoni-two-factor__help" id="security-<%= field %>-help">
-                <% if channel[:available] %>
+                <% if required %>
+                  <%= t("#{field}.required", scope:) %>
+                <% elsif channel[:available] %>
                   <%= t("#{field}.help", scope:) %>
                 <% elsif @form.file_census? %>
                   <%= t("#{field}.needs_column", scope:) %>

@@ -1,17 +1,19 @@
 <%#
-  Card: how voters prove who they are.
+  Card: how voters prove who they are, shown, not edited.
 
-  - "Participants from a file": the admin ticks 1–3 of the file's columns.
-    Which ones are allowed depends on the vote type (the secure voting
-    service only accepts some details); each box carries both answers in
-    `data-simple-ok` / `data-secure-ok` so `security.js` can follow the
-    radio, and the server renders the state of the saved choice.
-  - "Registered participants": nothing to choose; the card explains what
-    voters will be asked.
-  - No list yet: a pointer to the Census tab.
+  The choice belongs to the census: a simple vote needs it just as much, and
+  for registered participants the same question is answered by the
+  verifications on the Census tab. So it is made there, and this card only
+  reports it and points back.
+
+  - "Participants from a file": the details the admin picked, with a link to
+    change them, or a warning when the list has none yet.
+  - "Registered participants": nothing to pick; what voters will be asked
+    depends on the vote type, so both sentences are rendered and `security.js`
+    shows the one that matches.
+  - No census yet: a pointer to the Census tab.
 %>
 <% scope = "decidim.elections.vocdoni.admin.security.show.identifiers" %>
-<% fields = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
 <% census_link = Decidim::EngineRouter.admin_proxy(election.component).census_election_path(election) %>
 <div class="card vocdoni-security__card">
   <div class="card-divider">
@@ -20,57 +22,35 @@
 
   <div class="card-section">
     <div class="row column">
-      <% if @form.file_census_with_list? %>
-        <% errors = @form.errors[:identifiers] %>
-        <fieldset id="js-security-identifiers"
-                  class="vocdoni-security__fieldset vocdoni-identifiers"
-                  aria-labelledby="security-identifiers-title"
-                  aria-describedby="security-identifiers-lead<%= " security-identifiers-error" if errors.any? %>"
-                  data-max="<%= fields::MAX_IDENTIFIERS %>"
-                  data-weak="<%= fields::WEAK.join(" ") %>">
-          <p class="vocdoni-security__lead" id="security-identifiers-lead"><%= t("lead", scope:, max: fields::MAX_IDENTIFIERS) %></p>
+      <% if @form.file_census? && @form.identifiers.any? %>
+        <p class="vocdoni-security__lead"><%= t("chosen", scope:, fields: @form.identifier_names.to_sentence) %></p>
 
-          <% if errors.any? %>
-            <p class="form-error is-visible" id="security-identifiers-error"><%= errors.to_sentence %></p>
-          <% end %>
+        <%# Only one case is worth a warning: a list a secret vote cannot
+            read at all. An access code next to a detail it can read is
+            ordinary, and the Census tab already says what happens to it. %>
+        <% if @form.secure_blocked_by_identifiers? %>
+          <%= cell "decidim/announcement",
+                   { title: t("refused.title", scope:), body: t("refused.body", scope:) },
+                   callout_class: "alert" %>
+        <% end %>
 
-          <input type="hidden" name="security[identifiers][]" value="">
-          <ul class="vocdoni-identifiers__list">
-            <% @form.identifier_options.each do |field| %>
-              <% simple_ok = @form.allowed_for_simple?(field) %>
-              <% secure_ok = @form.allowed_for_secure?(field) %>
-              <% allowed = @form.enable_vocdoni ? secure_ok : simple_ok %>
-              <li class="vocdoni-identifiers__item<%= " is-unavailable" unless allowed %>"
-                  data-identifier="<%= field %>"
-                  data-simple-ok="<%= simple_ok %>"
-                  data-secure-ok="<%= secure_ok %>">
-                <label class="vocdoni-identifiers__label" for="security_identifiers_<%= field %>">
-                  <input type="checkbox"
-                         name="security[identifiers][]"
-                         id="security_identifiers_<%= field %>"
-                         value="<%= field %>"
-                         aria-describedby="security-identifiers-<%= field %>-hint"
-                         <%= "checked" if @form.identifier_selected?(field) %>
-                         <%= "disabled" unless allowed %>>
-                  <span><%= fields.label(field) %></span>
-                </label>
-                <p class="help-text vocdoni-identifiers__hint" id="security-identifiers-<%= field %>-hint">
-                  <span data-identifier-hint="ok"><%= fields.hint(field) %></span>
-                  <%# An access code has its own way out (see the locale), so the reason is per detail. %>
-                  <span data-identifier-hint="refused" <%= "hidden" if allowed %>><%= t("not_for_secure.#{field}", scope:, default: t("not_for_secure.other", scope:)) %></span>
-                </p>
-              </li>
-            <% end %>
-          </ul>
+        <%# A contact detail identifies a voter through the code sent to it,
+            so saying only "they type their email" would be a half-truth. %>
+        <% if @form.code_identifiers.any? %>
+          <p class="vocdoni-security__note" data-identifiers-note="secure" <%= "hidden" unless @form.enable_vocdoni %>>
+            <%= icon "mail-lock-line" %>
+            <span><%= t("by_code", scope:, fields: @form.required_code_labels.to_sentence) %></span>
+          </p>
+        <% end %>
 
-          <div class="vocdoni-identifiers__weak" data-identifiers-weak <%= "hidden" unless @form.weak_identifiers? %>>
-            <%= cell("decidim/announcement", t("weak", scope:), callout_class: "warning") %>
-          </div>
-        </fieldset>
-      <% elsif @form.file_census? %>
         <p class="vocdoni-security__note">
           <%= icon "information-line" %>
-          <span><%= t("no_list_html", scope:, url: census_link) %></span>
+          <span><%= t("change_html", scope:, url: census_link) %></span>
+        </p>
+      <% elsif @form.file_census? %>
+        <p class="vocdoni-security__note">
+          <%= icon "error-warning-line" %>
+          <span><%= t("none_html", scope:, url: census_link) %></span>
         </p>
       <% elsif @form.registered_census? %>
         <p class="vocdoni-security__lead"><%= t("registered.lead", scope:) %></p>

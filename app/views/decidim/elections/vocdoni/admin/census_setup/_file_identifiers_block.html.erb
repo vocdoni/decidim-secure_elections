@@ -1,0 +1,62 @@
+<%#
+  Who a voter says they are, as a sentence.
+
+  This used to be a question with up to eight checkboxes. It is a question the
+  columns already answer ({CensusCsv::Identifiers}), and one an admin has no
+  better information to answer than we do, so the answer is stated and the
+  checkboxes wait behind "Change" for the rare list that needs something else.
+
+  The sentence is built from the chosen details themselves rather than written
+  per case, so it cannot drift from what was stored.
+
+  Locals: `form` (any form including `ChoosesIdentifiers`), `scope`, and
+  optionally `change` (false to show the sentence alone, when the columns it
+  is derived from are still being decided on the same form), `name` (the
+  parameter name the boxes submit under) and `open` (whether Change starts
+  open).
+%>
+<% ids_scope = "decidim.elections.vocdoni.admin.census_file.identifiers" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<% chosen = form.chosen_identifiers %>
+<% errors = form.errors[:identifiers] %>
+<% code_fields = chosen & fields_mod::TWO_FA %>
+<div class="vocdoni-census__identity" data-identifiers-block>
+  <% if chosen.any? %>
+    <p class="vocdoni-census__sentence" data-identifiers-sentence>
+      <%= icon "fingerprint-line" %>
+      <span>
+        <%# The names sit in their own element so the script can keep them in
+            step with the boxes below without owning the whole sentence. %>
+        <%= t("sentence_html", scope: ids_scope,
+              fields: content_tag(:span, chosen.map { |field| fields_mod.in_sentence(field) }.to_sentence,
+                                  data: { identifiers_names: true })) %>
+        <%# The one asymmetry worth a clause: a contact detail is not checked
+            against the list, it is where the code goes. %>
+        <% if code_fields.any? %>
+          <%= t("sentence_code.#{code_fields.first}", scope: ids_scope) %>
+        <% end %>
+      </span>
+    </p>
+
+    <% if chosen.include?("token") %>
+      <p class="help-text vocdoni-census__sentence-note"><%= t("sentence_token", scope: ids_scope) %></p>
+    <% end %>
+  <% else %>
+    <p class="vocdoni-census__sentence vocdoni-census__sentence--missing" data-identifiers-sentence>
+      <%= icon "alert-line" %>
+      <span><%= t("none_available", scope: ids_scope) %></span>
+    </p>
+  <% end %>
+
+  <% if errors.any? %>
+    <p class="form-error is-visible" id="census-identifiers-error" role="alert"><%= errors.to_sentence %></p>
+  <% end %>
+
+  <% if local_assigns.fetch(:change, true) %>
+    <details class="vocdoni-census__details" <%= "open" if errors.any? || local_assigns[:open] %>>
+      <summary class="vocdoni-census__details-summary"><%= t("change", scope: ids_scope) %></summary>
+      <%= render "decidim/elections/vocdoni/admin/census_setup/file_identifiers",
+                 form:, name:, options: local_assigns[:options] %>
+    </details>
+  <% end %>
+</div>

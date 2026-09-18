@@ -23,7 +23,7 @@ module Decidim
       # `Decidim::Elections::Election` and its associated tables are read-only
       # from this job's point of view.
       #
-      # Only handles elections that opted in — that is, those whose sidecar is
+      # Only handles elections that opted in: those whose sidecar is
       # already present when the publish notification fires. The subscriber
       # filters on the same predicate, but the job double-checks so a manually
       # enqueued run cannot publish a non-Vocdoni election.
@@ -34,7 +34,7 @@ module Decidim
         # know how to load.
         queue_as :vocdoni_spike
 
-        # Only transient failures (network flap, 5xx, 429) are retried — a
+        # Only transient failures (network flap, 5xx, 429) are retried; a
         # permanent rejection (4xx or a 2xx with `errors` in the body) fails
         # identically on retry and, when the failing call is `POST /members`,
         # creates fresh duplicated members upstream on each attempt.
@@ -45,12 +45,19 @@ module Decidim
         # Defensive bound on the memberbase pagination walk.
         MAX_MEMBER_PAGES = 200
 
-        # Largest roster we push. The SaaS caps the memberbase per organisation
-        # (100 on staging), so a bigger census is refused with a clear message
-        # instead of being silently truncated. Override with
-        # `VOCDONI_MAX_ROSTER`.
+        # How many people this platform is willing to load and push in one
+        # request. A safety valve against an unbounded census (a "registered
+        # participants" list with no verification is every account on the
+        # platform), not a statement about what Vocdoni accepts.
+        #
+        # The organisation's real ceiling is its own quota with the SaaS,
+        # which this platform cannot read. It used to be guessed at 100 here
+        # and enforced as though it were fact, which refused lists the service
+        # would have taken. Now the census is pushed and the service answers
+        # for itself; only a roster too big to send at all stops here first.
+        # Override with `VOCDONI_MAX_ROSTER`.
         def self.max_roster
-          Integer(ENV.fetch("VOCDONI_MAX_ROSTER", 100))
+          Integer(ENV.fetch("VOCDONI_MAX_ROSTER", 10_000))
         end
 
         # Census pre-flight, run in the background by {PreflightCensusJob}:
@@ -145,14 +152,17 @@ module Decidim
           Rails.logger.error("[vocdoni] could not record the census pre-flight failure for election ##{election&.id}: #{e.class}")
         end
 
+        # Distinct from the SaaS's own `roster_too_large`: this one is this
+        # platform saying it will not send a list that big in one request,
+        # and it says so in its own name rather than Vocdoni's.
         def ensure_roster_within_limit!
           @step = "roster"
           limit = self.class.max_roster
           return if census_rows.size <= limit
 
           raise Decidim::Elections::Vocdoni::ApiError.new(
-            "The census has #{census_rows.size} people; the secure voting service accepts up to #{limit} per organisation",
-            code: "roster_too_large",
+            "The census has #{census_rows.size} people; this platform pushes at most #{limit} in one request",
+            code: "roster_over_ceiling",
             transient: false
           )
         end
@@ -194,7 +204,7 @@ module Decidim
           payloads = voter_payloads
           if payloads.empty?
             raise Decidim::Elections::Vocdoni::ApiError.new(
-              "This election's census resolves to zero voters — nothing to push to the Vocdoni memberbase",
+              "This election's census resolves to zero voters, so there is nothing to push to the Vocdoni memberbase",
               transient: false
             )
           end
@@ -349,7 +359,7 @@ module Decidim
         # The people the admin put in the census, whatever its type: the
         # authorised participants of a "Registered participants" census, or
         # the rows of a "Participants from a file" one. One query, no paging
-        # limit — the size is bounded by `max_roster` before anything is sent.
+        # limit: the size is bounded by `max_roster` before anything is sent.
         def census_rows
           @census_rows ||= begin
             census = election.census
@@ -365,7 +375,7 @@ module Decidim
         end
 
         # Maps a `Decidim::User` onto the Vocdoni memberbase schema. The
-        # `memberNumber` is the Decidim user id — stable, unique, and lets a
+        # `memberNumber` is the Decidim user id: stable, unique, and lets a
         # returning voter match up on the same identity across retries.
         def user_to_member(user)
           {
@@ -525,22 +535,37 @@ module Decidim
         def auth_fields
           return ["memberNumber"] unless election.census_manifest.to_s == "token_csv"
 
-          chosen = Array(election.census_settings.to_h["identifiers"]).map(&:to_s) & CensusCsv::Fields::AUTH
-          return chosen if chosen.any?
+          chosen = census_identifiers
+          unless chosen.intersect?(CensusCsv::Fields::SECURE_IDENTIFIERS)
+            @step = "identifiers"
+            raise Decidim::Elections::Vocdoni::ApiError.new(
+              "Choose on the Census tab which details voters type to identify themselves",
+              code: "no_identifiers",
+              transient: false
+            )
+          end
 
-          @step = "identifiers"
-          raise Decidim::Elections::Vocdoni::ApiError.new(
-            "Choose on the Security tab which details voters type to identify themselves",
-            code: "no_identifiers",
-            transient: false
-          )
+          # May legitimately be empty: a census identified by a contact detail
+          # alone is authenticated by the one-time code sent there, and the
+          # service accepts a census with no `authFields` at all.
+          chosen & CensusCsv::Fields::AUTH
         end
 
-        # Second-factor selection lives on the sidecar's settings, populated by
-        # {Admin::UpdateElectionSecurity} from the Security-tab form. Verbatim
-        # SaaS shape (`["email"]`, `["phone"]`, `["email","phone"]` or `[]`).
+        def census_identifiers
+          Array(election.census_settings.to_h["identifiers"]).map(&:to_s)
+        end
+
+        # Where the one-time code goes. Two sources, because there are two
+        # reasons to send one: the admin asked for it on the Security tab, or
+        # the census identifies people by a contact detail, in which case the
+        # code is what proves the person and is not optional.
+        #
+        # Verbatim SaaS shape (`["email"]`, `["phone"]`, `["email","phone"]`
+        # or `[]`).
         def two_fa_fields
-          Array(process.metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
+          chosen = Array(process.metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
+          chosen |= census_identifiers & CensusCsv::Fields::TWO_FA if election.census_manifest.to_s == "token_csv"
+          chosen.sort
         end
 
         def org_address

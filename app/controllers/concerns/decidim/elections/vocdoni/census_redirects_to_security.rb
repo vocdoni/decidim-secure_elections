@@ -7,7 +7,7 @@ module Decidim
       # (see `phase_4_spike.rb`).
       #
       # Upstream hard-codes `redirect_to dashboard_election_path(election)`
-      # inside `#update`. That skips the Security tab entirely — an admin who
+      # inside `#update`. That skips the Security tab entirely, and an admin who
       # clicks "Save and continue" on the Census tab lands on the Dashboard
       # without a chance to opt in to Vocdoni. Rewire the redirect target so
       # the wizard walks Census → Security → Dashboard.

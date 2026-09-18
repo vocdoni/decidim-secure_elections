@@ -8,7 +8,7 @@ en:
             # Labels for Decidim::Elections::Vocdoni::CensusCsv::Fields::TARGETS.
             # Used both as the column-mapping UI's dropdown options and as
             # the downloadable template's own headers, so they double as
-            # header aliases (Fields.suggest) — someone re-uploading a
+            # header aliases (Fields.suggest): someone re-uploading a
             # template they downloaded earlier must round-trip.
             fields:
               memberNumber: Member number
@@ -20,6 +20,19 @@ en:
               phone: Phone
               weight: Voting weight
               token: Access code
+            # The same details as they read inside a sentence ("Voters
+            # identify themselves with their ID number"). Separate from the
+            # labels above, which are titles: downcasing "National ID number"
+            # mid-sentence would give "national id number".
+            fields_in_sentence:
+              memberNumber: member number
+              nationalId: ID number
+              name: first name
+              surname: last name
+              birthDate: date of birth
+              email: email address
+              phone: phone number
+              token: access code
             # One plain-English line per field, shown next to the mapping
             # dropdown so an admin who has never heard "credential" or
             # "identity field" can still pick the right column.
@@ -32,7 +45,9 @@ en:
               email: The person's email address.
               phone: The person's phone number.
               weight: How many votes this person's ballot should count as. Leave this column unmapped if everyone should have one vote.
-              token: A private code you send this person separately, which they type in to prove who they are. It only works for a simple vote — for a secret, verifiable one, match the column as Member number instead.
+              # Where it matters that this one cannot be used for a secret
+              # vote, the page says so next to it: no need to repeat it here.
+              token: A private code you send this person separately, which they type in to prove who they are.
             rows:
               invalid_email: "“%{value}” is not a valid email address"
               invalid_date: "“%{value}” is not a valid date of birth (use 31/12/1990 or 1990-12-31)"

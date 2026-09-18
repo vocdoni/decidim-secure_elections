@@ -1,0 +1,131 @@
+# The Census tab. Written for the person running the vote: no "manifest",
+# no "handler", no "multi-step", no "token". Every sentence answers a question
+# an organiser actually asks: who can vote, what does this cost me, what do I
+# do next.
+en:
+  activemodel:
+    attributes:
+      census_identifiers:
+        identifiers: "Details people type to vote"
+      census_file:
+        identifiers: "Details people type to vote"
+    errors:
+      models:
+        # The same rules are checked in two places: the last step of the
+        # upload wizard and the "Change" page. The wording is the same in
+        # both. Written out twice rather than shared with a YAML anchor: the
+        # translations of several files are merged into one tree, and an
+        # anchor would put the same object in it twice.
+        census_identifiers:
+          attributes:
+            identifiers:
+              blank: "Choose at least one detail people type to vote."
+              unknown: "Choose details your list actually has."
+              not_unique:
+                one: "1 person can't be told apart with %{fields}. Add another detail."
+                other: "%{count} people in your list share the same %{fields}, so they can't be told apart. Add another detail."
+        census_file:
+          attributes:
+            identifiers:
+              blank: "Choose at least one detail people type to vote."
+              unknown: "Choose details your list actually has."
+              not_unique:
+                one: "1 person can't be told apart with %{fields}. Add another detail."
+                other: "%{count} people in your list share the same %{fields}, so they can't be told apart. Add another detail."
+  decidim:
+    elections:
+      censuses:
+        # Upstream calls this one "Registered participants (dynamic)". What
+        # "dynamic" means is on the card now, so the name can just be a name.
+        internal_users:
+          label: "Registered participants"
+      vocdoni:
+        admin:
+          census_setup:
+            no_choice: "Choose where your list of voters comes from before saving."
+            confirm_switch:
+              title: "Delete the list you uploaded?"
+              body:
+                one: "Saving this removes the 1 person on your uploaded list. This can't be undone."
+                other: "Saving this removes the %{count} people on your uploaded list. This can't be undone."
+            save_hint: "Choose one of the two options above to continue."
+            choice:
+              legend: "Who can vote"
+              lead: "Choose where your list of voters comes from. You can change this until you publish."
+              best_for: "Best for:"
+              internal_users:
+                title: "Registered participants"
+                summary: "People with an account on this platform."
+                points:
+                  nothing_to_upload: "Nothing to upload"
+                  open_list: "The list stays open until the vote closes: anyone who registers joins it"
+                  verification: "Optional: ask for a verification before voting"
+                best_for: "open consultations where the platform is the membership."
+              token_csv:
+                title: "Participants from a file"
+                summary: "A list you upload (CSV). Only the people on it can vote. No account needed."
+                points:
+                  exact: "You decide exactly who is in"
+                  typed: "Voters type details from the list, for example name and ID number"
+                  frozen: "Once you publish the election, you can't add or remove people"
+                  code: "In a vote with guarantees (which you choose next), can also send each person a one-time code by email or text message"
+                best_for: "assemblies, boards, AGMs, associations with a member list."
+            registered:
+              legend: "Registered participants"
+              eligible:
+                zero: "Nobody could vote right now."
+                one: "Right now 1 person could vote."
+                other: "Right now %{count} people could vote."
+              verifications_legend: "Ask for a verification before voting (optional)"
+              verifications_lead: "A person must hold every verification you tick. Leave them all unticked to let anyone with an account vote."
+              no_verifications: "This organisation offers no verifications, so anyone with an account can vote."
+              granted:
+                zero: "Nobody has it yet"
+                one: "1 person has it"
+                other: "%{count} people have it"
+              nobody:
+                title: "Nobody could vote right now"
+                body: "With this selection, no one has every verification you are asking for. Ask people to complete it, or untick it until they have."
+            file:
+              legend: "Your list"
+              empty:
+                lead: "Upload the list of people who may vote. Any spreadsheet saved as CSV works: one person per line, with the column names on the first line."
+                fields_title: "Details we can recognise"
+                download_template: "Download a template"
+              drop_zone:
+                title: "Drop your spreadsheet here, or choose a file"
+                hint: "Any columns, in any order. Using Excel? Save as CSV UTF-8."
+                submit: "Upload"
+              status:
+                people:
+                  one: "1 person on your list."
+                  other: "%{count} people on your list."
+                save_identifiers: "Save"
+                replace: "Use another file"
+                remove: "Remove the list"
+                remove_confirm_title: "Remove this list of participants?"
+                remove_confirm_body:
+                  one: "This removes the 1 person currently on the list. This can't be undone."
+                  other: "This removes all %{count} people currently on the list. This can't be undone."
+                locked: "This election is already on the voting network, so its list of participants can no longer be changed."
+                details: "Details of this list"
+                file: "File: %{name}"
+                imported_at: "Imported %{date}"
+                columns: "Columns we kept"
+                sample:
+                  one: "The first person on the list"
+                  other: "The first %{count} people on the list"
+            sample:
+              summary:
+                one: "See the 1 person who could vote"
+                other: "See a sample of %{count} people who could vote"
+            verifications:
+              kinds:
+                reviewed: "Reviewed by you"
+                automatic: "Automatic"
+              descriptions:
+                id_documents: "The person uploads an identity document and you check it by hand."
+                postal_letter: "You post a code to their address; they type it in to prove they live there."
+                csv_census: "Their email address must be on a list you upload under Verifications."
+                dummy_authorization_handler: "For testing only: anyone can pass it by typing a document number ending in X."
+                another_dummy_authorization_handler: "For testing only: anyone can pass it by typing a passport number starting with A."

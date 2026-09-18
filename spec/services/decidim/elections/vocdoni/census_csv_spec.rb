@@ -21,6 +21,149 @@ module Decidim
         end
       end
 
+      describe CensusCsv::Identifiers do
+        subject(:derived) { described_class.derive(available, duplicates:, blanks:) }
+
+        # Neither a duplicate nor a blank unless a context below says otherwise:
+        # most cases are about preference order, not about the tie-breakers.
+        let(:duplicates) { ->(_fields) { 0 } }
+        let(:blanks) { ->(_field) { 0 } }
+
+        context "with a field that is unique to one person by definition, alongside weaker ones" do
+          let(:available) { %w(memberNumber name surname nationalId email) }
+
+          it "prefers a detail that is unique by definition over any combination" do
+            expect(derived).to eq(["memberNumber"])
+          end
+        end
+
+        context "with the same columns plus an access code" do
+          let(:available) { %w(memberNumber name surname nationalId email token) }
+
+          it "carries the access code along once one is available" do
+            expect(derived).to eq(%w(memberNumber token))
+          end
+        end
+
+        context "with only a name and a contact detail, both clean" do
+          let(:available) { %w(name surname email) }
+
+          it "prefers a contact detail over a name combination" do
+            expect(derived).to eq(["email"])
+          end
+        end
+
+        context "when the preferred contact detail is blank for some voters" do
+          let(:available) { %w(name surname email) }
+          let(:blanks) { ->(field) { field == "email" ? 3 : 0 } }
+
+          it "skips it for a combination that is actually filled in, even though it ranks lower" do
+            expect(derived).to eq(%w(name surname))
+          end
+        end
+
+        context "when nothing on the list is unique" do
+          let(:available) { %w(name surname) }
+          let(:duplicates) { ->(_fields) { 1 } }
+
+          # There is no good answer here: the card cannot invent a unique
+          # detail out of two fields nobody separates. It still has to return
+          # something, and the form's own validation is what warns the admin.
+          it "falls back to its best guess rather than returning nothing" do
+            expect(derived).to eq(%w(name surname))
+          end
+        end
+
+        context "with a contact detail and an access code, nothing else" do
+          let(:available) { %w(email token) }
+
+          it "pairs the access code with the one identifier there is" do
+            expect(derived).to eq(%w(email token))
+          end
+        end
+
+        context "when the top-ranked field is blank but a lower-ranked one is clean" do
+          let(:available) { %w(memberNumber email) }
+          let(:blanks) { ->(field) { field == "memberNumber" ? 5 : 0 } }
+
+          it "moves on to the field that is actually complete" do
+            expect(derived).to eq(["email"])
+          end
+        end
+
+        context "when the top-ranked field is clean and a lower-ranked one is duplicated" do
+          let(:available) { %w(memberNumber email) }
+          let(:duplicates) { ->(fields) { fields == ["email"] ? 4 : 0 } }
+
+          # The mirror of the case above: a problem with an alternative further
+          # down the list is irrelevant once the preferred field has nothing
+          # wrong with it.
+          it "keeps the field that needed no fallback in the first place" do
+            expect(derived).to eq(["memberNumber"])
+          end
+        end
+
+        context "with a single contact detail and nothing to compare it against" do
+          let(:available) { %w(phone) }
+
+          it "accepts it as sufficient on its own" do
+            expect(derived).to eq(["phone"])
+          end
+        end
+
+        context "when the shortest combination is already unique" do
+          let(:available) { %w(name surname birthDate) }
+
+          it "does not reach for a third field it does not need" do
+            expect(derived).to eq(%w(name surname))
+          end
+        end
+
+        context "when the shortest combination is not unique enough" do
+          let(:available) { %w(name surname birthDate) }
+          let(:duplicates) { ->(fields) { fields == %w(name surname) ? 1 : 0 } }
+
+          it "adds the next field until the combination is unique" do
+            expect(derived).to eq(%w(name surname birthDate))
+          end
+        end
+
+        context "with only an access code" do
+          let(:available) { %w(token) }
+
+          it "hands it back on its own rather than deriving nothing" do
+            expect(derived).to eq(["token"])
+          end
+        end
+
+        context "with no columns at all" do
+          let(:available) { [] }
+
+          it "derives nothing rather than raising" do
+            expect(derived).to eq([])
+          end
+        end
+
+        context "with a column that was never eligible to identify anyone" do
+          let(:available) { %w(weight) }
+
+          it "derives nothing from it" do
+            expect(derived).to eq([])
+          end
+        end
+
+        context "when a long combination is the only one that tells people apart" do
+          let(:available) { %w(name surname birthDate token) }
+          let(:duplicates) { ->(fields) { fields.include?("birthDate") ? 0 : 1 } }
+
+          # Nothing is capped any more, and the access code is the one detail
+          # an impersonator who knows the other three would still not have.
+          it "keeps the access code alongside them" do
+            expect(derived).to eq(%w(name surname birthDate token))
+          end
+        end
+      end
+
       describe CensusCsv::Importer do
         subject(:importer) { described_class.new(election, path) }
 
