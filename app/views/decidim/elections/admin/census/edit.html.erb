@@ -1,20 +1,27 @@
 <%#
-  The Census tab — this engine's version of it.
+  The Census tab: this engine's version of it.
 
   Upstream ships the same template path and this one wins (the view path is
-  prepended in `Decidim::Elections::Vocdoni::CensusPage`). Everything upstream
-  does still happens: the page is one `PATCH` to its own controller, the census
-  type travels as `manifest` and the registered-participants inputs keep the
-  names `Decidim::Elections::Admin::Censuses::InternalUsersForm` expects, so
+  prepended in `Decidim::Elections::Vocdoni::CensusTabData`). Everything
+  upstream does still happens: the census type travels as `manifest` and the
+  registered-participants inputs keep the names
+  `Decidim::Elections::Admin::Censuses::InternalUsersForm` expects, so
   `ProcessCensus` is untouched.
 
-  What changed is the shape: the type is chosen as a card, with what it means
-  written on it, and its set-up is on the same page instead of behind a reload.
-  Both set-up blocks are rendered and the radio only decides which one is
-  shown, so nothing an admin typed is lost by looking at the other option.
+  What changed is the shape. The type is chosen as a card with what it means
+  written on it; both set-up blocks are rendered and the radio only decides
+  which is shown, so nothing an admin typed is lost by looking at the other
+  option; and a list of participants is uploaded, checked and changed inside
+  its own card rather than on a page of its own.
 
-  `internal_users_form`, `verification_rows`, `eligible_count` and
-  `census_voters_count` come from `CensusPage`.
+  That last part is why the file card sits *outside* the tab's form: it has
+  forms of its own, and a form cannot contain another. The sticky Save is
+  outside too, tied back by `form:`, the same trick upstream's own template
+  uses for the same reason. Visually nothing moved.
+
+  `internal_users_form`, `mapping_form`, `identifiers_form`, `import_outcome`,
+  `verification_rows`, `eligible_count` and `census_voters_count` come from
+  `CensusTabData`.
 %>
 <% add_decidim_page_title(t("decidim.elections.admin.census.edit.title")) %>
 <%# Upstream's pack still carries the admin-wide behaviour of this section. %>
@@ -50,21 +57,24 @@
                        html: { id: "census-election-form", class: "form-defaults form" }) do |f| %>
     <%= render "decidim/elections/vocdoni/admin/census_setup/choice", chosen: %>
     <%= render "decidim/elections/vocdoni/admin/census_setup/registered", f:, chosen: %>
-    <%= render "decidim/elections/vocdoni/admin/census_setup/file", chosen: %>
-    <%= render "decidim/elections/vocdoni/admin/census_setup/next_step" %>
+  <% end %>
 
-    <div class="item__edit-sticky">
-      <div class="item__edit-sticky-container">
-        <%# The button stays reachable and explains itself rather than
-            disappearing until a card is picked (`disabled` cannot be focused,
-            so it cannot be asked why). %>
-        <span class="vocdoni-census__save-hint" id="js-census-save-hint" <%= "hidden" if chosen.present? %>>
-          <%= t("save_hint", scope:) %>
-        </span>
-        <%# `census_setup.js` puts a confirmation on this button when the
-            chosen card would delete the uploaded list. The card says so too,
-            in words, for anyone without JavaScript. %>
-        <%= f.submit t("save", scope: "decidim.elections.admin.elections.form"),
+  <%= render "decidim/elections/vocdoni/admin/census_setup/file", chosen: %>
+
+  <div class="item__edit-sticky">
+    <div class="item__edit-sticky-container">
+      <%# The button stays reachable and explains itself rather than
+          disappearing until a card is picked (`disabled` cannot be focused,
+          so it cannot be asked why). %>
+      <span class="vocdoni-census__save-hint" id="js-census-save-hint" <%= "hidden" if chosen.present? %>>
+        <%= t("save_hint", scope:) %>
+      </span>
+      <%# `census_setup.js` puts a confirmation on this button when the
+          chosen card would delete the uploaded list. The card says so too,
+          in words, for anyone without JavaScript. %>
+      <%= button_tag t("save", scope: "decidim.elections.admin.elections.form"),
+                     type: :submit,
+                     form: "census-election-form",
                      id: "js-census-submit",
                      class: "button button__sm button__secondary",
                      data: {
@@ -73,7 +83,6 @@
                        "confirm-body": t("confirm_switch.body", scope:, count: census_voters_count)
                      },
                      aria: { disabled: chosen.blank?, describedby: "js-census-save-hint" } %>
-      </div>
     </div>
-  <% end %>
+  </div>
 </div>

@@ -5,7 +5,7 @@ module Decidim
     module Vocdoni
       module AdminForms
         # Changing the details voters type, for a list that is already
-        # imported — the "Change" link on the Census tab, which must not force
+        # imported: the "Change" on the Census tab, which must not force
         # the admin to upload the file again.
         #
         # Same rules as the wizard's last step ({ChoosesIdentifiers}); only the
@@ -18,8 +18,15 @@ module Decidim
 
           attribute :election, Object
 
+          # Seeded only with stored details the list still has. A census
+          # imported before this question was answered for the admin, or one
+          # whose columns changed underneath it, is left blank on purpose:
+          # blank is what makes the form fall back to the columns.
           def self.from_model(election)
-            new(election:, identifiers: Array(election.census_settings.to_h["identifiers"]).map(&:to_s))
+            form = new(election:)
+            stored = Array(election.census_settings.to_h["identifiers"]).map(&:to_s)
+            form.identifiers = stored & form.available_fields
+            form
           end
 
           # The controller passes the election in the form's context, not as an
@@ -44,7 +51,7 @@ module Decidim
             election.present? && available_fields.any?
           end
 
-          # How many people on the list have nothing in that column — the
+          # How many people on the list have nothing in that column: the
           # answer to "what happens to the members without an email?", given
           # before the choice rather than after it.
           def people_without(field)

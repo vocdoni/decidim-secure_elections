@@ -2,7 +2,7 @@
 // own template path via `Decidim::Elections::Vocdoni::CensusPage`).
 //
 // Scoped under `.vocdoni-census`, which sits on the same element as
-// upstream's `.item__edit-form` — alongside `.vocdoni-cards`, the selectable
+// upstream's `.item__edit-form`, alongside `.vocdoni-cards`, the selectable
 // cards shared with the Security tab (see `choice_cards.scss`; not
 // redefined here). That matters for labels: `.item__edit-form label` makes
 // every label small and grey, and a scoped class selector (two classes) is
@@ -11,7 +11,7 @@
 // is only reused here, never redefined.
 //
 // Colours are Decidim's tokens only. Text never uses the raw
-// `success`/`warning`/`alert` fills (they fail contrast as text — see
+// `success`/`warning`/`alert` fills (they fail contrast as text): see
 // `vocdoni.scss`); state pills are `.label` variants from decidim-core, and
 // this file only adds layout to them, never colour. The one exception is
 // `__save-hint`: it sits on `.item__edit-sticky-container`, which upstream
@@ -24,6 +24,13 @@
 
   .vocdoni-census__card {
     @apply mb-6;
+
+    // Matches the Security tab's own cards (`security.scss`): the header
+    // already carries its own bottom padding, so only the content needs it
+    // here, to keep the last line of a card off its bottom border.
+    .card-section > .row:last-child {
+      @apply pb-6;
+    }
   }
 
   .vocdoni-census__fieldset {
@@ -47,7 +54,7 @@
   }
 
   // The eligible / imported people count (`_registered.html.erb`,
-  // `_file.html.erb`) — a figure that has to read at a glance.
+  // `_file.html.erb`): a figure that has to read at a glance.
   .vocdoni-census__count {
     @apply flex items-center gap-2 my-1 text-lg font-semibold text-black;
 
@@ -78,7 +85,7 @@
     @apply flex flex-wrap gap-2 mt-4;
   }
 
-  // Disclosures (`_file.html.erb`, `_sample.html.erb`) — the native marker
+  // Disclosures (`_file.html.erb`, `_sample.html.erb`): the native marker
   // stays, styled to read as a clickable row rather than a plain triangle.
   .vocdoni-census__details {
     @apply mt-4 mb-0 text-sm text-gray-2;
@@ -115,15 +122,34 @@
     }
   }
 
-  // Status card's "identified by" sentence (`_file.html.erb`). The missing
-  // case reads as an issue through weight, not colour — no warning fill on
-  // text.
-  .vocdoni-census__identifiers {
-    @apply flex flex-wrap items-center gap-1 m-0 text-sm text-gray-2;
+  // Who a voter says they are (`_file_identifiers_block.html.erb`): the
+  // answer the columns gave, with the way to overrule it directly under it.
+  .vocdoni-census__identity {
+    @apply mt-4;
   }
 
-  .vocdoni-census__identifiers--missing {
-    @apply font-semibold text-black;
+  // The sentence itself. Body size, not a heading: it is a statement of fact
+  // the admin reads once, not a section they have to work through.
+  .vocdoni-census__sentence {
+    @apply flex items-start gap-2 m-0 text-md text-black;
+
+    svg {
+      @apply w-5 h-5 mt-0.5 shrink-0 fill-secondary;
+    }
+  }
+
+  // Nothing usable in the list reads as an issue through weight, not colour:
+  // no warning fill on text.
+  .vocdoni-census__sentence--missing {
+    @apply font-semibold;
+
+    svg {
+      @apply fill-gray-2;
+    }
+  }
+
+  .vocdoni-census__sentence-note {
+    @apply mt-1 mb-0 ml-7;
   }
 
   .vocdoni-census__inline-link {
@@ -147,16 +173,10 @@
     @apply inline-block px-3 py-1 rounded-full bg-background-4 text-sm text-black;
   }
 
-  // Summary strip spacing (`_next_step.html.erb`). `.vocdoni-summary*`
-  // itself is defined once, in `security.scss`.
-  .vocdoni-census__next {
-    @apply mt-2;
-  }
-
   // Save hint next to the sticky submit button (`edit.html.erb`). The
   // button stays focusable and clickable while a card is unpicked, rather
   // than `disabled`, so this text is what tells an admin why nothing
-  // happens yet — it has to read on the sticky bar's dark background.
+  // happens yet: it has to read on the sticky bar's dark background.
   .vocdoni-census__save-hint {
     @apply mr-3 text-sm text-white/90;
   }
@@ -198,7 +218,7 @@
 
   // `.help-text` (already applied in the markup) sets the colour and size;
   // this only aligns the block under the label's text, past the checkbox,
-  // and stacks its two lines — the description and the "granted by" note —
+  // and stacks its two lines (the description and the "granted by" note)
   // rather than running them together.
   .vocdoni-verification__description {
     @apply flex flex-col mt-1 mb-0 ml-7;
@@ -213,8 +233,8 @@
   }
 }
 
-// The submit button stays focusable and clickable while inactive — see the
-// `__save-hint` comment above — so it only looks inactive, via `aria-disabled`
+// The submit button stays focusable and clickable while inactive (see the
+// `__save-hint` comment above), so it only looks inactive, via `aria-disabled`
 // rather than the `disabled` attribute or `pointer-events: none`.
 #js-census-submit[aria-disabled="true"] {
   @apply opacity-60 cursor-not-allowed;

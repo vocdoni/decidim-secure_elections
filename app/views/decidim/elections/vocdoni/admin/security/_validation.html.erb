@@ -52,7 +52,10 @@
               "missingData" => Array(data["missingData"]).size,
               "notFound" => Array(data["notFound"]).size
             }.select { |_key, count| count.positive? }
-            known_codes = %w(roster_too_large no_identifiers no_identity)
+            # This platform's own codes. The SaaS reports numeric ones
+            # (`error_code` keeps only `Numeric`), so its refusals fall
+            # through to `generic`, which says where to read its own words.
+            known_codes = %w(roster_over_ceiling no_identifiers no_identity)
             code = validation["code"].to_s
           %>
           <%= cell("decidim/announcement",

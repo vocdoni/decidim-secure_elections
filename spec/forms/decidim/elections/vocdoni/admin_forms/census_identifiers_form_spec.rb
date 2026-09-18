@@ -25,6 +25,29 @@ module Decidim
 
               expect(form.identifiers).to eq([])
             end
+
+            it "keeps a stored choice that the list can still answer" do
+              election.update!(census_settings: election.census_settings.merge("identifiers" => %w(name email)))
+
+              expect(described_class.from_model(election).chosen_identifiers).to eq(%w(name email))
+            end
+
+            it "derives from the columns instead of coming up blank when nothing is stored" do
+              expect(described_class.from_model(election).chosen_identifiers).to eq(["email"])
+            end
+
+            context "when the stored identifiers name a column the list no longer has" do
+              # Stale data: the census was remapped after the choice was made,
+              # so nationalId is not one of `fields` any more. Blindly keeping
+              # it would leave the card pointing at a column that does not
+              # exist, which is exactly what `stored & available_fields`
+              # (empty here) is meant to prevent.
+              before { election.update!(census_settings: election.census_settings.merge("identifiers" => %w(nationalId))) }
+
+              it "derives from the columns the list actually has now" do
+                expect(described_class.from_model(election).chosen_identifiers).to eq(["email"])
+              end
+            end
           end
 
           describe "#available_fields" do
@@ -57,7 +80,11 @@ module Decidim
             end
 
             context "when nothing is chosen" do
-              let(:identifiers) { [] }
+              # The hidden field ahead of the checkboxes is what actually
+              # reaches the server when every box is unticked; a bare `[]`
+              # instead means no answer was given at all, and that falls back
+              # to the derived identifiers rather than failing validation.
+              let(:identifiers) { [""] }
 
               it "is invalid" do
                 expect(form).to be_invalid
@@ -171,7 +198,10 @@ module Decidim
             end
 
             context "with an empty choice" do
-              subject(:form) { described_class.from_params({ census_identifiers: { identifiers: [] } }, election:) }
+              # [""], not []: the hidden field is what a real unticked
+              # submission sends, and it must still be checked against the
+              # context election rather than silently deriving.
+              subject(:form) { described_class.from_params({ census_identifiers: { identifiers: [""] } }, election:) }
 
               it "is still invalid: the context election is not lost" do
                 expect(form).to be_invalid

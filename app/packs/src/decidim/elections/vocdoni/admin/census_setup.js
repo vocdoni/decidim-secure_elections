@@ -6,7 +6,7 @@
  *
  * 1. The whole census-type card selects its option, and only the set-up block
  *    of the selected type is shown. Without JavaScript the radio and its title
- *    still select, and both blocks are visible — nothing becomes unreachable.
+ *    still select, and both blocks are visible: nothing becomes unreachable.
  * 2. The Save button says why it does nothing until a type is chosen.
  * 3. A ticked verification reveals its options (upstream did this with an
  *    inline <script> in its own partial, which this page does not render).

@@ -1,7 +1,7 @@
 <%#
   Card 1: where the list of voters comes from.
 
-  Same card as the Security tab's vote-type question — radio labelled by the
+  Same card as the Security tab's vote-type question: radio labelled by the
   title only, the rest of the card describing it (`aria-describedby`), so a
   screen reader announces "Registered participants, radio" and can then hear
   what that means. The radio is `manifest`, the name upstream's controller
@@ -9,7 +9,7 @@
 
   A list that already has people in it is destroyed by choosing the other
   census type, so that card says so, in the card itself and with the real
-  number — it is visible whether or not JavaScript is.
+  number; it is visible whether or not JavaScript is.
 
   Locals: `chosen` (the census type currently selected, "" when none).
 %>
@@ -89,11 +89,6 @@
             </div>
           <% end %>
         </div>
-
-        <p class="vocdoni-census__note">
-          <%= icon "information-line" %>
-          <span><%= t("not_sure", scope:) %></span>
-        </p>
       </fieldset>
     </div>
   </div>

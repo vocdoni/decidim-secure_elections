@@ -1,0 +1,131 @@
+<%#
+  The file, read, with one button to take it.
+
+  What the admin is asked, in the order they can answer it:
+
+    1. Anything wrong with the lines (nothing is imported until it is fixed).
+    2. What we understood: a sentence, not a table. The full table is one
+       disclosure away for whoever wants to check every column; re-asking
+       about columns whose heading we recognised turned a confirmation into
+       nine decisions that all looked equally certain.
+    3. The columns we could NOT place. These are the only ones that need a
+       decision, so they are the only ones with a question on screen.
+    4. Who a voter will say they are: a sentence, because the columns answer
+       it. Changing it is a disclosure away.
+    5. Import.
+
+  Locals: `form` (CensusFileMappingForm), `outcome` (nil unless an import was
+  refused over its rows), `upload_url`, `people_count` (already on the list, if
+  any), `scope`.
+%>
+<%# The review keys stay where the import flow already had them. %>
+<% review_scope = "decidim.elections.vocdoni.admin.census_file.review" %>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<% target_options = [[t("ignore", scope: review_scope), ""]] + fields_mod::TARGETS.map { |field| [fields_mod.label(field), field] } %>
+<% unknown = form.unknown_indexes %>
+<% failed_rows = outcome&.failed_rows.to_a %>
+<% import_url = Decidim::EngineRouter.admin_proxy(election.component).election_census_file_path(election) %>
+
+<% if failed_rows.any? %>
+  <%= render "decidim/elections/vocdoni/admin/census_setup/file_failed_rows",
+             rows: failed_rows, total: outcome.failed_rows.size %>
+<% end %>
+
+<%# Uploading the downloaded template unchanged is the commonest way to end
+    up with a file holding nobody: its example line is never imported. %>
+<% if form.reader.people_count.zero? %>
+  <%= cell "decidim/announcement",
+           { title: t("nobody.title", scope: review_scope),
+             body: t(form.reader.example_row_count.positive? ? "nobody.only_example" : "nobody.no_rows", scope: review_scope) },
+           callout_class: "alert" %>
+<% end %>
+
+<%= form_tag import_url, method: :patch, class: "form-defaults form", id: "js-census-file-mapping-form" do %>
+  <%= hidden_field_tag "census_file[blob]", form.blob %>
+
+  <p class="vocdoni-census__count">
+    <%= icon "group-2-line" %>
+    <span><%= t("people", scope: review_scope, count: form.reader.people_count) %></span>
+  </p>
+
+  <% if form.reader.truncated? %>
+    <p class="vocdoni-census-file__note">
+      <%= icon "information-line" %>
+      <span><%= t("truncated", scope: review_scope) %></span>
+    </p>
+  <% end %>
+
+  <%# Said before the button, not after it: replacing a list is how people
+      lose one. %>
+  <% if people_count.positive? %>
+    <p class="vocdoni-census-file__note">
+      <%= icon "alert-line" %>
+      <span><%= t("replaces", scope: review_scope, count: people_count) %></span>
+    </p>
+  <% end %>
+
+  <%# What we understood, in one sentence. %>
+  <% if form.kept_pairs.any? %>
+    <p class="vocdoni-census-file__understood">
+      <%= icon "check-line" %>
+      <%# Heading and detail together: a wrong guess is visible without
+          opening anything, and a wrong guess about who somebody is is
+          exactly what an organiser is afraid of. %>
+      <span><%= t("understood", scope: review_scope, fields: form.kept_pairs.map { |header, label| "#{header} → #{label}" }.to_sentence) %></span>
+    </p>
+  <% end %>
+
+  <% if form.dropped_headers.any? %>
+    <p class="vocdoni-census-file__dropped">
+      <%= t("dropped", scope: review_scope, count: form.dropped_headers.size, headers: form.dropped_headers.to_sentence) %>
+    </p>
+  <% end %>
+
+  <%# Only the columns we could not place ask a question. %>
+  <% if unknown.any? %>
+    <div class="vocdoni-census-file__unknown" id="js-census-file-unknown">
+      <h3 class="vocdoni-census-file__subtitle"><%= t("unknown_title", scope: review_scope, count: unknown.size) %></h3>
+      <p class="help-text"><%= t("unknown_lead", scope: review_scope) %></p>
+      <%= render "decidim/elections/vocdoni/admin/census_setup/file_columns",
+                 form:, indexes: unknown, target_options:, table_id: "js-census-file-unknown-table" %>
+    </div>
+  <% end %>
+
+  <%# The ones we placed ourselves, for whoever wants to check them. Each
+      column's select is rendered exactly once across the page: twice would
+      mean two inputs of the same name, and the hidden one would quietly
+      win. %>
+  <% if form.guessed_indexes.any? %>
+    <details class="vocdoni-census__details" <%= "open" if form.errors[:columns].any? %>>
+      <summary class="vocdoni-census__details-summary"><%= t("check_all", scope: review_scope, count: form.guessed_indexes.size) %></summary>
+      <% if form.errors[:columns].any? %>
+        <p class="form-error is-visible" role="alert"><%= form.errors[:columns].to_sentence %></p>
+      <% end %>
+      <%= render "decidim/elections/vocdoni/admin/census_setup/file_columns",
+                 form:, indexes: form.guessed_indexes, target_options:, table_id: "js-census-file-mapping-table" %>
+    </details>
+  <% end %>
+
+  <%# Shown, not asked. The answer follows from the columns above, which are
+      still being decided on this very form, so it is derived again from
+      whatever is submitted: an admin who matches a better column here gets
+      the better identifier without having to notice. Changing it by hand is
+      offered once the list is in, where the columns have settled. %>
+  <%= render "decidim/elections/vocdoni/admin/census_setup/file_identifiers_block",
+             form:, scope:, change: false %>
+
+  <div class="vocdoni-census__actions">
+    <% if form.reader.people_count.positive? %>
+      <%= submit_tag t("submit", scope: review_scope, count: form.reader.people_count),
+                     class: "button button__sm button__secondary" %>
+    <% end %>
+  </div>
+<% end %>
+
+<%# Outside the import form: a second file replaces this one, and that is a
+    different form posting somewhere else. %>
+<details class="vocdoni-census__details">
+  <summary class="vocdoni-census__details-summary"><%= t("another_file", scope: review_scope) %></summary>
+  <%= render "decidim/elections/vocdoni/admin/census_setup/file_drop_zone",
+             upload_url:, scope:, id: "js-census-file-input-again" %>
+</details>

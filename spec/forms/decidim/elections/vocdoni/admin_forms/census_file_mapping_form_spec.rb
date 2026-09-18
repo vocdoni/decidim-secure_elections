@@ -201,8 +201,34 @@ module Decidim
           end
 
           describe "the details voters type to be found on the list" do
-            context "when none is chosen" do
-              let(:identifiers) { [] }
+            context "when the form was built without any identifiers param" do
+              let(:attributes) { { census_file: { blob: blob.signed_id, columns: } } }
+
+              # The wizard's last step never asks any more: the card just
+              # shows what the mapped columns already imply.
+              it "derives them from the mapped columns" do
+                expect(form.chosen_identifiers).to eq(["email"])
+              end
+
+              it "is valid on that derived choice alone" do
+                expect(form).to be_valid
+              end
+            end
+
+            context "when the admin picks a field other than the one that would be derived" do
+              let(:identifiers) { %w(surname) }
+
+              it "respects the submitted choice instead of deriving one" do
+                expect(form.chosen_identifiers).to eq(%w(surname))
+              end
+            end
+
+            context "when every box is unticked" do
+              # The hidden field ahead of the checkboxes is what a real
+              # submission sends when nothing is ticked; it must count as the
+              # admin's answer, not be read as "no answer" and fall back to
+              # the derived identifiers.
+              let(:identifiers) { [""] }
 
               it "is invalid" do
                 expect(form).to be_invalid

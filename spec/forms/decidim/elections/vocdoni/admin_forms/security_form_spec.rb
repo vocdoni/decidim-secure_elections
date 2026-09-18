@@ -14,7 +14,7 @@ module Decidim
           # `from_params(params, election:)`, which puts it in the context. A
           # form that only looks at its attributes finds nothing there, every
           # predicate answers "no", and the rules this form exists to enforce
-          # are skipped exactly when they matter — on save.
+          # are skipped exactly when they matter: on save.
           describe "built the way the controller builds it" do
             subject(:form) { described_class.from_params({ security: { enable_vocdoni: "1" } }, election:) }
 
@@ -188,20 +188,16 @@ module Decidim
               end
             end
 
-            describe "#refused_identifier_labels" do
-              let(:identifiers) { %w(name token email) }
-
-              it "names only the access code: email is usable via the one-time code" do
-                expect(form.refused_identifier_labels).to match_array(
-                  %w(token).map { |field| CensusCsv::Fields.label(field) }
-                )
-              end
-            end
+            # There used to be a `#refused_identifier_labels` here, naming the
+            # details a secret vote would drop. Only an access code is ever in
+            # that list, and only a list identified by nothing else is worth
+            # saying anything about, so the page names it in a sentence and
+            # `#secure_blocked_by_identifiers?` above is the whole rule.
 
             describe "#secure_available?" do
               let(:identifiers) { %w(name) }
 
-              context "when the census is within the roster limit" do
+              context "when the census holds people this platform can identify" do
                 before { Decidim::Elections::Voter.create!(election:, data: { "name" => "Ada" }) }
 
                 it "is true" do
@@ -209,7 +205,12 @@ module Decidim
                 end
               end
 
-              context "when the census is bigger than the roster limit" do
+              # How many people a secret vote may hold belongs to the
+              # organisation's plan with the secure voting service, which this
+              # platform cannot read. It used to be guessed here and enforced
+              # as fact, which refused lists the service would have accepted;
+              # now the census is pushed and the service answers for itself.
+              context "when the census is larger than the roster this platform would push in one go" do
                 around do |example|
                   previous = ENV.fetch("VOCDONI_MAX_ROSTER", nil)
                   ENV["VOCDONI_MAX_ROSTER"] = "1"
@@ -222,16 +223,8 @@ module Decidim
                   Decidim::Elections::Voter.create!(election:, data: { "name" => "Grace" })
                 end
 
-                it "is false" do
-                  expect(form.secure_available?).to be(false)
-                end
-
-                context "when the election is already on chain" do
-                  before { Vocdoni::Process.create!(election:, state: "pending") }
-
-                  it "is true regardless: the roster already went through" do
-                    expect(form.secure_available?).to be(true)
-                  end
+                it "is still true: size is the voting service's answer to give, not this page's" do
+                  expect(form.secure_available?).to be(true)
                 end
               end
 

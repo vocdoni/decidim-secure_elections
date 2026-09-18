@@ -1,0 +1,84 @@
+<%#
+  A list is imported.
+
+  Who is on it, how they are identified, and the two things that can still be
+  done to it, both inside the card: replace it with another file, or remove it.
+
+  Locals: `people_count`, `upload_url`, `admin`, `editable`, `scope`.
+  `identifiers_form` comes from `CensusTabData`.
+%>
+<% fields_mod = Decidim::Elections::Vocdoni::CensusCsv::Fields %>
+<% settings = election.census_settings.to_h %>
+<% kept_fields = census_columns(election) %>
+<% identifiers_url = admin.identifiers_election_census_file_path(election) %>
+<p class="vocdoni-census__count">
+  <%= icon "group-2-line" %>
+  <span><%= t("status.people", scope:, count: people_count) %></span>
+</p>
+
+<% if editable %>
+  <%# Its own form: the details can be changed long after the file is gone,
+      so this posts on its own rather than riding with an import. %>
+  <%= form_tag identifiers_url, method: :patch, class: "form-defaults form", id: "js-census-identifiers-form" do %>
+    <%= render "decidim/elections/vocdoni/admin/census_setup/file_identifiers_block",
+               form: identifiers_form,
+               name: "census_identifiers",
+               scope:,
+               open: identifiers_form.chosen_identifiers.empty? %>
+
+    <div class="vocdoni-census__actions" data-identifiers-actions>
+      <%= submit_tag t("status.save_identifiers", scope:), class: "button button__sm button__transparent-secondary" %>
+    </div>
+  <% end %>
+<% else %>
+  <%= render "decidim/elections/vocdoni/admin/census_setup/file_identifiers_block",
+             form: identifiers_form, name: "census_identifiers", scope: %>
+<% end %>
+
+<% if editable %>
+  <details class="vocdoni-census__details">
+    <summary class="vocdoni-census__details-summary"><%= t("status.replace", scope:) %></summary>
+    <%= render "decidim/elections/vocdoni/admin/census_setup/file_drop_zone",
+               upload_url:, scope:, id: "js-census-file-input" %>
+  </details>
+
+  <div class="vocdoni-census__actions">
+    <%= button_to t("status.remove", scope:), upload_url,
+                  method: :delete,
+                  class: "button button__sm button__transparent-secondary",
+                  form: { data: { confirm: t("status.remove_confirm_body", scope:, count: people_count) } },
+                  data: { "confirm-title": t("status.remove_confirm_title", scope:) } %>
+  </div>
+<% else %>
+  <p class="vocdoni-census__note">
+    <%= icon "lock-2-line" %>
+    <span><%= t("status.locked", scope:) %></span>
+  </p>
+<% end %>
+
+<details class="vocdoni-census__details">
+  <summary class="vocdoni-census__details-summary"><%= t("status.details", scope:) %></summary>
+  <ul class="vocdoni-census__facts">
+    <% if settings.dig("file", "name").present? %>
+      <li><%= t("status.file", scope:, name: settings.dig("file", "name")) %></li>
+    <% end %>
+    <% if settings.dig("file", "imported_at").present? %>
+      <li><%= t("status.imported_at", scope:, date: l(Time.zone.parse(settings.dig("file", "imported_at")), format: :short)) %></li>
+    <% end %>
+  </ul>
+
+  <% if kept_fields.any? %>
+    <p class="vocdoni-census__facts-title"><%= t("status.columns", scope:) %></p>
+    <ul class="vocdoni-census__pills">
+      <% kept_fields.each do |field| %>
+        <li class="vocdoni-census__pill"><%= fields_mod.label(field) %></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <% rows = preview_users(election) %>
+  <% if rows.present? %>
+    <p class="vocdoni-census__facts-title"><%= t("status.sample", scope:, count: rows.size) %></p>
+    <%= render partial: "decidim/elections/admin/census/preview", locals: { election: } %>
+  <% end %>
+</details>

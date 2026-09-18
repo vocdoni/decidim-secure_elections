@@ -217,6 +217,7 @@ initializer.
 | `open_timeout` | `VOCDONI_OPEN_TIMEOUT` | — | no | `5` | Connect timeout, in seconds. |
 | `timeout` | `VOCDONI_TIMEOUT` | — | no | `30` | Read timeout, in seconds. |
 | `job_timeout` | `VOCDONI_JOB_TIMEOUT` | — | no | `120` | How long a background job waits for an async Vocdoni job (publish, status change) before giving up. |
+| `max_roster` | `VOCDONI_MAX_ROSTER` | — | no | `10000` | How many people this installation will load and push to the memberbase in one request. A safety valve against an unbounded census, **not** the limit on how large a secret vote may be: that is the organization's own quota with the SaaS, which this module cannot read and no longer tries to guess. A census over this ceiling fails the pre-flight with `roster_over_ceiling`, which names this installation; a census the SaaS itself refuses fails with `roster_too_large`, which names the plan. |
 
 `.env.example`, in the repository rather than in the gem, is a ready-to-copy
 template. It leaves `VOCDONI_API_URL` **empty on purpose**: a template that

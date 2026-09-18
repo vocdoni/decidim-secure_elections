@@ -6,8 +6,8 @@ module Decidim
       module Admin
         # Turns Decidim's verification vocabulary into something an organiser
         # reads, and keeps the one-line description of a census in a single
-        # place — the Census tab, the Security tab and the "next step" line all
-        # say the same thing about the same list.
+        # place, so the Census tab and the Security tab say the same thing
+        # about the same list.
         module CensusSetupHelper
           SCOPE = "decidim.elections.vocdoni.admin.census_setup"
 
@@ -15,7 +15,7 @@ module Decidim
           # "Multi-Step") describe how a verification is built, not what it
           # costs the organiser, and for one of them the two disagree:
           # `csv_census` is an engine with its own steps, yet nobody reviews
-          # anything — a person is matched against a list that was uploaded
+          # anything: a person is matched against a list that was uploaded
           # once. So the ones Decidim ships are named here, and anything else
           # falls back to the only signal available.
           KINDS = {

@@ -145,10 +145,12 @@ module Decidim
         initializer "phase_4_spike.census_file" do |app|
           Decidim::Elections::AdminEngine.routes.append do
             resources :elections, only: [] do
-              resource :census_file, only: [:new, :create, :update, :destroy],
+              # No `new`: the list is uploaded, reviewed and changed inside the
+              # "Your list" card on the Census tab, so every route here answers
+              # a form and hands the admin straight back to that tab.
+              resource :census_file, only: [:create, :update, :destroy],
                                      controller: "/decidim/elections/vocdoni/admin/census_file" do
                 get :template
-                get :identifiers
                 patch :identifiers, action: :update_identifiers
               end
             end

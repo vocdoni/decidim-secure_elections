@@ -6,7 +6,7 @@
 // class selector (two classes) is what outranks it without `!important`.
 //
 // Colours are Decidim's tokens only. Text never uses the raw
-// `success`/`warning`/`alert` fills (they fail contrast as text — see
+// `success`/`warning`/`alert` fills (they fail contrast as text): see
 // `vocdoni.scss`); state pills are `.label` variants from decidim-core.
 
 .vocdoni-security {

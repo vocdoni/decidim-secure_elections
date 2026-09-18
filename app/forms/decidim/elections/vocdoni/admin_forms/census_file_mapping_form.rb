@@ -6,16 +6,16 @@ module Decidim
   module Elections
     module Vocdoni
       module AdminForms
-        # Step 2 of the census file wizard: what each column means, and which
+        # The file as read, ready to import: what each column means, and which
         # of those details a voter types to be found on the list.
         #
         # `columns` maps a column position ("0", "1", …) to a field of
         # {CensusCsv::Fields::TARGETS}, or "" to leave the column out. The
-        # uploaded file travels as a signed blob id between steps.
+        # uploaded file travels as a signed blob id, so the review the admin is
+        # looking at survives a reload without the file being posted twice.
         #
-        # The identifiers are asked here rather than on the Security tab
-        # because the columns are already on screen: it is the same decision as
-        # matching them, one question later.
+        # The identifiers follow from those columns ({ChoosesIdentifiers}), so
+        # an admin who agrees with the mapping has nothing left to answer.
         class CensusFileMappingForm < Decidim::Form
           include Decidim::ProcessesFileLocally
           include ChoosesIdentifiers

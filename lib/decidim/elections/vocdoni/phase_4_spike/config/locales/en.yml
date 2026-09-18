@@ -1,11 +1,4 @@
 en:
-  activemodel:
-    errors:
-      models:
-        security:
-          attributes:
-            enable_vocdoni:
-              roster_too_large: "Your list has %{count} people. Secret, verifiable votes accept up to %{limit} for now; run this one as a simple vote."
   decidim:
     admin:
       menu:
@@ -43,18 +36,17 @@ en:
                   title: "Secret, verifiable vote"
                   summary: "Ballots are sealed so nobody can read them, and the count can be checked independently."
                   points:
-                    anonymous: "Nobody — not even administrators — can link a ballot to a voter."
+                    anonymous: "Nobody, not even administrators, can link a ballot to a voter."
                     tamper: "Any tampering is detectable: each voter gets a receipt they can check on a public website, and the results export links there too."
                     minimal: "Only the details needed to check who may vote are used; ballots hold no personal data."
-                    locked: "Locked once published — that is what makes it trustworthy."
-                  best_for: "Elections of officers, statutory votes, budgets — anything that must stand up to challenge."
+                    locked: "Locked once published: that is what makes it trustworthy."
+                  best_for: "Elections of officers, statutory votes, budgets: anything that must stand up to challenge."
                   powered_by: "Powered by the Vocdoni voting protocol."
                   # Leave empty until the admin guide exists: the link is only
                   # rendered when this has a value.
                   guide_url: ""
                   guide_link: "Read the full guide"
-                too_large: "Your list has %{count} people. Secret, verifiable votes accept up to %{limit} for now, so this vote can only run as a simple vote."
-                refused_identifiers: "Your list identifies people only by %{fields}, which a secret vote cannot use. Change that on the Census tab to run this as a secret vote."
+                refused_identifiers: "Your list identifies people only by an access code, which a secret vote cannot check. Add another detail on the Census tab to run this as a secret vote."
                 good_to_know_html: "<strong>Good to know:</strong> you can change this choice until the election is published. Voters won't notice any difference, except the one-time code if you enable it."
               why:
                 title: "Why it matters for organisations and public bodies"
@@ -99,13 +91,12 @@ en:
               # are picked on the Census tab and only reported here.
               identifiers:
                 legend: "How people prove who they are"
-                chosen: "Voters type %{fields} to be found on your list."
+                chosen: "Voters type their %{fields} to be found on your list."
                 change_html: "You choose these together with your list, on the <a href=\"%{url}\">Census tab</a>."
-                partly_refused: "A secret, verifiable vote can't use %{fields} as proof of identity, so voters would be asked for %{kept} only."
-                by_code: "For a secret, verifiable vote, %{fields} is proved with a one-time code sent there — see below."
+                by_code: "In a secret, verifiable vote their %{fields} is not checked against the list: a one-time code is sent there instead, and that is what proves them (see below)."
                 refused:
                   title: "A secret vote can't use these details"
-                  body: "Your list identifies people only by %{fields}, which a secret vote cannot use: it can neither check it nor send a code to it. On the Census tab, add a name, member number, ID number, date of birth, email address or phone number — or match the code's column as “Member number”."
+                  body: "Your list identifies people only by an access code, which a secret vote can neither check nor send a code to. On the Census tab, add a member number, ID number, name, date of birth, email address or phone number."
                 none_html: "Nobody can vote yet: choose on the <a href=\"%{url}\">Census tab</a> which details people type to be found on your list."
                 no_census_html: "Choose who can vote on the <a href=\"%{url}\">Census tab</a> first."
                 registered:
@@ -144,9 +135,9 @@ en:
                   body: "Everyone can be told apart with the details you chose. You can publish the election."
                 failed:
                   title: "Your list isn't ready for a secret vote yet"
-                  generic: "The secure voting service couldn't accept the list. Check the details below, fix the list or your choices, and save again."
+                  generic: "The secure voting service couldn't accept this list. Its own words are under \"Technical details\" below. For a large list the usual cause is your Vocdoni plan, which limits how many people your organisation can hold across all its elections, not just this one; Vocdoni can raise it for you."
                   codes:
-                    roster_too_large: "The secure voting service accepts up to %{limit} people per organisation. Reduce the list or contact support."
+                    roster_over_ceiling: "This list is larger than this platform sends in one go (%{limit} people). That limit is this platform's own, not your Vocdoni plan's. Ask whoever runs this platform to raise it, or run this vote as a simple one."
                     no_identifiers: "Choose above which details people type to vote."
                     no_identity: "Some people have no member number, ID number, email or phone. The secure voting service needs at least one of them for every person: add one of those columns to your file."
                   problems:

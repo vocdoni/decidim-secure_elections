@@ -1,4 +1,4 @@
-// "Participants from a file" — the one page with two states
+// "Participants from a file": the one page with two states
 // (`census_file/new.html.erb` renders either `_upload`, before a file has
 // been read, or `_review`, once one has) and the standalone "change
 // identifiers" page (`census_file/identifiers.html.erb`).
@@ -6,16 +6,16 @@
 // Everything is scoped under `.vocdoni-census-file`, which sits on the same
 // element as upstream's `.item__edit-form`. The Census tab's own status card
 // (`census_setup/_file.html.erb`) also carries the bare `.vocdoni-census-file`
-// class, but only for the `[hidden]` rule below — its own elements are
+// class, but only for the `[hidden]` rule below: its own elements are
 // `.vocdoni-census__*`, a different block styled in `census_setup.scss`.
 //
 // The voter sign-in fields (`.vocdoni-census-file__voter`) share this
 // prefix too, even though they render on a public page rather than the
-// admin flow above — one file, one prefix, easier to grep than to keep two
+// admin flow above; one file, one prefix, easier to grep than to keep two
 // in sync.
 //
 // Colours are Decidim's tokens only. Text never uses the raw
-// `success`/`warning`/`alert` fills (they fail contrast as text) — see
+// `success`/`warning`/`alert` fills (they fail contrast as text): see
 // `__understood` and `.vocdoni-identifiers__missing` below for how a
 // positive or attention-worthy line is built without one.
 
@@ -26,10 +26,65 @@
 
   &__card {
     @apply mb-6;
+
+    // Matches the Security tab's own cards (`security.scss`): the header
+    // already carries its own bottom padding, so only the content needs it
+    // here, to keep the last line of a card off its bottom border.
+    .card-section > .row:last-child {
+      @apply pb-6;
+    }
   }
 
   &__subtitle {
     @apply text-lg font-semibold text-black mb-2 mt-4 first:mt-0;
+  }
+
+  // The drop zone (`census_setup/_file_drop_zone.html.erb`). The label fills
+  // it, so the whole dashed area is the click target and the pointer says so
+  // everywhere inside it.
+  &__upload {
+    @apply mt-4;
+  }
+
+  &__dropzone {
+    @apply relative flex rounded-lg border-2 border-dashed border-background-4 bg-background transition-colors;
+
+    &:hover,
+    &.is-dragging {
+      @apply border-secondary bg-secondary/5;
+    }
+
+    // The keyboard's focus ring belongs on the zone, not on the input that
+    // is visually inside it.
+    &:focus-within {
+      @apply outline outline-2 outline-offset-2 outline-secondary;
+    }
+  }
+
+  &__dropzone-label {
+    @apply flex flex-col items-center gap-1 w-full px-4 py-8 text-center cursor-pointer;
+  }
+
+  &__dropzone-icon {
+    @apply w-8 h-8 fill-secondary;
+  }
+
+  &__dropzone-title {
+    @apply text-md font-semibold text-black;
+  }
+
+  &__dropzone-hint {
+    @apply text-sm text-gray-2;
+  }
+
+  // Covers the zone rather than hiding: `display: none` would take it out of
+  // the tab order, and the keyboard needs to reach it.
+  &__file-input {
+    @apply absolute inset-0 w-full h-full opacity-0 cursor-pointer;
+  }
+
+  &__upload-actions {
+    @apply flex flex-wrap gap-2 mt-3;
   }
 
   &__lead {
@@ -54,7 +109,7 @@
 
   // Disclosures (`_upload.html.erb`'s fields table, `_review.html.erb`'s
   // recognised-columns table). The native marker stays, styled to read as a
-  // clickable row rather than a plain triangle — same idiom as
+  // clickable row rather than a plain triangle: same idiom as
   // `.vocdoni-census__details` in `census_setup.scss`.
   &__details {
     @apply mt-4 mb-0;
@@ -93,7 +148,7 @@
     @apply text-sm font-normal text-secondary underline hover:no-underline;
   }
 
-  // What we understood, in one sentence — a positive line, but built from
+  // What we understood, in one sentence: a positive line, but built from
   // `fill-secondary`/`text-black`, never a raw `success` fill as text.
   &__understood {
     @apply flex items-start gap-2 mt-3 mb-0 text-sm text-black;
@@ -103,13 +158,13 @@
     }
   }
 
-  // The columns we chose not to keep — a fact, not a problem, so it stays
+  // The columns we chose not to keep: a fact, not a problem, so it stays
   // as quiet as `&__more-rows` below rather than reading like a warning.
   &__dropped {
     @apply mt-2 mb-0 text-sm text-gray-2;
   }
 
-  // The columns we could NOT place — the one thing on this page that needs
+  // The columns we could NOT place: the one thing on this page that needs
   // a decision, so it is the one panel that reads as needing attention.
   // Tinted with `bg-background`/`border-secondary`, not a warning colour:
   // nothing is wrong, there is just a question left to answer.
@@ -171,8 +226,8 @@
   // Identifiers card (`census_file/_identifiers.html.erb`). Moved here from
   // `security.scss`: that card is now read-only and these classes belong to
   // the census-file flow instead. Unlike this file's own classes, these
-  // keep their original `.vocdoni-identifiers__*` names — that is what the
-  // markup renders — just re-scoped under `.vocdoni-census-file` rather than
+  // keep their original `.vocdoni-identifiers__*` names: that is what the
+  // markup renders, just re-scoped under `.vocdoni-census-file` rather than
   // `.vocdoni-security`. A couple of selectors (`.is-unavailable`) have no
   // matching element in the current markup; kept as-is since they are
   // harmless, rather than pruned or replaced with an invented one.
@@ -217,14 +272,14 @@
   }
 
   // "Simple vote only": a detail the secure voting service does not accept as
-  // proof of identity. Neutral rather than alarming — it is a fact about the
+  // proof of identity. Neutral rather than alarming: it is a fact about the
   // detail, and the vote type has not been chosen yet. `inline-flex` keeps it
   // from stretching to the label row's height next to the name `span`.
   .vocdoni-identifiers__badge {
     @apply inline-flex items-center shrink-0;
   }
 
-  // "N people have nothing in this column" — the hint above it (`span:first-
+  // "N people have nothing in this column": the hint above it (`span:first-
   // child`, via `.vocdoni-identifiers__hint`) is neutral, so this needs to
   // read as more than plain body text without borrowing a raw `warning`
   // fill: bold, near-black, on its own line.

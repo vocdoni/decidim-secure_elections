@@ -1,7 +1,7 @@
 <%#
   A table of columns to place: the heading, a few of its values, and what it
-  means. Rendered twice on the page with different `indexes` — the columns we
-  could not place, and (behind a disclosure) the ones we could — so every
+  means. Rendered twice on the page with different `indexes`: the columns we
+  could not place, and (behind a disclosure) the ones we could, so every
   column's select exists exactly once.
 
   Locals: `form`, `indexes` (which columns to show), `target_options`,
@@ -36,7 +36,7 @@
               <span class="vocdoni-census-file__samples"><%= samples.join(", ") %></span>
             <% else %>
               <span class="vocdoni-census-file__samples vocdoni-census-file__samples--empty">
-                <span aria-hidden="true">—</span>
+                <span aria-hidden="true">-</span>
                 <span class="sr-only"><%= t("no_examples", scope:) %></span>
               </span>
             <% end %>

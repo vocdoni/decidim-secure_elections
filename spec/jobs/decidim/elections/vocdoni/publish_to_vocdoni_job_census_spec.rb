@@ -138,7 +138,10 @@ module Decidim
         describe ".preview_census!" do
           let(:election) { create(:election, census_manifest: "token_csv", census_settings: { "identifiers" => %w(memberNumber) }) }
 
-          context "when the roster is bigger than the configured limit" do
+          # This platform's own ceiling on what it will send in one request,
+          # not a claim about the organisation's Vocdoni plan: it reports
+          # under its own code so the two are never confused on the page.
+          context "when the roster is bigger than this platform sends in one request" do
             around do |example|
               previous = ENV.fetch("VOCDONI_MAX_ROSTER", nil)
               ENV["VOCDONI_MAX_ROSTER"] = "2"
@@ -156,7 +159,7 @@ module Decidim
 
               validation = Vocdoni::Process.find_by(decidim_election_id: election.id).census_validation
               expect(validation["ok"]).to be(false)
-              expect(validation["code"]).to eq("roster_too_large")
+              expect(validation["code"]).to eq("roster_over_ceiling")
             end
           end
 

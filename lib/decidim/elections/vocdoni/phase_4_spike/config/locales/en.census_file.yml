@@ -26,31 +26,17 @@ en:
           census_file:
             create:
               invalid: "We couldn't read that file. Please check the details below and try again."
-            new:
-              title: "Add participants from a file"
-              file_missing: "We couldn't read that file any more — it may have expired. Please upload it again."
-              upload_title: "Your file"
-              lead: "Upload the list of people who may vote. Any spreadsheet saved as CSV works — one person per line, with the column names on the first line."
-              file_label: "Your file (CSV)"
-              help_columns: "Any columns, in any order — we will tell you what we understood."
-              help_excel: "Using Excel? Choose \"Save as\" and pick \"CSV UTF-8 (Comma delimited)\"."
-              help_limit: "Secret, verifiable votes currently accept up to %{limit} people per organisation. Larger lists can run as a simple vote."
-              fields_title: "Which details we can recognise"
-              fields_caption: "The details this list can recognise"
-              fields_label: "Detail"
-              fields_meaning: "What it means"
-              fields_example: "Example"
-              template_help: "Not sure where to start? Download a file with every column we understand and one example line. Delete the columns you do not need, replace the example with your own people, and upload it."
-              download_template: "Download a template"
-              continue: "Continue"
-              cancel: "Cancel"
+            file_missing: "We couldn't read that file any more. It may have expired, so please upload it again."
             review:
               legend: "%{file}"
               people:
                 one: "1 person in this file."
                 other: "%{count} people in this file."
-              another_file: "Use another file"
-              truncated: "This file has more rows than we can show here — every row will still be imported."
+              another_file: "Use a different file"
+              replaces:
+                one: "This replaces the 1 person currently on your list."
+                other: "This replaces the %{count} people currently on your list."
+              truncated: "This file has more rows than we can show here; every row will still be imported."
               understood: "We understood these columns: %{fields}."
               dropped:
                 one: "%{headers} will not be used."
@@ -71,12 +57,11 @@ en:
               meaning_select_label: "What \"%{column}\" means"
               ignore: "Don't use this column"
               submit:
-                one: "Import 1 person"
-                other: "Import %{count} people"
-              cancel: "Cancel"
+                one: "Add 1 person"
+                other: "Add %{count} people"
               nobody:
                 title: "There is nobody in this file yet"
-                only_example: "It still holds only the example line the template comes with (Ada Lovelace). Open the file in your spreadsheet, replace that line with your own participants — one person per line — and upload it again."
+                only_example: "It still holds only the example line the template comes with (Ada Lovelace). Open the file in your spreadsheet, replace that line with your own participants (one person per line), and upload it again."
                 no_rows: "It has column names on the first line, but no people underneath them. Add one line per person and upload the file again."
             failed_rows:
               title:
@@ -91,25 +76,30 @@ en:
                 one: "…and 1 more line"
                 other: "…and %{count} more lines"
             identifiers:
-              page_title: "How people identify themselves"
-              legend: "How do people prove who they are?"
-              lead: "Choose up to %{max} details from your list. A voter types them to be found on it, so pick details your people know by heart and that others are unlikely to know."
-              contact_note: "Email and phone work differently depending on how you run the vote, which you choose next on the Security tab."
-              none_available: "Your list has no details people could type. Keep at least one column that identifies a person."
+              sentence_html: "Voters identify themselves with their %{fields}."
+              sentence_code:
+                email: "In a secret, verifiable vote a code is sent there instead."
+                phone: "In a secret, verifiable vote a code is sent there by text message instead."
+              sentence_token: "Access codes are checked only in a simple vote. A secret, verifiable vote uses the other details."
+              change: "Change what voters are asked for"
+              legend: "Details voters type to be found on the list"
+              lead: "Pick up to %{max}. Each person has to be told apart by them."
+              none_available: "Nobody can vote yet. Keep a column that identifies people, such as member number or email."
               simple_only: "Simple vote only"
               sends_code: "Code in a secret vote"
-              sends_code_hint: "In a simple vote, people type it in like any other detail. In a secret, verifiable vote it cannot be checked against the list, so we send a one-time code there instead and that code is what proves who they are — nothing else to set up."
+              options:
+                memberNumber: "Unique to each person. Works for a simple and a secret vote."
+                nationalId: "Unique to each person. Works for a simple and a secret vote."
+                name: "Easy for others to know. Pair it with another detail."
+                surname: "Easy for others to know. Pair it with another detail."
+                birthDate: "Easy for others to know. Pair it with another detail."
+                email: "In a secret vote, a code sent there is what proves who they are."
+                phone: "In a secret vote, a code sent there by text message proves who they are."
+                token: "The private code you send each person separately."
               missing:
-                one: "1 person on your list has nothing in this column, so they could not vote."
-                other: "%{count} people on your list have nothing in this column, so they could not vote."
-              # An access code has a way out that the other two do not, so the
-              # reason is per detail.
-              simple_only_hint:
-                other: "A secret, verifiable vote can't use this as proof of identity."
-                token: "A secret, verifiable vote can't use a code you hand out. To use one anyway, match its column as “Member number” instead."
-              weak: "Anyone who knows these details could vote on someone else's behalf. Add an ID number, a member number or an access code."
-              submit: "Save"
-              cancel: "Cancel"
+                one: "1 person has nothing in this column and could not vote."
+                other: "%{count} people have nothing in this column and could not vote."
+              weak: "Anyone who knows these details could vote as that person. Add a member number, an ID number or an access code."
             update_identifiers:
               success: "Saved. People will now identify themselves with the details you chose."
               invalid: "Nothing was saved. Please check the choices below."

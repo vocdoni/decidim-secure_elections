@@ -48,7 +48,7 @@
             <div class="vocdoni-two-factor__option<%= " is-unavailable" unless channel[:available] %>">
               <div class="vocdoni-two-factor__control">
                 <%# Required: rendered on and disabled, with a hidden field so
-                    the choice still reaches the server. No id of its own —
+                    the choice still reaches the server. No id of its own:
                     it would collide with the checkbox's and steal its label. %>
                 <%= hidden_field_tag "security[#{field}]", "1", id: nil if required %>
                 <%= f.check_box field,

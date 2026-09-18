@@ -1,6 +1,6 @@
 # The Census tab. Written for the person running the vote: no "manifest",
 # no "handler", no "multi-step", no "token". Every sentence answers a question
-# an organiser actually asks — who can vote, what does this cost me, what do I
+# an organiser actually asks: who can vote, what does this cost me, what do I
 # do next.
 en:
   activemodel:
@@ -11,8 +11,8 @@ en:
         identifiers: "Details people type to vote"
     errors:
       models:
-        # The same rules are checked in two places — the last step of the
-        # upload wizard and the "Change" page — so the wording is the same in
+        # The same rules are checked in two places: the last step of the
+        # upload wizard and the "Change" page. The wording is the same in
         # both. Written out twice rather than shared with a YAML anchor: the
         # translations of several files are merged into one tree, and an
         # anchor would put the same object in it twice.
@@ -55,13 +55,12 @@ en:
               legend: "Who can vote"
               lead: "Choose where your list of voters comes from. You can change this until you publish."
               best_for: "Best for:"
-              not_sure: "Not sure? If you already have a list of who may vote, upload it. If anyone with an account should be able to vote, choose registered participants."
               removes_list:
                 one: "Choosing this removes the 1 person on your uploaded list. This can't be undone."
                 other: "Choosing this removes the %{count} people on your uploaded list. This can't be undone."
               internal_users:
                 title: "Registered participants"
-                summary: "People with an account on this platform — you don't control exactly who that is."
+                summary: "People with an account on this platform, though you don't control exactly who that is."
                 points:
                   account: "Voters sign in with their account"
                   nothing_to_upload: "Nothing to upload"
@@ -75,7 +74,7 @@ en:
                   exact: "You decide exactly who is in"
                   typed: "Voters type details from the list, for example name and ID number"
                   frozen: "Once you publish the election, you can't add or remove people"
-                  code: "In a secret, verifiable vote — which you choose next — can also send each person a one-time code by email or text message"
+                  code: "In a secret, verifiable vote (which you choose next), can also send each person a one-time code by email or text message"
                 best_for: "assemblies, boards, AGMs, associations with a member list."
             registered:
               legend: "Registered participants"
@@ -96,19 +95,19 @@ en:
             file:
               legend: "Your list"
               empty:
-                lead: "Upload a list of the people who may vote. Any spreadsheet saved as CSV works — one person per line, any columns, in any order."
-                next: "We will tell you what we understood of it, ask about anything we could not place, and let you choose what a voter types to be found on the list."
+                lead: "Upload the list of people who may vote. Any spreadsheet saved as CSV works: one person per line, with the column names on the first line."
                 fields_title: "Details we can recognise"
                 download_template: "Download a template"
-                upload: "Upload a file"
+              drop_zone:
+                title: "Drop your spreadsheet here, or choose a file"
+                hint: "Any columns, in any order. Using Excel? Save as CSV UTF-8."
+                submit: "Upload"
               status:
                 people:
                   one: "1 person on your list."
                   other: "%{count} people on your list."
-                identified_by: "People identify themselves with: %{fields}."
-                no_identifiers: "Nobody can vote yet: no details have been chosen for people to identify themselves with."
-                change_identifiers: "Change"
-                replace: "Replace the list"
+                save_identifiers: "Save"
+                replace: "Use another file"
                 remove: "Remove the list"
                 remove_confirm_title: "Remove this list of participants?"
                 remove_confirm_body:
@@ -126,9 +125,6 @@ en:
               summary:
                 one: "See the 1 person who could vote"
                 other: "See a sample of %{count} people who could vote"
-            next_step:
-              title: "Next step"
-              body: "On the Security tab, choose whether this runs as a simple vote or as a secret, verifiable one."
             verifications:
               kinds:
                 reviewed: "Reviewed by you"

@@ -11,7 +11,7 @@ module Decidim
         #      the {Process} sidecar row.
         #
         #   2. The second-factor challenge for CSP authentication. Two
-        #      independent booleans — SMS and Email — that map onto the
+        #      independent booleans (SMS and Email) that map onto the
         #      Vocdoni SaaS `twoFaFields` array (`"phone"` and `"email"`
         #      respectively). All four combinations are valid:
         #
@@ -20,8 +20,8 @@ module Decidim
         #        [] [x] → Email OTP only
         #        [x] [x] → voter picks at auth time (SaaS OR)
         #
-        # The details voters type to prove who they are belong to the census —
-        # a simple vote needs them too — so they are chosen on the Census tab
+        # The details voters type to prove who they are belong to the census,
+        # and a simple vote needs them too, so they are chosen on the Census tab
         # and only read here, to say whether a secret vote can accept them.
         #
         # Persisted through {Admin::UpdateElectionSecurity} onto the sidecar's
@@ -37,8 +37,6 @@ module Decidim
           attribute :sms, Boolean, default: false
           attribute :email, Boolean, default: false
           attribute :election, Object
-
-          validate :roster_within_limit, if: :enable_vocdoni
 
           # Reconstructs a form from the sidecar and the census. An election
           # that has never visited the Security tab has no sidecar; every
@@ -70,25 +68,17 @@ module Decidim
             election&.census_manifest.to_s == "internal_users"
           end
 
-          # How many people the census holds, as the secure voting service
-          # would receive them.
-          def census_size
-            return 0 if election&.census.blank?
-
-            @census_size ||= election.census.count(election).to_i
-          end
-
-          def max_roster
-            PublishToVocdoniJob.max_roster
-          end
-
-          # A secret vote cannot be set up for a list the secure voting service
-          # will refuse; the page says so before the admin chooses it, because
-          # the alternative is a publication that fails after the fact.
+          # How many people a secret vote may hold is the organisation's own
+          # quota with the secure voting service, which this platform cannot
+          # read. Guessing it here only ever refused lists the service would
+          # have accepted, so size is no longer judged before the fact: the
+          # census is pushed and the service answers, and its answer is what
+          # the pre-flight on this page reports.
+          #
+          # What is left is the one thing this platform does know: a list the
+          # service cannot authenticate at all.
           def secure_available?
-            return false if secure_blocked_by_identifiers?
-
-            census_size <= max_roster || election&.vocdoni_process.present?
+            !secure_blocked_by_identifiers?
           end
 
           # The details voters type, chosen with the census on the Census tab.
@@ -98,8 +88,15 @@ module Decidim
             @identifiers ||= census_fields & Array(election.census_settings.to_h["identifiers"]).map(&:to_s)
           end
 
+          # Titles, for a list of boxes.
           def identifier_labels
             identifiers.map { |field| Fields.label(field) }
+          end
+
+          # The same details as they read inside a sentence, which is how this
+          # tab reports them and how the Census tab states them.
+          def identifier_names
+            identifiers.map { |field| Fields.in_sentence(field) }
           end
 
           # What a secret vote would send as its `authFields`.
@@ -108,15 +105,11 @@ module Decidim
           end
 
           # The list is identified only by details the secure voting service
-          # cannot use at all — in practice an access code we hand out, which
+          # cannot use at all: in practice an access code we hand out, which
           # it will neither check nor deliver a code to. Nothing here can fix
           # that (the choice belongs to the census), so the card says where.
           def secure_blocked_by_identifiers?
             file_census? && identifiers.any? && !identifiers.intersect?(Fields::SECURE_IDENTIFIERS)
-          end
-
-          def refused_identifier_labels
-            (identifiers - Fields::SECURE_IDENTIFIERS).map { |field| Fields.label(field) }
           end
 
           # A contact detail chosen as the way people identify themselves is
@@ -127,7 +120,7 @@ module Decidim
           end
 
           def required_code_labels
-            code_identifiers.map { |field| Fields.label(field) }
+            code_identifiers.map { |field| Fields.in_sentence(field) }
           end
 
           def code_identifiers
@@ -176,7 +169,7 @@ module Decidim
             two_fa_fields.any? ? "strongest" : "strong"
           end
 
-          # SaaS-shape array — the same value we forward verbatim as
+          # SaaS-shape array: the same value we forward verbatim as
           # `twoFaFields` in the process-creation payload. Kept sorted so
           # two equivalent selections do not appear as different diffs.
           def two_fa_fields
@@ -184,14 +177,6 @@ module Decidim
             fields << "email" if (email || code_required?("email")) && email_code_available?
             fields << "phone" if (sms || code_required?("phone")) && sms_code_available?
             fields.sort
-          end
-
-          private
-
-          def roster_within_limit
-            return if census_size <= max_roster
-
-            errors.add(:enable_vocdoni, :roster_too_large, count: census_size, limit: max_roster)
           end
         end
       end

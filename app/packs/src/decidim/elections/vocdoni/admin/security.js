@@ -73,7 +73,7 @@ const setupSecurity = () => {
       element.hidden = usable;
     });
 
-    // A required channel is rendered checked and disabled — the code is sent
+    // A required channel is rendered checked and disabled: the code is sent
     // either way, so `checked` alone is the question.
     return usable && codes.some((box) => box.checked);
   };

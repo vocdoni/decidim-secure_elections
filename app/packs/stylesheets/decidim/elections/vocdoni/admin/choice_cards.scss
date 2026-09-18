@@ -1,6 +1,6 @@
 // Selectable cards shared by the Security tab's vote-type question
 // (`admin/security/_choice.html.erb`) and the Census tab's census-type
-// question (`admin/census_setup/_choice.html.erb`) — same markup, same
+// question (`admin/census_setup/_choice.html.erb`): same markup, same
 // behaviour, so one stylesheet instead of two copies drifting apart.
 //
 // Scoped under `.vocdoni-cards`, which both pages put on the same element as
@@ -8,7 +8,7 @@
 // `.vocdoni-census` respectively). That nesting still matters for
 // `.vocdoni-choice__title`: it is the radio's `<label>`, and
 // `.item__edit-form label` makes every label small and grey. Keeping the
-// selector one level deep — `.vocdoni-cards .vocdoni-choice__title` — is what
+// selector one level deep (`.vocdoni-cards .vocdoni-choice__title`) is what
 // outranks it without `!important`.
 //
 // The card is a plain block; only its title is the radio's <label>.

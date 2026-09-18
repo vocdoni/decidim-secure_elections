@@ -1,5 +1,5 @@
 <%#
-  Card: how voters prove who they are — shown, not edited.
+  Card: how voters prove who they are, shown, not edited.
 
   The choice belongs to the census: a simple vote needs it just as much, and
   for registered participants the same question is answered by the
@@ -23,18 +23,15 @@
   <div class="card-section">
     <div class="row column">
       <% if @form.file_census? && @form.identifiers.any? %>
-        <p class="vocdoni-security__lead"><%= t("chosen", scope:, fields: @form.identifier_labels.to_sentence) %></p>
+        <p class="vocdoni-security__lead"><%= t("chosen", scope:, fields: @form.identifier_names.to_sentence) %></p>
 
+        <%# Only one case is worth a warning: a list a secret vote cannot
+            read at all. An access code next to a detail it can read is
+            ordinary, and the Census tab already says what happens to it. %>
         <% if @form.secure_blocked_by_identifiers? %>
           <%= cell "decidim/announcement",
-                   { title: t("refused.title", scope:),
-                     body: t("refused.body", scope:, fields: @form.refused_identifier_labels.to_sentence) },
+                   { title: t("refused.title", scope:), body: t("refused.body", scope:) },
                    callout_class: "alert" %>
-        <% elsif @form.refused_identifier_labels.any? %>
-          <p class="vocdoni-security__note">
-            <%= icon "information-line" %>
-            <span><%= t("partly_refused", scope:, fields: @form.refused_identifier_labels.to_sentence, kept: @form.secure_identifiers.map { |field| Decidim::Elections::Vocdoni::CensusCsv::Fields.label(field) }.to_sentence) %></span>
-          </p>
         <% end %>
 
         <%# A contact detail identifies a voter through the code sent to it,
