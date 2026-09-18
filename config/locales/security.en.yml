@@ -2,9 +2,9 @@ en:
   decidim:
     admin:
       menu:
-        # Injected into upstream's `admin_elections_menu` from the
-        # phase-4 spike engine. Appears on every election so an admin can
-        # discover the Vocdoni opt-in on the Security tab.
+        # Injected into upstream's `admin_elections_menu` by this engine.
+        # Appears on every election so an admin can discover the Vocdoni
+        # opt-in on the Security tab.
         elections_menu:
           security: "Security"
     elections:

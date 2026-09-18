@@ -4,7 +4,7 @@ module Decidim
   module Elections
     module Vocdoni
       # Prepended onto upstream's `Decidim::Elections::VotesController` (see
-      # `phase_4_spike.rb`).
+      # `engine.rb` — the `extend_upstream` initializer).
       #
       # For a Vocdoni-backed election the whole voting flow lives in the
       # Vocdoni booth SPA (`/vocdoni/vote.html`), not in Decidim's own
@@ -28,12 +28,12 @@ module Decidim
         private
 
         def render_vocdoni_booth_if_backed
-          return unless election.vocdoni_process.present?
+          return if election.vocdoni_process.blank?
           return if action_name == "receipt"
 
           render template: "decidim/elections/vocdoni/booth/show",
                  layout: "decidim/election_booth",
-                 locals: { election: election }
+                 locals: { election: }
         end
       end
     end

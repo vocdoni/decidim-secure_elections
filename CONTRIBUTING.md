@@ -12,6 +12,9 @@ By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 - For anything larger than a bug fix, open an issue first and describe the
   problem before writing the solution. It is much cheaper to disagree about an
   approach in prose.
+- Read [docs/architecture.md](docs/architecture.md). Its §0 lists the
+  invariants that keep ballot secrecy intact, and source comments cite the
+  document as `ARCHITECTURE §N` throughout the module.
 
 ## Setting up
 
@@ -36,8 +39,10 @@ Both generated applications are throwaway and are not committed. Regenerate
 them, or run `bin/rails decidim:upgrade && bin/rails db:migrate` inside them,
 after you add a migration.
 
-To develop against a Decidim checkout rather than a released gem, set
-`DECIDIM_PATH=/path/to/decidim` before `bundle install`.
+To develop against a local Decidim checkout rather than the pinned git
+revision, set `DECIDIM_PATH=/path/to/decidim` before `bundle install`. See
+`Gemfile` for the full set of environment variables (`DECIDIM_REPO`,
+`DECIDIM_REF`).
 
 You do not need Vocdoni credentials to run the test suite — every call to the
 SaaS API is stubbed. You do need them to run a real election.
@@ -45,16 +50,16 @@ SaaS API is stubbed. You do need them to run a real election.
 ## Running the checks
 
 ```bash
-bundle exec rspec                          # Ruby
+bundle exec rspec                                   # Ruby
 bundle exec rspec --exclude-pattern "system/**/*"   # …without the browser specs
-npm test                                   # Jest, for the voting page
-bundle exec rubocop                        # Ruby lint
-npm run lint                               # JavaScript lint
-npm run stylelint                          # Stylesheet lint
+npm test                                            # Jest, for the voting page
+bundle exec rubocop                                 # Ruby lint
+npm run lint                                        # JavaScript lint
+npm run stylelint                                   # Stylesheet lint
 ```
 
-CI runs all of these, plus a check that the committed voting page is what the
-current sources build.
+CI (`.github/workflows/ci.yml`) runs all of these, plus a check that the
+committed voting page is what the current sources build.
 
 ## The voting page is a committed build artefact
 
@@ -62,31 +67,19 @@ current sources build.
 purpose**: the page has to exist the moment the gem is installed, with no npm
 and no `assets:precompile` in between.
 
-If you change anything under `app/packs/src/decidim/secure_elections/voter/`,
-`app/packs/fonts/decidim/secure_elections/` or the `votes.page` strings in
-`config/locales/`, run `npm run build:vote` and commit the result. The build is
-deterministic; CI fails if the committed output does not match.
+If you change anything under `app/packs/src/decidim/elections/vocdoni/voter/`,
+`app/packs/fonts/decidim/elections/vocdoni/` or the `votes.page` strings in
+`config/locales/en.vote.yml`, run `npm run build:vote` and commit the result.
+The build is deterministic; CI fails if the committed output does not match.
 
-## Rules that are not negotiable
+## Invariants
 
-These exist because getting them wrong has a cost measured in ballots. They are
-documented in full in [docs/architecture.md](docs/architecture.md) §0 and most of them are
-enforced by a lint rule or a spec.
-
-1. **No secret reaches the browser.** The integrator API key is server-side
-   only. The voter path uses public and CSP-token routes exclusively.
-2. **No `console.*` anywhere under `app/packs/src/decidim/secure_elections/voter/`.**
-   Ballots and keys must never reach a console. ESLint enforces this.
-3. **Nothing from a voting session is persisted** — not to storage, a cookie,
-   the URL or a session. No auth token, no one-time code, no ballot.
-4. **No call to the Vocdoni API inside a web request.** Every write and every
-   slow read goes through an ActiveJob; the UI polls a cheap Decidim-local
-   endpoint backed by a cached column.
-5. **Fail loudly on misconfiguration.** Never default to a test chain.
-6. **English is the source language.** It lives in three files —
-   `config/locales/en.yml`, `en.census.yml` and `en.vote.yml` — split by
-   subject. `en.vote.yml` is compiled into the voting page, so a change there
-   needs a rebuild.
+The rules that keep ballots secret and voters' identities separate from their
+choices live in [docs/architecture.md](docs/architecture.md) §0. Most are
+enforced by a lint rule or a spec — for example, `no-console` is banned under
+`app/packs/src/decidim/elections/vocdoni/voter/` because a ballot must never
+reach a console. Read §0 before touching anything that handles a ballot,
+a census credential or a Vocdoni API key.
 
 ## Style
 
@@ -104,7 +97,7 @@ enforced by a lint rule or a spec.
 - Branch from `main`. Prefix the branch `feature/`, `fix/`, `chore/`, `docs/`,
   `refactor/` or `test/` followed by descriptive words.
 - Commit subjects and PR titles: imperative mood, capitalised, no trailing
-  period.
+  period. English only.
 - Add an entry to `CHANGELOG.md` under "Unreleased" for anything an operator
   or an integrator would need to know about.
 - A pull request needs green CI and one approving review.
@@ -113,9 +106,9 @@ enforced by a lint rule or a spec.
 
 Maintainers only.
 
-1. Bump `lib/decidim/secure_elections/version.rb`.
+1. Bump `lib/decidim/elections/vocdoni/version.rb`.
 2. Move the `Unreleased` section of `CHANGELOG.md` under the new version and
    date it.
 3. `npm run build:vote` and commit if anything changed.
 4. Tag `v<version>` and push the tag.
-5. `gem build decidim-secure_elections.gemspec && gem push decidim-secure_elections-<version>.gem`.
+5. `gem build decidim-elections-vocdoni.gemspec && gem push decidim-elections-vocdoni-<version>.gem`.

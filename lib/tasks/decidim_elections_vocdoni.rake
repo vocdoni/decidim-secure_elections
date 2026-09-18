@@ -7,7 +7,9 @@ namespace :decidim_elections_vocdoni do
     organization_name = organization_name.values.first if organization_name.is_a?(Hash)
     name = args[:name].presence || organization_name.presence || "Decidim"
 
-    abort "VOCDONI_API_URL and VOCDONI_API_KEY must be set before creating an organization." if Decidim::Elections::Vocdoni.api_url.blank? || Decidim::Elections::Vocdoni.api_key.blank?
+    if Decidim::Elections::Vocdoni.api_url.blank? || Decidim::Elections::Vocdoni.api_key.blank?
+      abort "VOCDONI_API_URL and VOCDONI_API_KEY must be set before creating an organization."
+    end
 
     client = Decidim::Elections::Vocdoni::ApiClient.new
     org = client.organizations.create_managed(name:, type: "association")
@@ -63,9 +65,7 @@ namespace :decidim_elections_vocdoni do
 
   desc "List SaaS draft processes and (with APPLY=1) delete the ones with no matching sidecar"
   task purge_stale_drafts: :environment do
-    unless Decidim::Elections::Vocdoni.configured?
-      abort "decidim-elections-vocdoni is not configured — nothing to talk to."
-    end
+    abort "decidim-elections-vocdoni is not configured — nothing to talk to." unless Decidim::Elections::Vocdoni.configured?
 
     client = Decidim::Elections::Vocdoni::ApiClient.new
     org = Decidim::Elections::Vocdoni.org_address

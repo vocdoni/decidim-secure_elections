@@ -21,9 +21,9 @@ module Decidim
         #        [x] [x] → voter picks at auth time (SaaS OR)
         #
         # Persisted through {Admin::UpdateElectionSecurity} onto the sidecar's
-        # `metadata["settings"]` hash. The Publish subscription checks
+        # `metadata["settings"]` hash. The engine's publish subscriber checks
         # `election.vocdoni_process.present?` to decide whether to enqueue
-        # {PublishToVocdoniJob}.
+        # {PublishElectionJob}.
         class SecurityForm < Decidim::Form
           mimic :security
 

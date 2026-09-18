@@ -4,7 +4,7 @@ module Decidim
   module Elections
     module Vocdoni
       # Prepended onto upstream's `Decidim::Elections::Admin::CensusController`
-      # (see `phase_4_spike.rb`).
+      # (see the `extend_upstream` initializer in `engine.rb`).
       #
       # Upstream hard-codes `redirect_to dashboard_election_path(election)`
       # inside `#update`. That skips the Security tab entirely — an admin who
@@ -20,14 +20,16 @@ module Decidim
         extend ActiveSupport::Concern
 
         included do
-          after_action :route_census_save_through_security, only: :update
+          # `update` lives on the upstream controller this concern is
+          # included into, not on the concern itself.
+          after_action :route_census_save_through_security, only: :update # rubocop:disable Rails/LexicallyScopedActionFilter
         end
 
         private
 
         def route_census_save_through_security
           return unless response.redirect?
-          return unless (location = response.headers["Location"]).present?
+          return if (location = response.headers["Location"]).blank?
           return unless location.include?("/dashboard")
 
           response.headers["Location"] = location.sub(%r{/dashboard(\z|\?)}, '/security\1')

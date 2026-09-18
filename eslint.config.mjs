@@ -36,8 +36,8 @@ export default defineConfig([
     // `no-console` is an error here and there is no `eslint-disable` exemption
     // worth granting: if you need to observe the flow, surface it in the UI
     // through the aria-live status region, which is auditable by design.
-    files: ["app/packs/src/decidim/secure_elections/voter/**/*.js"],
-    ignores: ["app/packs/src/decidim/secure_elections/voter/**/*.test.js"],
+    files: ["app/packs/src/decidim/elections/vocdoni/voter/**/*.js"],
+    ignores: ["app/packs/src/decidim/elections/vocdoni/voter/**/*.test.js"],
     rules: {
       "no-console": "error",
       "no-alert": "error",
@@ -62,7 +62,7 @@ export default defineConfig([
     // flags — so the operators are the subject rather than a mistake, and
     // rewriting them as arithmetic would only make the layout harder to check
     // against the Ruby encoder it has to agree with.
-    files: ["app/packs/src/decidim/secure_elections/voter/link_code.js"],
+    files: ["app/packs/src/decidim/elections/vocdoni/voter/link_code.js"],
     rules: { "no-bitwise": "off" }
   },
   {
