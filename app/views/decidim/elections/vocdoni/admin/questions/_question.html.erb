@@ -1,0 +1,140 @@
+<%#
+  One question card in the ballot editor, matching upstream
+  decidim-elections DOM conventions.
+
+  The card-divider is the entire drag surface (html5sortable grabs the
+  whole header). Collapse/Remove are in the header so they are always
+  visible even when the card body is collapsed.
+
+  Locals:
+    form_name — the outer form's object_name ("election")
+    index     — Integer position in the list, or "questionnaire-question-id"
+                in the <script> blueprint that createEditableForm() clones
+    question  — QuestionForm instance
+    election  — the Election record (for context, not mutated here)
+    response_option_template_selector — CSS selector of the per-card
+                response-option blueprint, e.g. "#response-option-template-0"
+                for existing card 0 or "#response-option-template-dummy" in
+                the new-question blueprint. `$.fn.template` follows this
+                `data-template` pointer at clone time.
+%>
+<%
+  parent_name = "#{form_name}[questions][#{index}]"
+  card_id     = question.id.presence || index.to_s
+%>
+<%= fields_for parent_name, question do |q| %>
+  <div class="card questionnaire-question" id="accordion-<%= card_id %>-field">
+    <div class="form__wrapper" data-controller="accordion">
+      <div class="card-divider">
+        <h2 class="card-title flex items-center">
+          <span>
+            <%= icon "draggable", class: "dragger hover:cursor-grab" %>
+            <%# createEditableForm() sets up a LiveTextUpdateComponent per
+                question card, keyed on `.question-title-statement`. It
+                binds on `input[name$="[body_{locale}]"]` — hard-coded in
+                decidim-forms — which is exactly the field name our
+                `translatable_attribute :body` produces, so live updates
+                as the admin types are handled upstream. The `_run()`
+                also reads `.length` off the text, so an undefined
+                `data-placeholder` would crash the whole editor setup
+                (and every downstream handler with it); both `data-locale`
+                and `data-placeholder` are required. The span is
+                pre-populated with the truncated title so the collapsed
+                header reads correctly on first paint, before JS runs. %>
+            <% question_title_placeholder = t("decidim.elections.vocdoni.admin.questions.question.title_placeholder", default: "New question") %>
+            <% question_title_text = translated_attribute(question.body).presence %>
+            <span class="question-title-statement"
+                  data-locale="<%= I18n.locale %>"
+                  data-max-length="50"
+                  data-omission="…"
+                  data-placeholder="<%= question_title_placeholder %>"><%= truncate(question_title_text.to_s, length: 50, omission: "…") %></span>
+          </span>
+          <span class="ml-auto flex flex-row-reverse items-center gap-2">
+            <button type="button"
+                    class="question--collapse"
+                    data-controls="panel-<%= card_id %>-question-card">
+              <span class="icon-collapse"><%= icon "arrow-up-s-line" %></span>
+              <span class="icon-expand"><%= icon "arrow-down-s-line" %></span>
+            </button>
+            <button type="button"
+                    class="button button__xs button__transparent-secondary small alert remove-question button--title">
+              <%= icon "delete-bin-line" %>
+              <span class="hidden md:block">
+                <%= t("decidim.elections.vocdoni.admin.questions.question.remove") %>
+              </span>
+            </button>
+          </span>
+        </h2>
+      </div>
+
+      <div id="panel-<%= card_id %>-question-card" class="mt-4 card-section collapsible">
+        <div class="row column">
+          <%= q.translated :text_field, :body,
+                           label: t("decidim.elections.vocdoni.admin.questions.question.statement_label") %>
+        </div>
+
+        <div class="row column">
+          <%= q.translated :editor, :description,
+                           label: t("decidim.elections.vocdoni.admin.questions.question.description_label") %>
+        </div>
+
+        <div class="row column">
+          <%= q.select :question_type,
+                       options_for_select(vocdoni_question_type_options, q.object.question_type),
+                       label: t("decidim.elections.vocdoni.admin.questions.question.question_type_label") %>
+        </div>
+
+        <%# These two hidden fields are submitted with every save.
+            `id` lets the command match the form row to its DB record.
+            `deleted` is set to "true" by DynamicFieldsComponent when the admin
+            clicks Remove; the command destroys rows absent from the kept set. %>
+        <%= q.hidden_field :id if question.persisted? %>
+        <%= q.hidden_field :deleted, value: false %>
+
+        <%# Response-option list for this question. `data-template` points
+            to the per-card blueprint (a top-level sibling of the card in
+            _form.html.erb). createEditableForm calls `$.fn.template`
+            during activation and on each Add: it fetches the blueprint,
+            clones it into `{original_id}-<uid>`, updates this wrapper's
+            data-template to the clone, and substitutes placeholders in
+            the clone's content. The Add button is right below the list
+            — createEditableForm binds it by its `.add-response-option`
+            class within the wrapper. %>
+        <div class="questionnaire-question-response-options"
+             data-template="<%= response_option_template_selector %>">
+          <div class="questionnaire-question-response-options-list">
+            <% question.answers.each_with_index do |answer, answer_index| %>
+              <%= render partial: "decidim/elections/vocdoni/admin/questions/response_option",
+                         locals: { parent_name:, answer:, index: answer_index, question_index: index } %>
+            <% end %>
+          </div>
+
+          <div class="row column mb-2 mt-4">
+            <button type="button"
+                    class="button button__sm button__transparent-secondary add-response-option">
+              <%= t("decidim.elections.vocdoni.admin.questions.question.add_response_option") %>
+            </button>
+          </div>
+        </div>
+
+        <%# max_choices only matters for multichoice; the JS hides this field
+            for singlechoice questions and, when it is visible, keeps its
+            options in sync with the number of response options. Upstream keys
+            on the `.questionnaire-question-max-choices` wrapper class to find
+            the select from the outer editor. The range starts at 2 (the
+            minimum) up to the current number of options. %>
+        <div class="questionnaire-question-max-choices row column">
+          <%= q.select :max_choices,
+                       options_for_select(
+                         [[t("decidim.elections.vocdoni.admin.questions.question.max_choices_any"), ""]].concat(
+                           (2..([2, question.number_of_options].max)).map { |n| [n.to_s, n] }
+                         ),
+                         question.max_choices
+                       ),
+                       { label: t("decidim.elections.vocdoni.admin.questions.question.max_choices_label"),
+                         include_blank: false } %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

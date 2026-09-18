@@ -1,0 +1,26 @@
+<%# The census screens use the admin pack for the member rows, the live
+    security meter and the credential limit. %>
+<% append_javascript_pack_tag "decidim_elections_vocdoni_admin" %>
+
+<% add_decidim_page_title(t("decidim.elections.vocdoni.admin.census.authentication.title")) %>
+
+<%= render partial: "decidim/elections/vocdoni/admin/shared/election_header", locals: { election: } %>
+<%= render partial: "nav", locals: { election: } %>
+
+<div class="item__edit item__edit-1col">
+  <div class="item__edit-form">
+    <%= decidim_form_for(@form, url: election_census_path(election), method: :patch, html: { id: "js-census-authentication-form", class: "form-defaults form edit_census" }) do |f| %>
+      <%= render partial: "authentication_form", locals: { form: f, election: } %>
+
+      <div class="item__edit-sticky">
+        <div class="item__edit-sticky-container">
+          <% if election.editable? %>
+            <%= f.submit t("decidim.elections.vocdoni.admin.census.authentication.save"), class: "button button__sm button__secondary" %>
+          <% else %>
+            <%= link_to t("decidim.elections.vocdoni.admin.census.authentication.back"), election_census_path(election), class: "button button__sm button__secondary" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

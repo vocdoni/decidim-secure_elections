@@ -13,8 +13,8 @@ Decidim::Shakapacker.register_entrypoints(
   # served by the engine's static middleware, so it needs nothing from
   # Shakapacker, from the host application's `node_modules` or from a manifest
   # lookup at request time.
-  decidim_secure_elections: "#{base_path}/app/packs/entrypoints/decidim_secure_elections.js",
+  decidim_elections_vocdoni: "#{base_path}/app/packs/entrypoints/decidim_elections_vocdoni.js",
   # Admin: the wizard and the monitoring page are server-rendered, so this pack
   # carries only progressive enhancement for forms with conditional fields.
-  decidim_secure_elections_admin: "#{base_path}/app/packs/entrypoints/decidim_secure_elections_admin.js"
+  decidim_elections_vocdoni_admin: "#{base_path}/app/packs/entrypoints/decidim_elections_vocdoni_admin.js"
 )

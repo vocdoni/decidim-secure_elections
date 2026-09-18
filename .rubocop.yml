@@ -15,8 +15,8 @@ AllCops:
 
 Metrics/BlockLength:
   Exclude:
-    - "lib/decidim/secure_elections/component.rb"
-    - "lib/decidim/secure_elections/admin_engine.rb"
+    - "lib/decidim/elections/vocdoni/component.rb"
+    - "lib/decidim/elections/vocdoni/admin_engine.rb"
     - "spec/**/*"
 
 # The Gemfile's `# rubocop:disable Bundler/DuplicatedGem` pair wraps a

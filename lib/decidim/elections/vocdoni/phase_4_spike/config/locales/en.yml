@@ -1,0 +1,118 @@
+en:
+  decidim:
+    admin:
+      menu:
+        # Injected into upstream's `admin_elections_menu` from the
+        # phase-4 spike engine. Appears on every election so an admin can
+        # discover the Vocdoni opt-in on the Security tab.
+        elections_menu:
+          security: "Security"
+    elections:
+      vocdoni:
+        admin:
+          # The Security tab. Written for the person running the vote, not for
+          # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
+          # vote types are "Simple vote" (any standard Decidim census) and
+          # "Secret, verifiable vote" (`enable_vocdoni`, the Vocdoni opt-in).
+          security:
+            show:
+              title: "Security"
+              choice:
+                legend: "How do you want to run this vote?"
+                lead: "This choice decides who can read the ballots and whether the count can be checked by someone other than you."
+                recommended: "Recommended for binding decisions"
+                best_for: "Best for:"
+                selected: "Selected"
+                simple:
+                  title: "Simple vote"
+                  summary: "Runs on this platform, like a survey."
+                  points:
+                    stored: "Ballots are stored in this platform's database."
+                    readable: "Platform administrators can technically read them."
+                    unverifiable: "Results are computed by this server; nobody outside can check them."
+                    editable: "Can be edited until the vote starts."
+                  best_for: "Informal polls, quick consultations, decisions nobody is likely to contest."
+                secure:
+                  title: "Secret, verifiable vote"
+                  summary: "Ballots are sealed so nobody can read them, and the count can be checked independently."
+                  points:
+                    anonymous: "Nobody — not even administrators — can link a ballot to a voter."
+                    tamper: "Any tampering is detectable: each voter gets a receipt to check on a public explorer, and the results export links there too."
+                    minimal: "Only the details needed to check who may vote are used; ballots hold no personal data."
+                    locked: "Locked once published — that is what makes it trustworthy."
+                  best_for: "Elections of officers, statutory votes, budgets — anything that must stand up to challenge."
+                  powered_by: "Powered by the Vocdoni voting protocol."
+                  # Leave empty until the admin guide exists: the link is only
+                  # rendered when this has a value.
+                  guide_url: ""
+                  guide_link: "Read the full guide"
+                good_to_know_html: "<strong>Good to know:</strong> you can change this choice until the election is published. Voters won't notice any difference, except the one-time code if you enable it."
+              why:
+                title: "Why it matters for organisations and public bodies"
+                secrecy:
+                  title: "Ballot secrecy and anonymity"
+                  body: "A secret ballot is the baseline of a legitimate vote. With a secret, verifiable vote it is guaranteed by cryptography, not by trust in whoever runs the platform."
+                leaks:
+                  title: "Fewer leaks, less liability"
+                  body: "The platform never holds a readable ballot, so a data breach or a mistaken administrator cannot reveal how anyone voted."
+                gdpr:
+                  title: "GDPR and data minimisation"
+                  body: "How someone voted is sensitive personal data. With a secret vote, the platform never stores it, so there is far less to protect and ballots contain no personal data. Only the identifiers needed to check who may vote are processed."
+                statutes:
+                  title: "Regulation and your own statutes"
+                  body: "Beyond national law, the statutes and bylaws of associations, cooperatives, professional bodies and councils often require a secret ballot for elections and binding decisions. This option lets you guarantee it, and prove it."
+                table:
+                  title: "At a glance"
+                  caption: "Comparison between a simple vote and a secret, verifiable vote"
+                  feature: "Feature"
+                  "yes": "Yes"
+                  "no": "No"
+                  rows:
+                    secrecy:
+                      label: "Ballot secrecy"
+                      simple: "Relies on administrators"
+                      secure: "Guaranteed"
+                    readers:
+                      label: "Who can read ballots"
+                      simple: "Platform administrators"
+                      secure: "Nobody"
+                    tamper:
+                      label: "Tampering is detectable"
+                    verification:
+                      label: "Anyone can verify the count"
+                    personal_data:
+                      label: "Personal data kept with the ballot"
+                      simple: "A reference to the voter"
+                      secure: "None"
+                    locked:
+                      label: "Locked once published"
+              two_factor:
+                legend: "Confirm voters' identity with a one-time code"
+                lead: "Each voter receives a one-time code when they open the ballot and types it in before voting. It stops someone voting on behalf of another person and makes the result harder to dispute."
+                simple_note: "Available for secret, verifiable votes."
+                email:
+                  label: "Email code"
+                  help: "The code goes to the email address each participant registered with."
+                sms:
+                  label: "SMS code"
+                  help: "The code goes by text message, so every voter needs a phone number registered with the voting service."
+                both_note: "If both are on, each voter chooses how to receive the code."
+              summary:
+                title: "Your configuration"
+                levels:
+                  basic: "Simple"
+                  strong: "Secret & verifiable"
+                  strongest: "Secret, verifiable + one-time code"
+                sentences:
+                  basic: "Ballots are kept on this platform. Suitable for informal consultations."
+                  strong: "Anonymous ballots, result checkable by anyone."
+                  strongest: "Anonymous ballots, result checkable by anyone. Voters confirm their identity with a one-time code."
+            update:
+              success: "Security settings updated."
+              invalid: "Security settings could not be saved. Please review the errors below."
+        booth:
+          launcher:
+            help_html: "Your ballot is signed and submitted in your browser. The Decidim server never sees a vote."
+            enter: "Open the voting booth"
+            chain_note_html: "Anchored on the Vocdoni chain <code>%{chain}</code>."
+            not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."

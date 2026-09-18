@@ -1,0 +1,56 @@
+<%#
+  Building the census from Decidim's own verifications.
+
+  This is the one census source the Vocdoni app cannot offer, and the reason
+  this module exists rather than a link to app.vocdoni.io: an organization that
+  has already verified its participants should not have to export them and
+  upload them back.
+
+  Decidim knows a participant's name and email and nothing else, so if the
+  election authenticates on a member number the imported rows will show up as
+  incomplete — which is the honest answer, and visible now.
+%>
+<details id="js-census-verifications" <%= "open" if form.errors.any? %>>
+  <summary class="cursor-pointer font-semibold py-2">
+    <%= icon "user-follow-line", class: "!w-4 !h-4 inline-block", aria_hidden: true %>
+    <%= t("decidim.elections.vocdoni.admin.census.verifications.title") %>
+  </summary>
+
+  <div class="pt-4 pl-2 border-l">
+    <% if handlers.none? %>
+      <p class="text-gray-2"><%= t("decidim.elections.vocdoni.admin.census.verifications.none_available") %></p>
+    <% else %>
+      <p class="text-sm text-gray-2 mb-2" id="census-verifications-help">
+        <%= t("decidim.elections.vocdoni.admin.census.verifications.help") %>
+      </p>
+
+      <%= decidim_form_for(form, url: election_census_verifications_path(election), method: :post,
+                           html: { id: "js-census-verifications-form", class: "form-defaults form new_census_verifications" }) do |f| %>
+        <div class="mb-2">
+          <%= f.select :authorization_handler,
+                       handlers.map { |name| [Decidim::Elections::Vocdoni::VerifiedParticipants.handler_label(name), name] },
+                       { include_blank: t("decidim.elections.vocdoni.admin.census.verifications.choose") },
+                       { "aria-describedby": "census-verifications-help" } %>
+        </div>
+
+        <div class="mb-2">
+          <%#
+            The hint is this panel's own: the import panel's says "the people
+            in the file", and there is no file here.
+
+            No `data-confirm`. It carried the import panel's pluralized
+            `replace_confirm` with no `count`, so `t` handed back the whole
+            plural hash and the attribute rendered as a stringified Ruby Hash —
+            and Decidim's confirm dialog is wired to links, form submits and
+            submit buttons, never to a checkbox, so nothing ever read it.
+          %>
+          <%= f.check_box :replace,
+                          label: t("decidim.elections.vocdoni.admin.census.import.replace_label"),
+                          help_text: t("decidim.elections.vocdoni.admin.census.verifications.replace_help") %>
+        </div>
+
+        <%= f.submit t("decidim.elections.vocdoni.admin.census.verifications.submit"), class: "button button__xs button__secondary" %>
+      <% end %>
+    <% end %>
+  </div>
+</details>

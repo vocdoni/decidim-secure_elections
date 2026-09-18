@@ -53,12 +53,12 @@ describe "Explore elections" do
     it "offers a voting link that opens the static voting page" do
       href = URI.parse(find_link("Vote")[:href])
 
-      expect(href.path).to eq(Decidim::SecureElections::Engine::VOTE_PATH)
+      expect(href.path).to eq(Decidim::Elections::Vocdoni::Engine::VOTE_PATH)
 
       packed = href.query.delete_prefix("v=")
-      decoded = Decidim::SecureElections::VotingPageUrl.decode(packed)
+      decoded = Decidim::Elections::Vocdoni::VotingPageUrl.decode(packed)
 
-      expect(decoded[:api]).to eq(Decidim::SecureElections.api_url)
+      expect(decoded[:api]).to eq(Decidim::Elections::Vocdoni.api_url)
       expect(decoded[:process]).to eq(election.vocdoni_process_id)
     end
 

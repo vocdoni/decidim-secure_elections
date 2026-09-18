@@ -1,0 +1,25 @@
+<%#
+  Question results section: per-question vote counts from results_cache.
+  The `#js-vocdoni-monitor-results` id is the target that the monitor
+  pack rewrites when new figures arrive from the polling loop.
+
+  Locals: `election`, `questions` (helper from DashboardController)
+%>
+<div class="card mb-6">
+  <div class="card-divider">
+    <h2 class="card-title"><%= t("decidim.elections.vocdoni.admin.monitor.show.results_title") %></h2>
+  </div>
+
+  <div class="card-section" id="js-vocdoni-monitor-results">
+    <div class="row column">
+      <% unless election.results_available? %>
+        <%= cell "decidim/announcement", t("decidim.elections.vocdoni.admin.monitor.show.no_results_yet"), callout_class: "secondary" %>
+      <% end %>
+
+      <% questions.each do |question| %>
+        <%= render partial: "decidim/elections/vocdoni/admin/dashboard/question_results",
+                   locals: { election:, question: } %>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         **Do not report security vulnerabilities here.** See
-        [SECURITY.md](https://github.com/vocdoni/decidim-secure_elections/blob/main/SECURITY.md).
+        [SECURITY.md](https://github.com/vocdoni/decidim-elections-vocdoni/blob/main/SECURITY.md).
 
   - type: textarea
     id: what-happened
@@ -31,7 +31,7 @@ body:
   - type: input
     id: module-version
     attributes:
-      label: decidim-secure_elections version
+      label: decidim-elections-vocdoni version
       placeholder: "0.1.0"
     validations:
       required: true

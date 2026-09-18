@@ -1,21 +1,21 @@
-# Reference deployment for a Decidim application running decidim-secure_elections.
+# Reference deployment for a Decidim application running decidim-elections-vocdoni.
 #
 # Build context is the Decidim *application* root (the app that has this module
 # in its Gemfile), not the module repository:
 #
-#   docker compose -f path/to/decidim-secure_elections/docker/compose.yml \
+#   docker compose -f path/to/decidim-elections-vocdoni/docker/compose.yml \
 #     --project-directory . up -d --build
 #
 # Copy .env.example to .env in the application root first — the app refuses to
 # boot without VOCDONI_API_URL, VOCDONI_API_KEY and VOCDONI_ORG_ADDRESS.
 
-name: decidim-secure_elections
+name: decidim-elections-vocdoni
 
 services:
   app:
     build:
       context: .
-      dockerfile: ${VOCDONI_DOCKERFILE:-vendor/decidim-secure_elections/docker/Dockerfile}
+      dockerfile: ${VOCDONI_DOCKERFILE:-vendor/decidim-elections-vocdoni/docker/Dockerfile}
     env_file: [.env]
     environment:
       RAILS_ENV: ${RAILS_ENV:-production}
@@ -38,7 +38,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: ${VOCDONI_DOCKERFILE:-vendor/decidim-secure_elections/docker/Dockerfile}
+      dockerfile: ${VOCDONI_DOCKERFILE:-vendor/decidim-elections-vocdoni/docker/Dockerfile}
     command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
     env_file: [.env]
     environment:

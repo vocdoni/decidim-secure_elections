@@ -16,9 +16,9 @@ WebMock.disable_net_connect!(allow_localhost: true)
 
 RSpec.configure do |config|
   # Give the module a known-good configuration by default so specs do not each
-  # have to stub `Decidim::SecureElections` settings. Individual specs override as needed.
+  # have to stub `Decidim::Elections::Vocdoni` settings. Individual specs override as needed.
   config.before do
-    allow(Decidim::SecureElections).to receive_messages(
+    allow(Decidim::Elections::Vocdoni).to receive_messages(
       api_url: "https://saas-api.example.org",
       api_key: "vsk_test_key",
       org_address: "0x0000000000000000000000000000000000000001"

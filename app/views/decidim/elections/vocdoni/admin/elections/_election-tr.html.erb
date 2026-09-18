@@ -1,0 +1,50 @@
+<tr data-id="<%= election.id %>">
+  <td data-label="<%= t("decidim.elections.vocdoni.models.election.fields.title") %>">
+    <%= link_to present(election).title(html_escape: true),
+                election.on_chain? ? election_dashboard_path(election) : edit_election_path(election) %>
+    <% unless election.published? %>
+      <span class="label basic"><%= t("decidim.elections.vocdoni.admin.elections.not_on_public_site") %></span>
+    <% end %>
+  </td>
+
+  <td data-label="<%= t("decidim.elections.vocdoni.models.election.fields.status") %>">
+    <%= vocdoni_election_status_label(election) %>
+  </td>
+
+  <%# Never "Starts when published" for an election that has already started:
+      see `ElectionsHelper#vocdoni_start_time_text`. %>
+  <td data-label="<%= t("decidim.elections.vocdoni.models.election.fields.start_at") %>">
+    <%= vocdoni_start_time_text(election) %>
+  </td>
+
+  <td data-label="<%= t("decidim.elections.vocdoni.models.election.fields.end_at") %>">
+    <%= l(election.end_at, format: :decidim_short) if election.end_at %>
+  </td>
+
+  <td data-label="<%= t("decidim.elections.vocdoni.models.election.fields.census") %>">
+    <% if election.census_configured? %>
+      <%= election.auth_fields.map { |field| t(field, scope: "decidim.elections.vocdoni.auth_fields", default: field) }.join(", ") %>
+    <% else %>
+      <span class="label alert"><%= t("decidim.elections.vocdoni.admin.census.not_configured") %></span>
+    <% end %>
+  </td>
+
+  <%#
+    The count comes from `results_cache`, which a background job fills in — it
+    is as old as the last sync, and a bare "0" next to a running election reads
+    as a lost ballot. The age is therefore never omitted, and the monitor (the
+    one place that can ask for a fresh reading) is one click away.
+  %>
+  <td data-label="<%= t("decidim.elections.vocdoni.models.election.fields.votes_count") %>">
+    <% if election.on_chain? %>
+      <%= link_to election.votes_count, election_dashboard_path(election) %>
+      <span class="block text-xs text-gray-2"><%= vocdoni_last_synced_text(election) %></span>
+    <% else %>
+      <span class="text-gray-2">—</span>
+    <% end %>
+  </td>
+
+  <td data-label="<%= t("decidim.elections.vocdoni.admin.elections.actions_title") %>" class="table-list__actions">
+    <%= render partial: "decidim/elections/vocdoni/admin/elections/actions", locals: { election:, view: } %>
+  </td>
+</tr>

@@ -1,0 +1,55 @@
+<%#
+  A read-only look at the census, first rows only.
+
+  Rows the election cannot authenticate are flagged here rather than left to be
+  discovered by an upstream `40037` at publish time.
+%>
+<%
+  columns = election.census_columns
+  reported = election.census_members_reported_missing.pluck(:id).to_set
+%>
+
+<div class="table-scroll">
+  <table class="table-list">
+    <caption class="sr-only"><%= t("decidim.elections.vocdoni.admin.census.members.table_caption") %></caption>
+    <thead>
+      <tr>
+        <% columns.each do |field| %>
+          <th scope="col"><%= Decidim::Elections::Vocdoni::CensusMember.field_label(field) %></th>
+        <% end %>
+        <th scope="col"><%= t("decidim.elections.vocdoni.admin.census.members.status") %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% members.each do |member| %>
+        <tr>
+          <% columns.each do |field| %>
+            <td data-label="<%= Decidim::Elections::Vocdoni::CensusMember.field_label(field) %>">
+              <% value = member.value_for(field) %>
+              <% if value.is_a?(Date) %>
+                <%= l value, format: :decidim_short %>
+              <% else %>
+                <%= value.presence || "—" %>
+              <% end %>
+            </td>
+          <% end %>
+
+          <td data-label="<%= t("decidim.elections.vocdoni.admin.census.members.status") %>">
+            <% missing = member.missing_fields %>
+            <% if missing.any? %>
+              <span class="label alert">
+                <%= t("decidim.elections.vocdoni.admin.census.members.missing",
+                      fields: missing.map { |field| Decidim::Elections::Vocdoni::CensusMember.field_label(field) }.to_sentence) %>
+              </span>
+            <% elsif reported.include?(member.id) %>
+              <%# Named by the upstream group validation. %>
+              <span class="label alert"><%= t("decidim.elections.vocdoni.admin.census.members.reported_missing") %></span>
+            <% else %>
+              <span class="label success"><%= t("decidim.elections.vocdoni.admin.census.members.complete") %></span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

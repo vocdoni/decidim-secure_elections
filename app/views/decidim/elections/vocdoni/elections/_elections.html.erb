@@ -1,0 +1,13 @@
+<% if elections.empty? %>
+  <%= cell("decidim/announcement", t("decidim.elections.vocdoni.elections.index.empty")) %>
+<% else %>
+  <h2 class="h5 md:h3 decorator" aria-live="polite" aria-atomic="true">
+    <%= t("decidim.elections.vocdoni.elections.index.count", count: paginated_elections.total_count) %>
+  </h2>
+
+  <div class="card__list-list">
+    <%= render partial: "election", collection: paginated_elections, as: :election %>
+  </div>
+
+  <%= decidim_paginate paginated_elections %>
+<% end %>

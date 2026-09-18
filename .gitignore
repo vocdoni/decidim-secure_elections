@@ -14,3 +14,9 @@ Gemfile.lock
 .rspec-failures
 .byebug_history
 .DS_Store
+
+# Playwright + local screenshots
+.playwright-mcp/
+*.png
+!docs/**/*.png
+.claude/

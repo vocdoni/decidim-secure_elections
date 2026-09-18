@@ -7,7 +7,7 @@
  * nothing from Rails at request time, and it must be there the moment the gem is
  * installed. That means the output of this script is **committed**, and
  * `s.files` in the gemspec ships it. Re-run this script and commit the result
- * whenever anything under `app/packs/src/decidim/secure_elections/voter/` or the
+ * whenever anything under `app/packs/src/decidim/elections/vocdoni/voter/` or the
  * `votes.page` strings in `config/locales/` change.
  *
  * What it produces:
@@ -35,8 +35,8 @@ import yaml from "js-yaml";
 
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const source = path.join(root, "app/packs/src/decidim/secure_elections/voter");
-const fontSource = path.join(root, "app/packs/fonts/decidim/secure_elections");
+const source = path.join(root, "app/packs/src/decidim/elections/vocdoni/voter");
+const fontSource = path.join(root, "app/packs/fonts/decidim/elections/vocdoni");
 const output = path.join(root, "public/vocdoni");
 const localesOut = path.join(output, "locales");
 const fontsOut = path.join(output, "fonts");
@@ -111,7 +111,7 @@ const readLocaleTrees = async () => {
  * @returns {Object|null} the voting page strings, or null when this locale has none.
  */
 const pageStrings = (tree) => {
-  const page = dig(tree, "decidim.secure_elections.votes.page");
+  const page = dig(tree, "decidim.elections.vocdoni.votes.page");
 
   if (!page || typeof page !== "object") {
     return null;
@@ -119,8 +119,8 @@ const pageStrings = (tree) => {
 
   return {
     ...page,
-    fields: dig(tree, "decidim.secure_elections.census.fields") || {},
-    question_number: dig(tree, "decidim.secure_elections.elections.show.question_number") || ""
+    fields: dig(tree, "decidim.elections.vocdoni.census.fields") || {},
+    question_number: dig(tree, "decidim.elections.vocdoni.elections.show.question_number") || ""
   };
 };
 
