@@ -39,7 +39,7 @@
   }
 }
 
-// "Why it matters" disclosure and the comparison table.
+// "Why it matters" disclosure.
 .vocdoni-security {
   .vocdoni-why {
     @apply mt-6 rounded-lg border border-background-4 bg-background;
@@ -95,53 +95,6 @@
 
   .vocdoni-why__reason-body {
     @apply m-0 text-sm leading-relaxed text-gray-2;
-  }
-
-  .vocdoni-why__table-title {
-    @apply mt-6 mb-2 text-md font-semibold text-black;
-  }
-
-  .vocdoni-compare {
-    table {
-      @apply m-0 rounded bg-white text-sm text-gray-2;
-    }
-
-    th,
-    td {
-      @apply p-3 text-left align-middle;
-    }
-
-    thead th {
-      @apply bg-background-2 font-semibold text-black;
-    }
-
-    tbody tr {
-      @apply border-b border-background-4 last:border-b-0;
-    }
-
-    tbody th {
-      @apply block font-semibold text-black md:table-cell;
-    }
-
-    .vocdoni-compare__secure {
-      @apply md:bg-secondary/5;
-    }
-  }
-
-  .vocdoni-compare__cell {
-    @apply inline-flex items-center gap-2;
-  }
-
-  .vocdoni-compare__icon {
-    @apply w-4 h-4 shrink-0;
-  }
-
-  .vocdoni-compare__icon--yes {
-    @apply fill-success;
-  }
-
-  .vocdoni-compare__icon--no {
-    @apply fill-gray-2;
   }
 }
 

@@ -1,15 +1,9 @@
 <%#
-  The reasons behind the choice, and a comparison an administrator can quote
-  to their board. Collapsed: it is background for the decision above it, not
+  The reasons behind the choice: background an administrator can quote to
+  their board. Collapsed: it is background for the decision above it, not
   part of making it.
-
-  Every table row is phrased so that the protective answer is the good one,
-  which is why the tick and the cross can carry the same meaning in every
-  row. The words ("Yes", "Nobody"…) are what a screen reader reads; the
-  icons are decorative.
 %>
 <% scope = "decidim.elections.vocdoni.admin.security.show.why" %>
-<% table_scope = "#{scope}.table" %>
 <%
   reasons = {
     "secrecy" => "lock-2-line",
@@ -17,19 +11,6 @@
     "gdpr" => "file-shield-2-line",
     "statutes" => "scales-3-line"
   }
-  # [row, simple cell, secure cell]; a nil cell reads "No" / "Yes".
-  rows = [
-    ["secrecy", t("rows.secrecy.simple", scope: table_scope), t("rows.secrecy.secure", scope: table_scope)],
-    ["readers", t("rows.readers.simple", scope: table_scope), t("rows.readers.secure", scope: table_scope)],
-    ["tamper", nil, nil],
-    ["verification", nil, nil],
-    ["personal_data", t("rows.personal_data.simple", scope: table_scope), t("rows.personal_data.secure", scope: table_scope)],
-    ["locked", nil, nil]
-  ]
-  # The cards' own titles say the whole thing; a column heading and a stacked
-  # row's label need the short form of each.
-  simple_heading = t("simple_heading", scope: table_scope)
-  secure_heading = t("secure_heading", scope: table_scope)
 %>
 <details class="vocdoni-why">
   <summary class="vocdoni-why__summary">
@@ -50,38 +31,5 @@
         </li>
       <% end %>
     </ul>
-
-    <h3 class="vocdoni-why__table-title"><%= t("title", scope: table_scope) %></h3>
-    <div class="table-stacked vocdoni-compare">
-      <table>
-        <caption class="sr-only"><%= t("caption", scope: table_scope) %></caption>
-        <thead>
-          <tr>
-            <th scope="col"><%= t("feature", scope: table_scope) %></th>
-            <th scope="col"><%= simple_heading %></th>
-            <th scope="col" class="vocdoni-compare__secure"><%= secure_heading %></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% rows.each do |key, simple_text, secure_text| %>
-            <tr>
-              <th scope="row"><%= t("rows.#{key}.label", scope: table_scope) %></th>
-              <td data-label="<%= simple_heading %>">
-                <span class="vocdoni-compare__cell">
-                  <%= icon "close-line", class: "vocdoni-compare__icon vocdoni-compare__icon--no" %>
-                  <span><%= simple_text || t("no", scope: table_scope) %></span>
-                </span>
-              </td>
-              <td data-label="<%= secure_heading %>" class="vocdoni-compare__secure">
-                <span class="vocdoni-compare__cell">
-                  <%= icon "check-line", class: "vocdoni-compare__icon vocdoni-compare__icon--yes" %>
-                  <span><%= secure_text || t("yes", scope: table_scope) %></span>
-                </span>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
   </div>
 </details>

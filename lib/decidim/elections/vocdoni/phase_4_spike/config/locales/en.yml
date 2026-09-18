@@ -27,12 +27,11 @@ en:
                 selected: "Selected"
                 simple:
                   title: "Poll without guarantees"
-                  summary: "Runs on this platform, like a survey. Not anonymous, and nobody outside can check the count, so it does not meet what annual general meetings, board elections and other statutory decisions normally require."
+                  summary: "Run the vote like a survey without cryptographic guarantees. Not anonymous, and not end-end verifiable, so it does not meet what annual general meetings, board elections and other statutory decisions normally require."
                   points:
                     stored: "Ballots are stored in this platform's database."
                     readable: "Platform administrators can technically read them."
-                    unverifiable: "Results are computed by this server; nobody outside can check them."
-                    editable: "Can be edited until the vote starts."
+                    unverifiable: "Results are computed by this server; nobody outside can verify them."
                   best_for: "Informal polls, quick consultations, decisions nobody is likely to contest."
                 secure:
                   title: "Vote with guarantees"
@@ -48,7 +47,6 @@ en:
                   guide_url: ""
                   guide_link: "Read the full guide"
                 refused_identifiers: "Your list identifies people only by an access code, which a vote with guarantees cannot check. Add another detail on the Census tab to run this as a vote with guarantees."
-                good_to_know_html: "<strong>Good to know:</strong> you can change this choice until the election is published. Voters won't notice any difference, except the one-time code if you enable it."
               why:
                 title: "Why organizing a verifiable secure vote matters for organisations and public bodies"
                 secrecy:
@@ -63,35 +61,6 @@ en:
                 statutes:
                   title: "Regulation and your own statutes"
                   body: "Beyond national law, the statutes and bylaws of associations, cooperatives, professional bodies and councils often require a secret ballot for elections and binding decisions. This option lets you guarantee it, and prove it."
-                table:
-                  title: "At a glance"
-                  caption: "Comparison between a poll without guarantees and a vote with guarantees"
-                  feature: "Feature"
-                  # Short forms of the two card titles. A column heading and a
-                  # stacked row's label have no room for the full one.
-                  simple_heading: "Without guarantees"
-                  secure_heading: "With guarantees"
-                  "yes": "Yes"
-                  "no": "No"
-                  rows:
-                    secrecy:
-                      label: "Ballot secrecy"
-                      simple: "Relies on administrators"
-                      secure: "Guaranteed"
-                    readers:
-                      label: "Who can read ballots"
-                      simple: "Platform administrators"
-                      secure: "Nobody"
-                    tamper:
-                      label: "Tampering is detectable"
-                    verification:
-                      label: "Anyone can verify the count"
-                    personal_data:
-                      label: "Personal data kept with the ballot"
-                      simple: "A reference to the voter"
-                      secure: "None"
-                    locked:
-                      label: "Locked once published"
               # Shown, not chosen: the details belong to the census, so they
               # are picked on the Census tab and only reported here.
               identifiers:
