@@ -1,7 +1,7 @@
 <%#
   The reasons behind the choice, and a comparison an administrator can quote
-  to their board. Open until the election opts in to a secret vote,
-  collapsed after: that admin has already read it.
+  to their board. Collapsed: it is background for the decision above it, not
+  part of making it.
 
   Every table row is phrased so that the protective answer is the good one,
   which is why the tick and the cross can carry the same meaning in every
@@ -26,10 +26,12 @@
     ["personal_data", t("rows.personal_data.simple", scope: table_scope), t("rows.personal_data.secure", scope: table_scope)],
     ["locked", nil, nil]
   ]
-  simple_heading = t("decidim.elections.vocdoni.admin.security.show.choice.simple.title")
-  secure_heading = t("decidim.elections.vocdoni.admin.security.show.choice.secure.title")
+  # The cards' own titles say the whole thing; a column heading and a stacked
+  # row's label need the short form of each.
+  simple_heading = t("simple_heading", scope: table_scope)
+  secure_heading = t("secure_heading", scope: table_scope)
 %>
-<details class="vocdoni-why" <%= "open" unless election.vocdoni_process %>>
+<details class="vocdoni-why">
   <summary class="vocdoni-why__summary">
     <%= icon "arrow-right-s-line", class: "vocdoni-why__chevron" %>
     <%= icon "government-line" %>

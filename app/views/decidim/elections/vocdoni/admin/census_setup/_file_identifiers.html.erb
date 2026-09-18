@@ -28,10 +28,9 @@
 <fieldset id="js-census-identifiers"
           class="vocdoni-census-file__fieldset vocdoni-identifiers"
           aria-describedby="census-identifiers-lead"
-          data-max="<%= fields_mod::MAX_IDENTIFIERS %>"
           data-weak="<%= fields_mod::WEAK.join(" ") %>">
   <legend class="sr-only"><%= t("legend", scope:) %></legend>
-  <p class="help-text" id="census-identifiers-lead"><%= t("lead", scope:, max: fields_mod::MAX_IDENTIFIERS) %></p>
+  <p class="help-text" id="census-identifiers-lead"><%= t("lead", scope:) %></p>
 
   <% available = form.identifier_options %>
   <% rows = local_assigns[:options] || available %>

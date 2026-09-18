@@ -152,14 +152,14 @@ module Decidim
           end
         end
 
-        context "when the three-field cap is already reached without the access code" do
+        context "when a long combination is the only one that tells people apart" do
           let(:available) { %w(name surname birthDate token) }
           let(:duplicates) { ->(fields) { fields.include?("birthDate") ? 0 : 1 } }
 
-          # MAX_IDENTIFIERS is 3: name, surname and birthDate already fill it,
-          # so there is no room left for the token even though one is available.
-          it "does not append the access code past the cap" do
-            expect(derived).to eq(%w(name surname birthDate))
+          # Nothing is capped any more, and the access code is the one detail
+          # an impersonator who knows the other three would still not have.
+          it "keeps the access code alongside them" do
+            expect(derived).to eq(%w(name surname birthDate token))
           end
         end
       end

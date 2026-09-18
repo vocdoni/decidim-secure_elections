@@ -14,9 +14,7 @@
  *    round trip to find out.
  * 4. The details a voter can be asked for are the columns being kept, so
  *    they follow the same selects: a column dropped here stops being
- *    offered, and one just mapped becomes available at once. Past the
- *    maximum the remaining boxes disable themselves, so the limit explains
- *    itself.
+ *    offered, and one just mapped becomes available at once.
  * 5. The sentence above "Change" follows the boxes, so the summary and the
  *    detail never disagree while the admin is looking at both.
  */
@@ -135,7 +133,6 @@ const setupCensusFileMapping = () => {
     }
 
     const kept = selects.map((select) => select.value).filter(Boolean);
-    const max = parseInt(identifiers.dataset.max, 10) || 3;
 
     identifierItems.forEach((item) => {
       const box = item.querySelector("input[type=checkbox]");
@@ -152,10 +149,6 @@ const setupCensusFileMapping = () => {
 
     const visible = identifierItems.filter((item) => !item.hidden);
     const chosen = visible.filter((item) => item.querySelector("input[type=checkbox]").checked);
-    visible.forEach((item) => {
-      const box = item.querySelector("input[type=checkbox]");
-      box.disabled = !box.checked && chosen.length >= max;
-    });
 
     identifiers.querySelectorAll("[data-identifiers-empty]").forEach((element) => {
       element.hidden = visible.length > 0;

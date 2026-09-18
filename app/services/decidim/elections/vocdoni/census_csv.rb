@@ -525,8 +525,6 @@ module Decidim
         # voter with any confidence.
         WEAK = %w(name surname birthDate).freeze
 
-        MAX_IDENTIFIERS = 3
-
         EXAMPLES = {
           "memberNumber" => "000123",
           "nationalId" => "12345678Z",
@@ -771,7 +769,7 @@ module Decidim
         # @param available [Array<String>] the columns kept, in file order.
         # @param duplicates [#call] fields -> how many people share those values.
         # @param blanks [#call] field -> how many people have nothing in it.
-        # @return [Array<String>] between 0 and {Fields::MAX_IDENTIFIERS} fields.
+        # @return [Array<String>] the details a voter will be asked for.
         def self.derive(available, duplicates:, blanks:)
           pool = Array(available) & Fields::SIMPLE_IDENTIFIERS
           others = pool - %w(token)
@@ -819,7 +817,7 @@ module Decidim
         # is the one detail an impersonator does not have.
         def self.with_token(fields, pool)
           return fields unless pool.include?("token")
-          return fields if fields.empty? || fields.size >= Fields::MAX_IDENTIFIERS
+          return fields if fields.empty?
 
           fields + %w(token)
         end

@@ -117,11 +117,11 @@ module Decidim
 
           private
 
+          # However many the list can offer. The rule above already reaches
+          # for the fewest that tell people apart, so a longer answer is one
+          # the admin asked for on purpose.
           def identifiers_count
-            count = chosen_identifiers.size
-            return if count.between?(1, Fields::MAX_IDENTIFIERS)
-
-            errors.add(:identifiers, count.zero? ? :blank : :too_many, count: Fields::MAX_IDENTIFIERS)
+            errors.add(:identifiers, :blank) if chosen_identifiers.empty?
           end
 
           def identifiers_allowed

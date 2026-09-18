@@ -20,7 +20,6 @@ en:
           attributes:
             identifiers:
               blank: "Choose at least one detail people type to vote."
-              too_many: "Choose at most %{count} details."
               unknown: "Choose details your list actually has."
               not_unique:
                 one: "1 person can't be told apart with %{fields}. Add another detail."
@@ -29,7 +28,6 @@ en:
           attributes:
             identifiers:
               blank: "Choose at least one detail people type to vote."
-              too_many: "Choose at most %{count} details."
               unknown: "Choose details your list actually has."
               not_unique:
                 one: "1 person can't be told apart with %{fields}. Add another detail."
@@ -55,14 +53,10 @@ en:
               legend: "Who can vote"
               lead: "Choose where your list of voters comes from. You can change this until you publish."
               best_for: "Best for:"
-              removes_list:
-                one: "Choosing this removes the 1 person on your uploaded list. This can't be undone."
-                other: "Choosing this removes the %{count} people on your uploaded list. This can't be undone."
               internal_users:
                 title: "Registered participants"
-                summary: "People with an account on this platform, though you don't control exactly who that is."
+                summary: "People with an account on this platform."
                 points:
-                  account: "Voters sign in with their account"
                   nothing_to_upload: "Nothing to upload"
                   open_list: "The list stays open until the vote closes: anyone who registers joins it"
                   verification: "Optional: ask for a verification before voting"
@@ -74,7 +68,7 @@ en:
                   exact: "You decide exactly who is in"
                   typed: "Voters type details from the list, for example name and ID number"
                   frozen: "Once you publish the election, you can't add or remove people"
-                  code: "In a secret, verifiable vote (which you choose next), can also send each person a one-time code by email or text message"
+                  code: "In a vote with guarantees (which you choose next), can also send each person a one-time code by email or text message"
                 best_for: "assemblies, boards, AGMs, associations with a member list."
             registered:
               legend: "Registered participants"

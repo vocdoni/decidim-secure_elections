@@ -7,20 +7,19 @@
   what that means. The radio is `manifest`, the name upstream's controller
   reads.
 
-  A list that already has people in it is destroyed by choosing the other
-  census type, so that card says so, in the card itself and with the real
-  number; it is visible whether or not JavaScript is.
+  Switching away from an uploaded list destroys it. The confirmation on Save
+  is what asks about that, once, rather than the card warning about it before
+  anything has been chosen.
 
   Locals: `chosen` (the census type currently selected, "" when none).
 %>
 <% scope = "decidim.elections.vocdoni.admin.census_setup.choice" %>
 <%
   options = {
-    "internal_users" => { icon: "group-2-line", points: %w(account nothing_to_upload open_list verification) },
+    "internal_users" => { icon: "group-2-line", points: %w(nothing_to_upload open_list verification) },
     "token_csv" => { icon: "bill-line", points: %w(exact typed frozen code) }
   }
   point_icons = {
-    "account" => "user-follow-line",
     "nothing_to_upload" => "check-line",
     "open_list" => "refresh-line",
     "verification" => "shield-check-line",
@@ -29,7 +28,6 @@
     "frozen" => "lock-2-line",
     "code" => "mail-lock-line"
   }
-  people_on_list = census_voters_count
 %>
 <div class="card vocdoni-census__card">
   <div class="card-divider">
@@ -47,8 +45,6 @@
         <div class="vocdoni-choices">
           <% options.each do |value, option| %>
             <% selected = chosen == value %>
-            <%# Saving this card would delete a list that belongs to the other. %>
-            <% destroys_list = people_on_list.positive? && value != "token_csv" %>
             <div class="vocdoni-choice<%= " is-selected" if selected %>" data-census-choice-card="<%= value %>">
               <div class="vocdoni-choice__header">
                 <%= radio_button_tag "manifest", value, selected,
@@ -73,13 +69,6 @@
                     </li>
                   <% end %>
                 </ul>
-
-                <% if destroys_list %>
-                  <p class="vocdoni-choice__unavailable">
-                    <%= icon "error-warning-line" %>
-                    <span><%= t("removes_list", scope:, count: people_on_list) %></span>
-                  </p>
-                <% end %>
 
                 <p class="vocdoni-choice__best">
                   <strong><%= t("best_for", scope:) %></strong>

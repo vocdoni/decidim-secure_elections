@@ -92,14 +92,12 @@ module Decidim
               end
             end
 
-            context "when more than the maximum number of identifiers is chosen" do
+            context "when the admin asks for more details than the rule would have picked" do
               let(:identifiers) { %w(name surname email phone) }
 
-              it "is invalid, naming the limit" do
-                expect(form).to be_invalid
-                expect(form.errors.details[:identifiers]).to include(
-                  a_hash_including(error: :too_many, count: CensusCsv::Fields::MAX_IDENTIFIERS)
-                )
+              it "takes them: the number of details is the admin's to decide" do
+                expect(form).to be_valid
+                expect(form.chosen_identifiers).to eq(%w(name surname email phone))
               end
             end
 
