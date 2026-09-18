@@ -27,7 +27,7 @@ en:
                 selected: "Selected"
                 simple:
                   title: "Poll without guarantees"
-                  summary: "Runs on this platform, like a survey."
+                  summary: "Runs on this platform, like a survey. Not anonymous, and nobody outside can check the count, so it does not meet what annual general meetings, board elections and other statutory decisions normally require."
                   points:
                     stored: "Ballots are stored in this platform's database."
                     readable: "Platform administrators can technically read them."
@@ -35,8 +35,8 @@ en:
                     editable: "Can be edited until the vote starts."
                   best_for: "Informal polls, quick consultations, decisions nobody is likely to contest."
                 secure:
-                  title: "Vote with guarantees with verifiable and anonymous voting"
-                  summary: "Ballots are sealed so nobody can read them, and the count can be checked independently."
+                  title: "Vote with guarantees"
+                  summary: "Anonymous and verifiable: ballots are sealed so nobody can read them, and anyone can check the count independently. This is what statutes and regulations normally require of a binding vote."
                   points:
                     anonymous: "Nobody, not even administrators, can link a ballot to a voter."
                     tamper: "Any tampering is detectable: each voter gets a receipt they can check on a public website, and the results export links there too."
