@@ -34,7 +34,7 @@
     "@noble/curves": "1.8.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^8.0.1",
     "@babel/preset-env": "^7.23.9",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^9.39.4",
