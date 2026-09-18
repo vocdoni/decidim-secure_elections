@@ -85,40 +85,28 @@ module Decidim
           app.middleware.use Decidim::Elections::Vocdoni::DevLoginPrefillMiddleware if Rails.env.development?
         end
 
-        # Pin the seeded admin's password and `password_updated_at` so a dev
-        # boot never lands on Decidim's forced-90-day change_password page.
-        # The seed already sets both; this closes the gap when a redeploy
-        # picks up a DB where an earlier boot went through the forced-change
-        # flow (bumping the password) or where `password_updated_at` ended
-        # up nil for any reason. Runs on every dev boot — idempotent: it
-        # only rewrites the password when the current hash no longer
-        # accepts the default, and only stamps `password_updated_at` when
-        # it is blank.
-        initializer "decidim_elections_vocdoni.dev_admin_pin_password", after: :load_config_initializers do |app|
-          next unless Rails.env.development?
-
-          app.config.after_initialize do
-            email = ENV["DECIDIM_ADMIN_EMAIL"] || "admin@example.org"
-            password = ENV["DECIDIM_ADMIN_PASSWORD"] || "decidim123456789"
-
-            begin
-              next unless ActiveRecord::Base.connection.data_source_exists?("decidim_users")
-
-              Decidim::User.where(email:).find_each do |admin|
-                unless admin.valid_password?(password)
-                  admin.password = password
-                  admin.password_confirmation = password
-                  admin.save(validate: false)
-                  Rails.logger.info "[vocdoni] reset dev admin password for #{email}"
-                end
-                admin.update_column(:password_updated_at, Time.current) if admin.password_updated_at.blank? # rubocop:disable Rails/SkipsModelValidations
-              end
-            rescue StandardError => e
-              # DB may not be ready at boot (db:create, seeding); nothing to
-              # do — next restart will run this again.
-              Rails.logger.warn "[vocdoni] dev_admin_pin_password skipped: #{e.class}: #{e.message}"
-            end
-          end
+        # Turn off Decidim's admin strong-password gate in dev so an operator
+        # never lands on `/change_password` after logging in with the
+        # prefilled `admin@example.org` / `decidim123456789` (see
+        # `dev_login_prefill` above). The flag is one switch on Decidim
+        # core that governs three otherwise separate behaviours:
+        #
+        #   - `Decidim::NeedsPasswordChange` — the before_action that
+        #     redirects any admin whose `password_updated_at` is nil or
+        #     older than `admin_password_expiration_days`.
+        #   - `Decidim::User#save_password_change` — pushes every
+        #     `encrypted_password_was` onto `previous_passwords` on save,
+        #     which grows the column one entry per admin password write.
+        #   - `Decidim::PasswordValidator`'s admin-specific rules (longer
+        #     minimum, host-similarity, "different from your old passwords",
+        #     …), the ones that reject `decidim123456789` on a
+        #     `decidim.*` host.
+        #
+        # All three exist for production hardening and belong on there.
+        # Dev deploys ship the prefill middleware precisely to skip login
+        # friction; keeping the strong-password gate on defeats that.
+        initializer "decidim_elections_vocdoni.dev_disable_admin_password_strong", after: :load_config_initializers do
+          Decidim.config.admin_password_strong = false if Rails.env.development?
         end
 
         # Decorate upstream `Decidim::Elections::Election` with the sidecar
