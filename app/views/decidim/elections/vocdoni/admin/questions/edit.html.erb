@@ -11,7 +11,7 @@
 <div class="item__edit item__edit-1col">
   <div class="item__edit-form">
     <%= decidim_form_for(@form,
-                         url: election_questions_path(election),
+                         url: update_questions_election_path(election),
                          method: :patch,
                          html: { id: "edit-election-questions-form",
                                  class: "form-defaults form edit_election_questions" }) do |f| %>

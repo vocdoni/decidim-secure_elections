@@ -1,7 +1,7 @@
 /**
  * Census admin: progressive enhancement, nothing load-bearing.
  *
- * Three things are enhanced here.
+ * Four things are enhanced here.
  *
  * 1. Voter authentication — cap the credentials at three the way the Vocdoni
  *    app does, keep the counter, the inline advice and the WEAK/MID/STRONG
@@ -14,6 +14,11 @@
  * 3. The import panel — put the confirmation dialog on the submit button while
  *    "replace the current census" is ticked, and take it off again when it is
  *    not.
+ *
+ * 4. Dirty-form guard — warn before navigating out of the Census tab (e.g.
+ *    via the "Manage people (N)" link) when the auth-config form has
+ *    unsaved changes. Autosave used to make that lost edit impossible; with
+ *    autosave retired this is the one remaining mitigation.
  *
  * Everything degrades. With JavaScript off the server renders the same
  * numbers, the same meter and one blank row, and a row is removed by ticking
@@ -31,10 +36,11 @@ const MEMBER_ROWS_ID = "js-census-members-rows";
 const MEMBER_TEMPLATE_ID = "js-census-member-template";
 const ADD_MEMBER_ID = "js-census-add-member";
 
-import setupAutoSave from "./census_autosave";
-
 const IMPORT_SUBMIT_ID = "js-census-import-submit";
 const IMPORT_REPLACE_SELECTOR = "[data-census-import-replace]";
+
+const AUTH_FORM_ID = "census-election-form";
+const DIRTY_GUARD_SELECTOR = "[data-confirm-if-dirty]";
 
 const LEVELS = ["weak", "mid", "strong"];
 
@@ -280,11 +286,56 @@ const setupImport = () => {
   sync();
 };
 
+/**
+ * The auth-config form has no autosave any more (see the retirement of
+ * `census_autosave.js`), so side-trips out of the tab — chiefly the
+ * "Manage people (N)" link over to the members editor — could silently
+ * discard whatever the admin just changed. This guard listens for the
+ * first `change` inside the form and, from that moment on, wraps every
+ * click on a `[data-confirm-if-dirty]` element in a confirm prompt.
+ *
+ * Submitting the form clears the flag so the redirect that follows a
+ * successful save doesn't trip the prompt.
+ *
+ * Selectors are single-purpose: the guard is a no-op on any page that
+ * does not carry both the form and at least one guarded link.
+ */
+const setupDirtyGuard = () => {
+  const form = document.getElementById(AUTH_FORM_ID);
+
+  if (!form) {
+    return;
+  }
+
+  let dirty = false;
+
+  form.addEventListener("change", () => { dirty = true; });
+  form.addEventListener("submit", () => { dirty = false; });
+
+  document.querySelectorAll(DIRTY_GUARD_SELECTOR).forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (!dirty) {
+        return;
+      }
+
+      // Native `confirm` on purpose. Decidim's fancier dialog is bound to
+      // links carrying `data-confirm`, and that would fire on every click
+      // instead of only the dirty ones. The message travels on the link
+      // itself so translation stays in the ERB.
+      const message = link.dataset.confirmIfDirty || "You have unsaved changes. Continue?";
+
+      if (!window.confirm(message)) {
+        event.preventDefault();
+      }
+    });
+  });
+};
+
 const setupCensusAdmin = () => {
   setupAuthentication();
   setupMembers();
   setupImport();
-  setupAutoSave();
+  setupDirtyGuard();
 };
 
 if (document.readyState === "loading") {

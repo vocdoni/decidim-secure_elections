@@ -19,13 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -46,9 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -67,9 +67,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -119,7 +119,7 @@ jobs:
       DECIDIM_SPAM_DETECTION_BACKEND_RESOURCE_URL: redis://localhost:6379/2
       DECIDIM_SPAM_DETECTION_BACKEND_USER_REDIS_URL: redis://localhost:6379/3
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install libvips (image-processing native dep loaded at Rails boot)
         run: sudo apt-get update && sudo apt-get install -y libvips42
@@ -128,7 +128,7 @@ jobs:
         with:
           bundler-cache: true
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -154,7 +154,7 @@ jobs:
       - name: RSpec
         run: bundle exec rspec
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: rspec-failure-artefacts

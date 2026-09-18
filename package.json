@@ -26,9 +26,9 @@
     "extends": "./config/lint/decidim-stylelint.cjs"
   },
   "dependencies": {
-    "@vocdoni/api-client": "1.0.0",
-    "@vocdoni/api-voting": "0.1.0",
-    "@vocdoni/ballot": "0.1.0"
+    "@vocdoni/api-client": "2.2.0",
+    "@vocdoni/api-voting": "1.2.1",
+    "@vocdoni/ballot": "1.2.1"
   },
   "overrides": {
     "@noble/curves": "1.8.1"

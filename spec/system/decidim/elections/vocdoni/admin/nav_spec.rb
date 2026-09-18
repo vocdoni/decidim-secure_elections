@@ -25,4 +25,31 @@ describe "Admin tab navigation" do
       expect(tab_labels).to eq(%w(Main Questions Census Dashboard))
     end
   end
+
+  # Dashboard is a disabled span pre-publish (matches upstream
+  # decidim-elections). The Publish flow lives on its own confirmation
+  # page reached from the row-level Actions dropdown, not on the
+  # Dashboard tab.
+  it "renders Dashboard as disabled pre-publish" do
+    within ".main-tabs-menu" do
+      dashboard_href = find("li", text: "Dashboard").find("a")["href"]
+      expect(dashboard_href).to eq("#")
+    end
+  end
+
+  context "when the election is on-chain" do
+    let!(:election) do
+      create(:vocdoni_election, :on_chain, component:, skip_injection: true, status: "ready")
+    end
+
+    before do
+      visit election_path.election_dashboard_path(election)
+    end
+
+    it "renders Dashboard as an active link" do
+      within ".main-tabs-menu" do
+        expect(page).to have_link("Dashboard", href: election_path.election_dashboard_path(election))
+      end
+    end
+  end
 end

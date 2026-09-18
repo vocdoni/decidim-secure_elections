@@ -25,7 +25,7 @@ describe "Admin Questions editor" do
   end
 
   before do
-    visit election_path.edit_election_questions_path(election)
+    visit election_path.edit_questions_election_path(election)
   end
 
   it "renders one .card.questionnaire-question per existing question" do
