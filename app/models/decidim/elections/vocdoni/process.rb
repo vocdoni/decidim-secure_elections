@@ -49,7 +49,7 @@ module Decidim
         def failed?     = state == "failed"
 
         # Per-question upstream ids and chain-side statuses. Written by
-        # PushElectionJob after the process is on chain; read by the voter
+        # PublishElectionJob after the process is on chain; read by the voter
         # booth and the results-sync job.
         #
         # Shape:

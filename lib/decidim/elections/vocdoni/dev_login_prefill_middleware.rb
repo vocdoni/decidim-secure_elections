@@ -5,14 +5,13 @@ require "json"
 module Decidim
   module Elections
     module Vocdoni
-      module Phase4Spike
-        # Injects a small `<script>` on the Devise sign-in page that pre-fills
-        # the email + password inputs with the seeded admin credentials pulled
-        # from `DECIDIM_ADMIN_EMAIL` / `DECIDIM_ADMIN_PASSWORD` at boot.
-        # Mirrors `try.decidim.org`, so an operator (or Claude) can drop into
-        # the deploy without hunting for the password. Dev only — the engine
-        # initializer only mounts this middleware when `Rails.env.development?`.
-        class DevLoginPrefillMiddleware
+      # Injects a small `<script>` on the Devise sign-in page that pre-fills
+      # the email + password inputs with the seeded admin credentials pulled
+      # from `DECIDIM_ADMIN_EMAIL` / `DECIDIM_ADMIN_PASSWORD` at boot.
+      # Mirrors `try.decidim.org`, so an operator (or Claude) can drop into
+      # the deploy without hunting for the password. Dev only — the engine
+      # initializer only mounts this middleware when `Rails.env.development?`.
+      class DevLoginPrefillMiddleware
           SIGN_IN_PATH_FRAGMENT = "/users/sign_in"
 
           def initialize(app)
@@ -59,7 +58,6 @@ module Decidim
             content_type = headers["Content-Type"] || headers["content-type"] || ""
             content_type.include?("text/html")
           end
-        end
       end
     end
   end

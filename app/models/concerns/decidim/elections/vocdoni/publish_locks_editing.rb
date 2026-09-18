@@ -3,7 +3,8 @@
 module Decidim
   module Elections
     module Vocdoni
-      # Prepended onto {Decidim::Elections::Election} by `phase_4_spike`.
+      # Prepended onto {Decidim::Elections::Election} by the `extend_upstream`
+      # initializer in `engine.rb`.
       #
       # In the v3 spike the Vocdoni push is deferred from Publish to Start —
       # the on-chain freeze happens when the admin clicks Start, not when

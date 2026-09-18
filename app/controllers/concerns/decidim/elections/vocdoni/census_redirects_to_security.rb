@@ -4,7 +4,7 @@ module Decidim
   module Elections
     module Vocdoni
       # Prepended onto upstream's `Decidim::Elections::Admin::CensusController`
-      # (see `phase_4_spike.rb`).
+      # (see the `extend_upstream` initializer in `engine.rb`).
       #
       # Upstream hard-codes `redirect_to dashboard_election_path(election)`
       # inside `#update`. That skips the Security tab entirely — an admin who

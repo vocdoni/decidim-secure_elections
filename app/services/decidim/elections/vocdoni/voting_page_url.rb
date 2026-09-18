@@ -121,7 +121,7 @@ module Decidim
       # Both return nil so the caller can say so, rather than minting a link
       # that lands on a page which can only fail.
       #
-      # @param election [Decidim::Elections::Vocdoni::Election] the election to open.
+      # @param election [Decidim::Elections::Election] the election to open.
       # @param locale [String, Symbol, nil] the language to open in.
       # @param exit_path [String, nil] where "back to the election" goes. Leave
       #   it out for a link that is going into an email: there is no page behind

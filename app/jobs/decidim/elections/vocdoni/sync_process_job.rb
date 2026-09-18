@@ -7,7 +7,7 @@ module Decidim
       # and mirrors it into the {Process} sidecar so the admin dashboard and
       # the voter booth do not each have to call the API.
       #
-      # Enqueued from {PushElectionJob} right after `POST /processes` and
+      # Enqueued from {PublishElectionJob} right after `POST /processes` and
       # again from itself while the process is still `publishing`, so a
       # deferred SaaS confirmation (the "publish did not confirm all questions
       # after 3 rounds" case) resolves without a human refreshing anything.
@@ -15,7 +15,7 @@ module Decidim
       # `results` is checked less often to keep the load light — the same
       # cadence the results-tally job uses.
       class SyncProcessJob < ApplicationJob
-        queue_as :vocdoni_spike
+        queue_as :vocdoni
 
         retry_on Decidim::Elections::Vocdoni::ApiError, wait: :polynomially_longer, attempts: 3
 
