@@ -12,62 +12,8 @@ en:
             phone: Phone number
             surname: Surname
         elections:
-          index:
-            count:
-              one: 1 election
-              other: "%{count} elections"
-            empty: There are no elections yet.
-          question_types:
-            multichoice: Choose several options
-            singlechoice: Choose one option
-          results:
-            final: Final result
-            last_updated: Last updated %{time}
-            not_synced_yet: The tally has not been read from the voting network yet.
-            provisional: Provisional count
-            secret_until_the_end: Votes for this question stay encrypted until the election ends.
-            share_for: "Share of votes for %{answer}"
-            title: Results
-            total: "Total:"
-            votes_count:
-              one: 1 vote
-              other: "%{count} votes"
           show:
-            calendar: "From %{start_date} to %{end_date}"
-            census_fields: "To vote you will be asked for: %{fields}."
-            census_size:
-              one: 1 person can vote in this election.
-              other: "%{count} people can vote in this election."
-            how_it_works_body: Your ballot is encrypted and signed in your browser and sent straight to the Vocdoni voting network. This website never sees how you voted.
-            how_it_works_title: How this election works
-            max_choices:
-              one: pick up to 1 option
-              other: "pick up to %{count} options"
-            no_end_date: no closing date
-            on_publication: publication
             question_number: "Question %{number}:"
-            questions_title: Questions
-            receipt_button: Check my vote receipt
-            secret_until_the_end: secret until the end
-            stream_title: Watch this election live
-            vote_button: Vote
-            voting_closed:
-              canceled: This election was canceled, so it is not accepting votes.
-              draft: This election has not been set up for voting yet.
-              ended: Voting has ended for this election.
-              paused: Voting is paused. Check back later.
-              publishing: This election is being registered on the voting network. Voting will open shortly.
-              results: Voting has ended and the results are published below.
-              scheduled: Voting has not started yet.
-          states:
-            canceled: Canceled
-            draft: Draft
-            ended: Ended
-            ongoing: Voting open
-            paused: Paused
-            publishing: Publishing
-            results: Results published
-            scheduled: Scheduled
         votes:
           page:
             auth:
@@ -214,5 +160,3 @@ en:
               max_choices: "Pick at most %{max} options."
               min_choices: "Pick at least %{min} options."
               required: Pick one option to continue.
-          errors:
-            not_on_chain: This election has not been published to the voting network yet, so there is no ballot to open.

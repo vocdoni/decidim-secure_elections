@@ -12,7 +12,7 @@ module Decidim
         # {Vocdoni::Process}; its presence is the opt-in signal.
         #
         # Inherits from upstream's `Decidim::Elections::Admin::ApplicationController`
-        # rather than the Vocdoni admin base, because in the phase-4 spike
+        # rather than the Vocdoni admin base, because
         # the elections component uses upstream's admin engine and its
         # controllers work off `Decidim::Elections::Election`, not the
         # Vocdoni-only Election model.
@@ -53,7 +53,7 @@ module Decidim
           private
 
           def election
-            @election ||= ::Decidim::Elections::Election.where(component: current_component).find(params[:election_id])
+            @election ||= ::Decidim::Elections::Election.where(component: current_component).find(params.expect(:election_id))
           end
 
           def security_form

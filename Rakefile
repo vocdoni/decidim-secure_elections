@@ -5,7 +5,7 @@ require "fileutils"
 
 def install_module(path)
   Dir.chdir(path) do
-    system("bundle exec rake decidim_secure_elections:install:migrations")
+    system("bundle exec rake decidim_elections_vocdoni:install:migrations")
     system("bundle exec rake db:migrate")
   end
 end

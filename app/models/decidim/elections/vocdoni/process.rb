@@ -7,8 +7,8 @@ module Decidim
       # `decidim_vocdoni_processes` table so upstream's `decidim_elections_elections`
       # stays untouched.
       #
-      # See db/migrate/20260911120001_create_decidim_vocdoni_processes.rb for
-      # the shape and the reasoning.
+      # See db/migrate/20260918150001_create_vocdoni_processes.rb for the
+      # shape and the reasoning.
       class Process < ApplicationRecord
         self.table_name = "decidim_vocdoni_processes"
 
@@ -38,18 +38,21 @@ module Decidim
         # SaaS draft still hanging around.
         before_destroy :delete_upstream_draft, if: :upstream_draft?
 
-        scope :pending,    -> { where(state: "pending") }
+        scope :pending, -> { where(state: "pending") }
         scope :publishing, -> { where(state: "publishing") }
-        scope :published,  -> { where(state: "published") }
-        scope :failed,     -> { where(state: "failed") }
+        scope :published, -> { where(state: "published") }
+        scope :failed, -> { where(state: "failed") }
 
-        def pending?    = state == "pending"
+        def pending? = state == "pending"
+
         def publishing? = state == "publishing"
-        def published?  = state == "published"
-        def failed?     = state == "failed"
+
+        def published? = state == "published"
+
+        def failed? = state == "failed"
 
         # Per-question upstream ids and chain-side statuses. Written by
-        # PushElectionJob after the process is on chain; read by the voter
+        # PublishElectionJob after the process is on chain; read by the voter
         # booth and the results-sync job.
         #
         # Shape:
@@ -96,7 +99,7 @@ module Decidim
         def delete_upstream_draft
           Decidim::Elections::Vocdoni::ApiClient.new.elections.delete(vocdoni_process_id)
         rescue Decidim::Elections::Vocdoni::ApiError => e
-          return if e.status == 404 || e.code == 40012
+          return if e.status == 404 || e.code == 40_012
 
           raise
         end
@@ -121,53 +124,6 @@ module Decidim
           self.last_error = message.to_s.truncate(255)
           self.state = "failed"
           save!
-        end
-
-        # The last census pre-flight. Deprecated in the v2 spike: the census
-        # pre-flight is no longer run on save (the Census tab is vanilla),
-        # only when the publish job runs. The methods are kept because the
-        # sidecar's `metadata["census_validation"]` may still be read by the
-        # dashboard/monitor code from earlier stages.
-        #
-        # `ok: true` means the auth-field selection produced unique, complete
-        # credentials over the current roster. Any other value blocks a
-        # meaningful publish.
-        #
-        # Kept as a plain metadata hash rather than as its own column so
-        # future variants (per-step timings, warnings) do not need a
-        # migration.
-        def record_census_validation!(ok:, size: nil, step: nil, code: nil, message: nil, data: nil)
-          self.metadata = metadata.merge(
-            "census_validation" => {
-              "ok" => ok,
-              "at" => Time.current.iso8601,
-              "size" => size,
-              "step" => step.presence&.to_s,
-              "code" => code,
-              "message" => message.presence&.to_s,
-              "data" => data.presence
-            }.compact
-          )
-          save!
-        end
-
-        # Drops the recorded validation. Legacy hook, retained for callers
-        # that may still want to invalidate before a re-run.
-        def invalidate_census_validation!
-          return unless metadata.key?("census_validation")
-
-          new_meta = metadata.dup
-          new_meta.delete("census_validation")
-          self.metadata = new_meta
-          save!
-        end
-
-        def census_validation
-          metadata["census_validation"]
-        end
-
-        def census_valid?
-          census_validation.is_a?(Hash) && census_validation["ok"] == true
         end
       end
     end

@@ -6,9 +6,9 @@ module Decidim
       module Admin
         # Persists the Security-tab choices onto the {Process} sidecar.
         #
-        # The sidecar's presence is the opt-in signal used by the phase-4
-        # publish subscription — if it exists, publish enqueues
-        # {PublishToVocdoniJob}. Its `metadata["settings"]` hash carries the
+        # The sidecar's presence is the opt-in signal read by the engine's
+        # publish subscriber — if it exists, publish enqueues
+        # {PublishElectionJob}. Its `metadata["settings"]` hash carries the
         # second-factor selection ({SecurityForm#two_fa_fields}) that the job
         # forwards verbatim as `twoFaFields`.
         #

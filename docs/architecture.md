@@ -1,7 +1,7 @@
 # Architecture
 
-The reference the code is written against. Source comments cite it by section — you will
-see `ARCHITECTURE §3` and the like throughout the module.
+The reference the code is written against. Source comments cite it by section — you
+will see `ARCHITECTURE §3` and the like throughout the module.
 
 Two things are in here:
 
@@ -16,104 +16,121 @@ Two things are in here:
 Each of these is here because getting it wrong costs somebody a ballot or their ballot
 secrecy, not because it is tidy.
 
-1. **No Node.js on the server.** Ruby talks to the SaaS REST API over HTTPS. Never shell out.
-2. **No secret ever reaches the browser.** The API key is server-side only. The voter path uses
-   only public/CSP-token routes.
-3. **No secret in process-global state.** Never assign to `ENV` at runtime; pass config explicitly.
-4. **No `console.log` in the voter path.** Ballots and keys must never hit the console. ESLint
-   enforces `no-console` under `app/packs/src/decidim/secure_elections/voter/`.
-5. **No SaaS call inside a web request.** All writes and all slow reads go through ActiveJob;
-   the UI polls a cheap Decidim-local endpoint backed by a cached column.
-6. **Fail loudly on misconfiguration.** `Decidim::SecureElections.validate_configuration!` raises rather
-   than defaulting to a test chain.
+1. **No Node.js on the server.** Ruby talks to the SaaS REST API over HTTPS through
+   `Decidim::Elections::Vocdoni::ApiClient`. Never shell out.
+2. **No secret ever reaches the browser.** The integrator API key is server-side only.
+   The voter path uses only public/CSP-token routes.
+3. **No secret in process-global state.** Never assign to `ENV` at runtime; pass config
+   explicitly through `Decidim::Elections::Vocdoni`.
+4. **No `console.log` in the voter path.** Ballots and keys must never hit the console.
+   ESLint enforces `no-console` under `app/packs/src/decidim/elections/vocdoni/voter/`.
+5. **No SaaS call inside a web request.** All writes and all slow reads go through
+   ActiveJob (`PublishElectionJob`, `SyncProcessJob`). The admin UI reads the sidecar's
+   local columns; nothing on the request path calls the SaaS.
+6. **Fail loudly on misconfiguration.** `Decidim::Elections::Vocdoni.validate_configuration!`
+   raises rather than defaulting to a test chain.
 
 ## 1. Vocdoni model → Decidim model
 
-| Decidim | Vocdoni | Column |
-|---|---|---|
-| `Decidim::SecureElections::Election` | process (Mongo ObjectID, 24 hex) | `vocdoni_process_id` |
-| `Decidim::SecureElections::Question` | question — its own Vochain election | `vocdoni_upstream_id` |
-| `Decidim::SecureElections::Answer` | choice `{title, value}` | `value` |
+This gem does **not** own its own election, question or answer models. It attaches a
+sidecar to the upstream `decidim-elections` models so that upstream's schema stays
+untouched:
 
-One process has many questions. **Each question is a separate Vochain election.** Voting casts
-one transaction per question. `sign()` takes the *question's* `upstreamId` as `electionId` —
-never the process id. This is the single easiest thing to get wrong.
+| Upstream (`decidim-elections`)  | This gem                                              | Vocdoni                                  |
+|---------------------------------|-------------------------------------------------------|------------------------------------------|
+| `Decidim::Elections::Election`  | `Decidim::Elections::Vocdoni::Process` (sidecar row)  | process (Mongo ObjectID, 24 hex)         |
+| `Decidim::Elections::Question`  | per-question metadata under `Process#metadata`        | question — its own Vochain election      |
+| `Decidim::Elections::Answer`    | (no sidecar; upstream owns it)                        | choice `{title, value}`                  |
+
+One process has many questions. **Each question is a separate Vochain election.** Voting
+casts one transaction per question. `sign()` takes the *question's* `upstreamId` as
+`electionId` — never the process id. This is the single easiest thing to get wrong.
+
+Opt-in to Vocdoni is materialised by the presence of the `Vocdoni::Process` sidecar,
+created from the Security tab. Its absence means the election runs as a plain Decidim
+election.
 
 ## 2. Ruby `ApiClient` contract
 
-`Decidim::SecureElections::ApiClient.new` reads config from `Decidim::SecureElections`. Sub-clients mirror the
-SDK: `#elections`, `#organizations`, `#census`, `#jobs`.
+`Decidim::Elections::Vocdoni::ApiClient.new` reads config from
+`Decidim::Elections::Vocdoni`. Sub-clients mirror the JS SDK: `#elections`,
+`#organizations`, `#jobs`.
 
-Required methods (snake_case Ruby, hash returns with string keys):
+Methods actually called from this module (snake_case Ruby, hash returns with string keys):
 
 ```ruby
-client.organizations.create_managed(name:, type:, website: nil, country: nil, timezone: nil)
-  # POST /integrator/organizations -> { "address" => "0x…", … }
-client.organizations.add_members(org_address, members)   # POST /organizations/{addr}/members
-client.organizations.groups(org_address)                 # GET  /organizations/{addr}/groups
+client.organizations.create_managed(name:, type:, ...)  # POST /integrator/organizations -> { "address" => "0x…" }
+client.organizations.add_members(org_address, members)  # POST /organizations/{addr}/members
+client.organizations.members(org_address, page:)        # GET  /organizations/{addr}/members (paginated)
+client.organizations.create_group(org_address, title:, description:, member_ids:)
+                                                        # POST /organizations/{addr}/groups
+client.organizations.groups(org_address)                # GET  /organizations/{addr}/groups
 
-client.elections.create(payload)                # POST /processes            -> { "processId" => … }
-client.elections.get(process_id)                # GET  /processes/{id}       (PUBLIC, no auth)
-client.elections.validate(process_id)           # GET  /processes/{id}/validation
-client.elections.publish(process_id)            # POST /processes/{id}/publish -> { "jobId" => … }
-client.elections.results(process_id)            # GET  /processes/{id}/results (PUBLIC)
-client.elections.bulk_set_question_status(process_id, status:, question_ids: nil)
-                                                # PUT  /processes/{id}/questions/status
-client.elections.participants(process_id, field:, value:)
+client.elections.create(payload)                        # POST /processes            -> { "processId" => … }
+client.elections.get(process_id)                        # GET  /processes/{id}       (PUBLIC once published)
+client.elections.validate_census(org_address, census)   # POST /processes/census/validation
+client.elections.publish(process_id)                    # POST /processes/{id}/publish -> { "jobId" => … }
+client.elections.delete(process_id)                     # DELETE /processes/{id}     (drafts only)
+client.elections.results(process_id)                    # GET  /processes/{id}/results (PUBLIC)
 
-client.jobs.get(job_id)                         # GET  /jobs/{id}
-client.jobs.wait_for(job_id, timeout: …)        # poll until terminal
+client.jobs.wait_for(job_id, timeout: …)                # poll GET /jobs/{id} until terminal
 ```
 
 ### 2.1 Payload quirks — these bite
 
 * **Language maps are mandatory.** `POST /processes` rejects a plain string for `title`,
   `description` or a choice `title` with `{"error":"invalid JSON request body","code":40004}`.
-  The JS SDK normalizes plain strings client-side; **Ruby must do the same**. Provide a private
-  `localize(value)` that turns `"Hi"` into `{ "default" => "Hi" }` and passes a Decidim
-  translated hash (`{"en" => "Hi"}`) through as `{ "default" => <default-locale value>, "en" => … }`.
+  The JS SDK normalizes plain strings client-side; **Ruby must do the same**.
+  `ApiClient#localize` turns `"Hi"` into `{ "default" => "Hi" }` and passes a Decidim
+  translated hash through as `{ "default" => <default-locale value>, "en" => …, "ca" => … }`.
 * **The process census is inline**, not a reference:
   `census: { authFields: ["memberNumber"], groupId: "<org group id>", weighted: false }`.
-  The standalone `POST /census` flow is a *different*, org-level concept — do not use it.
+  The standalone `POST /census` flow is a *different*, org-level concept — this gem does
+  not use it.
 * **Question type strings are lowercase**: `"singlechoice"`, `"multichoice"`. camelCase is
   rejected (code 40037). `multichoice` additionally requires
-  `typeSetup: { maxChoices:, minChoices:, uniqueChoices: }`.
-* **`ballotProtocol` comes back `null`** for singlechoice questions. Never assume it is present.
+  `typeSetup: { maxChoices:, minChoices: }`. Upstream `decidim-elections` uses
+  `single_option` / `multiple_option`; `PublishElectionJob` maps them.
+* **`ballotProtocol` comes back `null`** for singlechoice questions. Never assume it is
+  present.
+* **`weight` on a member must be a JSON string, not a number.** Passing `{"weight": 1}`
+  fails with `40004 "missing members"` — the error names the wrong field. `"1"` works.
 
 ### 2.2 Async jobs
 
-`publish`, `bulk_set_question_status` and the vote relay all return `{"jobId": …}`.
-Poll `GET /jobs/{id}` until `status` is `completed` or `failed`.
+`publish` and `bulk_set_question_status` return `{"jobId": …}`. Poll `GET /jobs/{id}`
+until `status` is `completed` or `failed`.
 
-⚠️ The job body contains a **nested `result.status`** (e.g. `"READY"`) that is *not* the job
-status. Parse `body["status"]` at the top level only — a naive regex/`sed` grabs the wrong one.
+⚠️ The job body contains a **nested `result.status`** (e.g. `"READY"`) that is *not* the
+job status. Parse `body["status"]` at the top level only — a naive regex/`sed` grabs the
+wrong one.
 
 A successful publish looks like:
 `{"jobId":"…","type":"publish_voting_process","status":"completed","result":{"status":"READY"}}`
 
-### 2.3 A complete request
+### 2.3 A complete `POST /processes` body
 
 ```json
-POST /processes
 {
   "orgAddress": "0x0000000000000000000000000000000000000001",
   "title":       { "default": "…" },
   "description": { "default": "…" },
-  "endDate": "2026-07-29T14:51:08Z",
-  "census": { "authFields": ["memberNumber"], "groupId": "000000000000000000000001", "weighted": false },
-  "questions": [{
-    "title": { "default": "…" },
-    "type": "singlechoice",
+  "endDate":     "2026-07-29T14:51:08Z",
+  "census":      { "authFields": ["memberNumber"], "groupId": "000000000000000000000001", "weighted": false },
+  "questions":   [{
+    "title":   { "default": "…" },
+    "type":    "singlechoice",
     "choices": [{ "title": { "default": "Yes" }, "value": 0 },
                 { "title": { "default": "No" },  "value": 1 }]
   }]
 }
 ```
+
 `startDate` may be omitted — the process then starts as soon as it is published.
 
 ## 3. Voter flow (browser only)
 
-The sequence implemented in `app/packs/src/decidim/secure_elections/voter/`.
+The sequence implemented in `app/packs/src/decidim/elections/vocdoni/voter/`:
 
 ```
 1. client.elections.get(processId)              → chainId  (PUBLIC; never use client.info())
@@ -137,16 +154,17 @@ Ballot encoding — `ballotProtocol` may be absent, so branch on question type:
 * `multichoice`  → one element per choice, `1` selected / `0` not
 
 For `secretUntilTheEnd` questions, `question.encryptionKeys` is **absent until the keykeepers
-publish**. Poll until present and only then build the ballot — never cast cleartext as a fallback.
+publish**. Poll until present and only then build the ballot — never cast cleartext as a
+fallback.
 
 ## 4. Values read from a deployment
 
 | Key | Value |
 |---|---|
-| API base | `https://saas-api-stg.vocdoni.net` |
-| Frontend (not the API) | `app-stg.vocdoni.io` — returns HTML for every path, so it is not the API |
-| orgAddress | `0x…` — one per integrator, from `organizations.create_managed` |
-| chainId | `vocdoni/LTS/1.2` (read from the process, not `/info`) |
+| API base | one of `saas-api.vocdoni.net`, `saas-api-stg.vocdoni.net`, `saas-api-dev.vocdoni.net` |
+| Explorer | derived: `explorer.vote`, `stg.explorer.vote`, `dev.explorer.vote` |
+| `orgAddress` | `0x…` — one per integrator, from `organizations.create_managed` |
+| `chainId` | e.g. `vocdoni/LTS/1.2` (read from the process, not `/info`) |
 | Auto member group | every organization gets an "All members" group on creation |
 
 The whole voter flow was walked end to end against staging, including a real vote whose
@@ -154,144 +172,88 @@ nullifier was returned.
 
 ## 4b. Database schema
 
-`decidim_vocdoni_elections`
-| column | type | notes |
-|---|---|---|
-| `decidim_component_id` | integer, indexed | |
-| `title`, `description` | jsonb | translatable |
-| `start_time`, `end_time` | datetime | `start_time` null ⇒ starts on publish |
-| `published_at`, `deleted_at` | datetime | `Publicable`, `SoftDeletable` |
-| `vocdoni_process_id` | string, indexed | Mongo ObjectID; null until pushed on-chain |
-| `vocdoni_chain_id` | string | cached from the process read |
-| `census_auth_fields` | jsonb, default `[]` | e.g. `["memberNumber"]` |
-| `census_two_fa_fields` | jsonb, default `[]` | empty ⇒ auth-only |
-| `census_group_id` | string | Vocdoni org member-group id |
-| `census_size` | integer, default 0 | |
-| `status` | string, default `"draft"` | `draft/publishing/ready/paused/ended/results/canceled` |
-| `results_cache` | jsonb, default `{}` | last tally read; what the UI polls |
-| `results_synced_at` | datetime | |
-| `votes_count` | integer, default 0 | denormalized from `results_cache` |
-| `reference` | string | `HasReference` |
+Exactly one table, kept small on purpose: `decidim_vocdoni_processes`, one row per
+Vocdoni-backed Decidim election (see the migration for the full column list and reasoning).
 
-`decidim_vocdoni_questions`
-| column | type | notes |
-|---|---|---|
-| `decidim_vocdoni_election_id` | fk, indexed | |
-| `title`, `description` | jsonb | translatable |
-| `question_type` | string, default `"singlechoice"` | `singlechoice` \| `multichoice` |
-| `max_choices`, `min_choices` | integer, null | multichoice only |
-| `secret_until_the_end` | boolean, default false | |
-| `position` | integer | |
-| `vocdoni_question_id` | string | question id inside the process |
-| `vocdoni_upstream_id` | string, indexed | **Vochain election id — used for sign/vote** |
-| `vocdoni_status` | string | mirrors QuestionStatus |
-| `answers_count` | integer, default 0 | counter cache |
+| column                  | type      | notes                                                                              |
+|-------------------------|-----------|------------------------------------------------------------------------------------|
+| `decidim_election_id`   | fk (unique) | one Vocdoni process per Decidim election; `on_delete: :cascade`                  |
+| `vocdoni_process_id`    | string, unique-when-present | Mongo ObjectID minted by `POST /processes`                        |
+| `vocdoni_upstream_id`   | string    | on-chain process id                                                                |
+| `chain_id`              | string    | cached from the process read                                                       |
+| `state`                 | string, default `"pending"` | `pending` / `publishing` / `published` / `failed`                |
+| `last_error`            | string    | last non-transient failure message, surfaced on the dashboard                      |
+| `census_group_id`       | string    | Vocdoni org member-group id built for this election                                |
+| `census_size`           | integer   | turnout denominator                                                                |
+| `metadata`              | jsonb     | per-question upstream ids + statuses; `settings.twofa_fields`; `last_error` bag    |
 
-`decidim_vocdoni_answers`
-| column | type | notes |
-|---|---|---|
-| `decidim_vocdoni_question_id` | fk, indexed | |
-| `title` | jsonb | translatable |
-| `value` | integer, not null | 0-based; the on-chain choice value |
-| `position` | integer | |
-| `votes_count` | integer, default 0 | from `results_cache` |
+`Process#published?` ⇒ `state == "published"`.
+`Process#upstream_draft?` ⇒ `vocdoni_process_id.present? && !published?`.
 
-Elections are `Publicable`, `SoftDeletable`, `Traceable`, `Loggable`, `Resourceable`,
-`HasComponent`, `TranslatableResource`, `Searchable`, `HasReference`, `FilterableResource`.
-
-`Election#editable?` ⇒ `vocdoni_process_id.blank?` (nothing on chain yet).
-`Election#on_chain?` ⇒ `vocdoni_process_id.present?`.
+Destroying the sidecar (via `dependent: :destroy` from the upstream election) attempts a
+best-effort `DELETE /processes/{id}` when the row is an upstream draft, so a cancelled
+Decidim election does not eat one of the org's draft slots. `404` and `40012`
+("already on chain") are treated as success; anything else raises and rolls the destroy
+back.
 
 ## 4c. Census creation — Decidim owns it
 
-The admin must **never** see or type a Vocdoni id. Decidim collects voters, then
-builds the whole upstream chain itself. Verified endpoints, in order:
+The admin never sees or types a Vocdoni id. `PublishElectionJob` collects voters from
+the Decidim side and builds the whole upstream chain itself. Endpoints, in order:
 
 ```
 1. POST /organizations/{orgAddress}/members
-     { members: [{ name, surname, email, phone, memberNumber, nationalId, birthDate, weight }] }
+     { members: [{ memberNumber, name, email, ... }] }
      → { added, errors[], jobId? }   ← poll jobId when present
-2. POST /organizations/{orgAddress}/groups
+2. GET  /organizations/{orgAddress}/members?page=N
+     paginated read-back to map each Decidim user to the upstream `memberId` — the
+     import does not return them when members already exist. Capped at 200 pages.
+3. POST /organizations/{orgAddress}/groups
      { title, description?, memberIds: [...] }        → { id }
-3. POST /organizations/{orgAddress}/groups/{groupId}/validate
-     { authFields, twoFaFields }                      → { valid } | 400 with detail
-4. POST /census                 { orgAddress }        → { id }
-5. POST /census/{censusId}/group/{groupId}/publish
-     { authFields, twoFaFields, weighted }            → { root, size, uri }
-6. POST /processes ... census: { authFields, twoFaFields, groupId, weighted }
+4. POST /processes/census/validation
+     { orgAddress, census: { authFields, twoFaFields, groupId, weighted } }
+     → 200 on success; 400 with `data.{duplicates, missingData, notFound}` on failure
+5. POST /processes ... census: { authFields, twoFaFields, groupId, weighted }
+6. POST /processes/{id}/publish
 ```
 
-Step 3 is what catches "you asked to authenticate on `email` but 12 members have
-none" *before* anything is written on chain. Surface its errors per member.
+Step 4 is what catches "you asked to authenticate on `email` but 12 members have none"
+*before* anything is written on chain. Its 400 body carries actionable member ids that
+`PublishElectionJob` records on the sidecar so the admin dashboard can name them.
 
-### What `PublishElectionJob` actually issues, and when it skips
+Each step is **conditional and idempotent by design**, so a retry after a mid-way
+failure is safe rather than duplicative:
 
-The list above is the full path. Most publications are shorter, because each
-call is conditional — which is also what makes a retry after a mid-way failure
-safe rather than duplicative.
+- `POST /members` is skipped when there is nothing fresh to push; `add_members` is
+  deduped against the upstream index by `memberNumber` because the endpoint is not
+  upsert-by-`memberNumber`.
+- `POST /groups` is skipped once `census_group_id` is set.
+- `POST /processes` is skipped once `vocdoni_process_id` is set.
+- `POST /processes/{id}/publish` is skipped once the read-back reports the process
+  is already `READY`/`ONGOING`/`ENDED`/`RESULTS`/`PAUSED`.
 
-| # | Call | Skipped when |
-|---|------|--------------|
-| 1 | `POST /organizations/{org}/members` | no local voter is missing a `vocdoni_member_id` |
-| 2 | `GET /jobs/{jobId}` | step 1 answered synchronously (no `jobId`) |
-| 3 | `GET /organizations/{org}/members?page=N` | every local voter already has an upstream id — the import does not return them, so they have to be read back; paginated, capped at 200 |
-| 4 | `POST /organizations/{org}/groups` | the census already points at a group Decidim did not build |
-| 5 | `POST …/groups/{gid}/validate` | never |
-| 6 | `POST /census` | never |
-| 7 | `POST /census/{cid}/group/{gid}/publish` | never |
-| 8 | `POST /processes` | `vocdoni_process_id` is already set |
-| 9 | `GET /processes/{pid}` | never — the read-back *before* publishing is what makes a retry safe |
-| 10 | `POST /processes/{pid}/publish` | step 9 reports the process already published |
-| 11 | `GET /jobs/{jobId}` | never |
-| 12 | `GET /processes/{pid}` | never — second read; persists per-question `upstreamId`, chain id, census size, status |
+The whole census phase is skipped once `vocdoni_process_id` is set: a published process
+carries a frozen census, so there is nothing left to build.
 
-The whole census phase (1–7) is skipped once `vocdoni_process_id` is set: a
-published process carries a frozen census, so there is nothing left to build.
+### Member field roles
 
-Two consequences worth knowing:
-
-- **A 400 from step 5 is an answer, not a failure.** It is recorded with the
-  member ids it names and the job stops cleanly; nothing is written on chain.
-- **Step 4 rebuilds the group on every attempt**, leaving superseded groups
-  behind upstream. Harmless, but it means group count is not a useful signal.
-
-### ⚠️ `weight` must be a STRING
-
-`POST /organizations/{addr}/members` fails when a member's `weight` is a JSON
-number, even though `@vocdoni/api-types` declares `weight?: number`:
-
-```
-{"weight": 1}    → 400 {"error":"invalid JSON request body: missing members","code":40004}
-{"weight": "1"}  → 200 {"added":1,"errors":[]}
-{}  (omitted)    → 200
-```
-
-The error names the **wrong field**: an unmarshal failure anywhere in the member
-object is reported as "missing members", which sends you hunting through the
-array shape instead of the offending value. Verified against staging.
-
-### Member fields
-
-| id | label | 2FA-capable | usable as credential |
-|---|---|---|---|
-| `name` | First name | | ✓ |
-| `surname` | Last name | | ✓ |
-| `email` | Email | ✓ | |
-| `phone` | Phone | ✓ | |
-| `memberNumber` | Member number | | ✓ |
-| `nationalId` | National ID | | ✓ |
-| `birthDate` | Birth date | | ✓ |
-| `weight` | Voting power | | never |
+| field           | 2FA-capable | usable as credential |
+|-----------------|-------------|----------------------|
+| `memberNumber`  |             | ✓                    |
+| `nationalId`    |             | ✓                    |
+| `name`          |             | ✓                    |
+| `surname`       |             | ✓                    |
+| `birthDate`     |             | ✓                    |
+| `email`         | ✓           |                      |
+| `phone`         | ✓           |                      |
+| `weight`        |             | never                |
 
 `authFields` (credentials) are chosen from the ✓ column, **max 3**.
 `twoFaFields` derive from a single choice:
 `email → ["email"]`, `sms → ["phone"]`, `voter_choice → ["email","phone"]`.
 
-Security level, shown as a WEAK/MID/STRONG meter:
-`use2FA → STRONG`; else `credentials.length == 3 → MID`; else `WEAK`.
-
-A census with **no** `authFields` and **no** `twoFaFields` identifies nobody and
-must stay refused.
+A census with no `authFields` and no `twoFaFields` identifies nobody and must stay
+refused.
 
 ## 4c-bis. Two-factor voter flow
 
@@ -318,25 +280,22 @@ assumption drawn from the SDK documentation.
    *"census participant not found"* — it does not disclose census membership, so
    show a generic "we could not identify you" rather than echoing the API.
 
-Group validation failure (`POST …/groups/{id}/validate`) returns actionable data:
-`{"error":"invalid data provided","code":40037,
-  "data":{"missingData":["<memberId>",…],"duplicates":[],"notFound":[]}}`
-Map `missingData` ids back to census members and name them in the admin error.
-
 ## 4d. Decisions taken, and why
 
-1. **Question type is per question, not per process.** Each question is its own
-   Vochain election and the voting page encodes a ballot per question, so the
-   type belongs to the question. The admin may offer one control that sets every
-   question at once, which is a convenience over the same data.
-2. **A vote is never linked to a voter.** The census authenticates against the
-   CSP, which returns a blind signature; the ballot is then cast with an
-   ephemeral key generated in the browser and discarded. Decidim stores the
-   census, never a vote.
-3. **The tally is a cached read, and the chain is the record.** Every figure the
-   admin and the public pages show comes from `results_cache`, refreshed by a
-   background job. Anything that disagrees with the chain is a stale cache, not
-   a different result.
+1. **Sidecar, not fork or table-alteration.** Upstream owns `Election`, `Question`,
+   `Answer` and their schema; this gem owns one extra table keyed to the upstream
+   election. Upstream migrations touch upstream's tables, this migration touches ours,
+   and both can advance independently.
+2. **Question type is per question, not per process.** Each question is its own
+   Vochain election and the voting page encodes a ballot per question, so the type
+   belongs to the question.
+3. **A vote is never linked to a voter.** The census authenticates against the CSP,
+   which returns a blind signature; the ballot is then cast with an ephemeral key
+   generated in the browser and discarded. Decidim stores the census, never a vote.
+4. **The tally is read from the chain, never from Decidim.** The sidecar caches
+   `census_size` and per-question chain-side status; result numbers come from the SaaS
+   directly. Anything that disagrees with the chain is a stale cache, not a different
+   result.
 
 ## 5. Decidim conventions that apply
 
