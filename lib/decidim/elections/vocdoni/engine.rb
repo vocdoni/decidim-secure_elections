@@ -186,19 +186,26 @@ module Decidim
           end
         end
 
-        # Publish subscriber: for manual-start elections, Publish is a no-op
-        # at the Vocdoni layer — the push happens when the admin clicks
-        # Start (see `subscribe_to_start` below). For scheduled elections
-        # (`start_at` set to a future timestamp at publish time) the
-        # subscriber schedules the push for exactly `start_at` via
-        # `Sidekiq.set(wait_until:)`. Same job either way — only the
-        # trigger differs. Opt-in is signalled by the presence of the
-        # {Process} sidecar (created from the Security tab).
+        # Publish subscriber. Three cases at publish time, one job either way
+        # (`PublishElectionJob`); only the trigger differs. Opt-in is signalled
+        # by the presence of the {Process} sidecar (created from the Security
+        # tab).
         #
-        # The scheduled path mirrors `decidim-blogs/PublishPostJob`, which
-        # is enqueued at post-create with `wait_until: published_at`.
-        # Sidekiq holds the job in Redis until fire time and then dispatches
-        # it.
+        #   1. `start_at` is in the future — schedule the push for exactly
+        #      `start_at` via `Sidekiq.set(wait_until:)`. Mirrors
+        #      `decidim-blogs/PublishPostJob`, which is enqueued at
+        #      post-create with `wait_until: published_at`; Sidekiq holds
+        #      the job in Redis until fire time and then dispatches it.
+        #
+        #   2. `start_at` is blank or already past — push now. Upstream
+        #      considers such an election already "started" at publish time
+        #      and does NOT fire `update_election_status:after` with
+        #      `action == :start`, so `subscribe_to_start` below never
+        #      triggers for this shape and the election would otherwise be
+        #      published on Decidim but never on chain.
+        #
+        #   3. Admin publishes without setting a `start_at` and later clicks
+        #      Start explicitly — covered by `subscribe_to_start` below.
         #
         # Both subscribers speak the `Decidim::Command#with_events` shape:
         # `ActiveSupport::Notifications.publish(name, **event_arguments)`
@@ -218,7 +225,9 @@ module Decidim
                 .perform_later(election.id, scheduled_at)
               Rails.logger.info "[vocdoni] scheduled PublishElectionJob for election ##{election.id} at #{scheduled_at.iso8601}"
             else
-              Rails.logger.info "[vocdoni] publish is a no-op for vocdoni-backed election ##{election.id}; push happens when admin clicks Start"
+              Decidim::Elections::Vocdoni::PublishElectionJob.perform_later(election.id)
+              reason = election.start_at.present? ? "start_at #{election.start_at.iso8601} already past" : "no start_at"
+              Rails.logger.info "[vocdoni] enqueued PublishElectionJob for election ##{election.id} (#{reason})"
             end
           end
         end
