@@ -210,26 +210,30 @@ module Decidim
           end
         end
 
-        # Publish subscriber. Three cases at publish time, one job either way
-        # (`PublishElectionJob`); only the trigger differs. Opt-in is signalled
-        # by the presence of the {Process} sidecar (created from the Security
-        # tab).
+        # Publish subscriber. Handles two shapes at publish time; a third
+        # (manual-start) is intentionally delegated to `subscribe_to_start`
+        # below. Opt-in is signalled by the presence of the {Process}
+        # sidecar (created from the Security tab).
         #
         #   1. `start_at` is in the future — schedule the push for exactly
         #      `start_at` via `Sidekiq.set(wait_until:)`. Mirrors
         #      `decidim-blogs/PublishPostJob`, which is enqueued at
         #      post-create with `wait_until: published_at`; Sidekiq holds
         #      the job in Redis until fire time and then dispatches it.
+        #      Upstream has no cron/job that would emit
+        #      `update_election_status:after :start` when `start_at`
+        #      arrives on its own (only the admin's Start click does),
+        #      so scheduling here is what keeps scheduled elections in
+        #      sync with the chain.
         #
-        #   2. `start_at` is blank or already past — push now. Upstream
-        #      considers such an election already "started" at publish time
-        #      and does NOT fire `update_election_status:after` with
-        #      `action == :start`, so `subscribe_to_start` below never
-        #      triggers for this shape and the election would otherwise be
-        #      published on Decidim but never on chain.
+        #   2. `start_at` is in the past (edge — publishing an election
+        #      whose start already passed) — push now.
         #
-        #   3. Admin publishes without setting a `start_at` and later clicks
-        #      Start explicitly — covered by `subscribe_to_start` below.
+        # Manual-start elections (`start_at` blank at publish time) are
+        # handled by `subscribe_to_start` when the admin clicks Start;
+        # `UpdateElectionStatus(:start)` sets `start_at = Time.current`
+        # and, wrapped in `with_events` (vocdoni/decidim#3), fires the
+        # notification the second subscriber consumes.
         #
         # Both subscribers speak the `Decidim::Command#with_events` shape:
         # `ActiveSupport::Notifications.publish(name, **event_arguments)`
@@ -241,8 +245,9 @@ module Decidim
             election = data[:election]
             next if election.blank?
             next if election.vocdoni_process.blank?
+            next if election.start_at.blank?
 
-            if election.start_at.present? && election.start_at.future?
+            if election.start_at.future?
               scheduled_at = election.start_at
               Decidim::Elections::Vocdoni::PublishElectionJob
                 .set(wait_until: scheduled_at)
@@ -250,16 +255,17 @@ module Decidim
               Rails.logger.info "[vocdoni] scheduled PublishElectionJob for election ##{election.id} at #{scheduled_at.iso8601}"
             else
               Decidim::Elections::Vocdoni::PublishElectionJob.perform_later(election.id)
-              reason = election.start_at.present? ? "start_at #{election.start_at.iso8601} already past" : "no start_at"
-              Rails.logger.info "[vocdoni] enqueued PublishElectionJob for election ##{election.id} (#{reason})"
+              Rails.logger.info "[vocdoni] enqueued PublishElectionJob for election ##{election.id} (start_at #{election.start_at.iso8601} already past)"
             end
           end
         end
 
-        # Push happens when the election transitions into `started` — either
-        # via the admin's manual Start click, or when a scheduled `start_at`
-        # fires. Piggybacks on the notification added by vocdoni/decidim#3
-        # (`UpdateElectionStatus with_events`).
+        # Push happens when the admin clicks Start on a manual-start
+        # election. `UpdateElectionStatus(:start)` sets
+        # `start_at = Time.current` and, wrapped in `with_events`
+        # (vocdoni/decidim#3), fires the notification this subscriber
+        # consumes. Scheduled elections do NOT reach this path on their
+        # own — `subscribe_to_publish` schedules them via `wait_until:`.
         #
         # The command handles :start, :end and :publish_results with a
         # single notification name; the subscriber filters on
