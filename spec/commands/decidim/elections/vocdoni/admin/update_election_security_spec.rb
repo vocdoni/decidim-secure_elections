@@ -26,7 +26,8 @@ module Decidim
               expect { command.call }.to broadcast(:ok)
 
               expect(sidecar).to be_pending
-              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => %w(email))
+              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => %w(email),
+                                                        "auth_fields" => %w(memberNumber))
             end
 
             it "leaves the census alone" do
@@ -45,8 +46,24 @@ module Decidim
             it "updates the settings and keeps the rest of the sidecar" do
               expect { command.call }.to broadcast(:ok)
 
-              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => [])
+              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => [],
+                                                        "auth_fields" => %w(memberNumber))
               expect(sidecar.metadata).to have_key("questions")
+            end
+          end
+
+          context "when the form picks auth_fields" do
+            let(:form) do
+              AdminForms::SecurityForm.from_params(
+                security: { enable_vocdoni: "true", email: "1", auth_fields: ["", "nationalId", "memberNumber"] }
+              )
+            end
+
+            it "persists them alongside twofa_fields" do
+              expect { command.call }.to broadcast(:ok)
+
+              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => %w(email),
+                                                        "auth_fields" => %w(memberNumber nationalId))
             end
           end
 
