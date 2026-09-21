@@ -284,6 +284,47 @@ module Decidim
           end
         end
 
+        # "End election" in the admin only sets `election.end_at = Time.current`
+        # in Decidim's own tables (see upstream's `UpdateElectionStatus`); the
+        # on-chain process keeps running until its scheduled `endDate`, so the
+        # explorer still says "Voting open / Provisional" and the SaaS reports
+        # `finalResults: false`. The `EndProcessOnChainJob` closes that gap by
+        # moving every question to status `ENDED` via
+        # `PUT /processes/{id}/questions/status`.
+        initializer "decidim_elections_vocdoni.subscribe_to_end" do
+          ActiveSupport::Notifications.subscribe("decidim.elections.admin.update_election_status:after") do |_event_name, data|
+            election = data[:election]
+            action = data[:action]
+            next if election.blank?
+            next unless action == :end
+            next if election.vocdoni_process.blank?
+            next if election.vocdoni_process.vocdoni_process_id.blank?
+
+            Decidim::Elections::Vocdoni::EndProcessOnChainJob.perform_later(election.id)
+            Rails.logger.info "[vocdoni] enqueued EndProcessOnChainJob for election ##{election.id}"
+          end
+        end
+
+        # "Publish results" in the admin only sets
+        # `election.published_results_at = Time.current` — it does not touch
+        # `Decidim::Elections::ResponseOption#votes_count`, so the public
+        # results view keeps rendering 0/0/0 even after publish. The
+        # `SyncElectionResultsJob` pulls `GET /processes/{id}/results` and
+        # mirrors the on-chain tally into the counter, one row per option.
+        initializer "decidim_elections_vocdoni.subscribe_to_publish_results" do
+          ActiveSupport::Notifications.subscribe("decidim.elections.admin.update_election_status:after") do |_event_name, data|
+            election = data[:election]
+            action = data[:action]
+            next if election.blank?
+            next unless action == :publish_results
+            next if election.vocdoni_process.blank?
+            next if election.vocdoni_process.vocdoni_process_id.blank?
+
+            Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id)
+            Rails.logger.info "[vocdoni] enqueued SyncElectionResultsJob for election ##{election.id}"
+          end
+        end
+
         # Every remixicon name referenced under app/views, app/cells and
         # app/helpers. Decidim 0.33 raises on an unregistered name at render
         # time rather than falling back to a placeholder, so this list is
