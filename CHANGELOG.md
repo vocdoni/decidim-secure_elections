@@ -35,11 +35,19 @@ All notable changes to this module are documented here. The format follows
   `update_election_status:after` with `action == :publish_results` and pulls
   `GET /processes/{id}/results` from the SaaS, mirroring the on-chain tally
   into `Decidim::Elections::ResponseOption#votes_count` so the Decidim
-  results view stops rendering 0/0/0 after publish. Reschedules itself on a
-  bounded cadence (30 attempts × 120 s) until every question reports
-  `finalResults: true` — required for `secretUntilTheEnd` elections whose
-  chain-side tally is only decrypted after ENDED, on the order of minutes,
-  without any SaaS event to notify.
+  results view stops rendering 0/0/0 after publish. Two run modes:
+  `:poll_until_final` (default) reschedules on a bounded cadence
+  (30 attempts × 120 s) until every question reports `finalResults: true` —
+  required for `secretUntilTheEnd` elections whose chain-side tally is only
+  decrypted after ENDED, on the order of minutes, without any SaaS event
+  to notify. `:one_shot` applies whatever the chain currently reports and
+  returns, used by `SyncProcessJob`'s live-results tick.
+- **Live results for `results_availability: "real_time"`** — `SyncProcessJob`
+  now piggybacks a `:one_shot` `SyncElectionResultsJob` on every tick while
+  the SaaS reports `READY`/`ONGOING`/`PAUSED`, and reschedules itself every
+  10 s for real_time elections (300 s for the rest). Explorer.vote uses the
+  same tick rate; investigation confirmed no push/webhook/SSE exists at
+  either the SaaS or the Vochain node layer, so polling is the only option.
 - **`ApiClient`** — Ruby client for the Vocdoni SaaS REST API, no Node.js
   runtime on the server. Elections, organizations and async jobs surfaces.
 - **Static in-browser voting page** under `public/vocdoni/vote.html`, served by
