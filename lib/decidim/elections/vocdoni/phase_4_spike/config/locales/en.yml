@@ -80,7 +80,6 @@ en:
               invalid: "Security settings could not be saved. Please review the errors below."
         booth:
           launcher:
-            help_html: "Your ballot is signed and submitted in your browser. The Decidim server never sees a vote."
+            help_html: "Your vote is cast using Vocdoni’s secure technology, guaranteeing complete anonymity and verifiability."
             enter: "Open the voting booth"
-            chain_note_html: "Anchored on the Vocdoni chain <code>%{chain}</code>."
             not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."
