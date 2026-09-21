@@ -39,7 +39,12 @@ module Decidim
           attribute :enable_vocdoni, Boolean, default: false
           attribute :sms, Boolean, default: false
           attribute :email, Boolean, default: false
-          attribute :auth_fields, Array[String], default: -> { [] } # rubocop:disable Style/RedundantArrayConstructor -- Decidim attribute type
+          # Default is memberNumber (the only value that always works), so
+          # `SecurityForm.new(enable_vocdoni: true)` — no params — is valid.
+          # An explicit empty submit (`auth_fields: [""]` from the hidden
+          # field that a fully-unchecked list sends) is NOT the default and
+          # trips the `:blank` validator instead.
+          attribute :auth_fields, Array[String], default: -> { DEFAULT_AUTH_FIELDS.dup } # rubocop:disable Style/RedundantArrayConstructor -- Decidim attribute type
 
           validate :auth_fields_allowed, if: :enable_vocdoni
           validate :auth_fields_present, if: :enable_vocdoni
