@@ -26,8 +26,10 @@ module Decidim
               expect { command.call }.to broadcast(:ok)
 
               expect(sidecar).to be_pending
-              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => %w(email),
-                                                        "auth_fields" => %w(memberNumber))
+              expect(sidecar.metadata["settings"]).to eq(
+                "twofa_fields" => %w(email),
+                "auth_fields" => %w(memberNumber)
+              )
             end
 
             it "leaves the census alone" do
@@ -46,8 +48,10 @@ module Decidim
             it "updates the settings and keeps the rest of the sidecar" do
               expect { command.call }.to broadcast(:ok)
 
-              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => [],
-                                                        "auth_fields" => %w(memberNumber))
+              expect(sidecar.metadata["settings"]).to eq(
+                "twofa_fields" => [],
+                "auth_fields" => %w(memberNumber)
+              )
               expect(sidecar.metadata).to have_key("questions")
             end
           end
@@ -62,8 +66,10 @@ module Decidim
             it "persists them alongside twofa_fields" do
               expect { command.call }.to broadcast(:ok)
 
-              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => %w(email),
-                                                        "auth_fields" => %w(memberNumber nationalId))
+              expect(sidecar.metadata["settings"]).to eq(
+                "twofa_fields" => %w(email),
+                "auth_fields" => %w(memberNumber nationalId)
+              )
             end
           end
 
