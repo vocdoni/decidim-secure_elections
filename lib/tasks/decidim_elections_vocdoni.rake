@@ -142,7 +142,11 @@ namespace :decidim_elections_vocdoni do
       end
       next unless changed
 
+      # rubocop:disable Rails/SkipsModelValidations -- Decidim::User's
+      # validations trip on `password_confirmation` when writing anything
+      # else, and we are only touching an unvalidated JSON blob.
       user.update_column(:extended_data, data)
+      # rubocop:enable Rails/SkipsModelValidations
       updated += 1
     end
 
