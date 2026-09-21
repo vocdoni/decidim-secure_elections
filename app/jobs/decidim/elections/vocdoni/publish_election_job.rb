@@ -463,12 +463,14 @@ module Decidim
         # Config
         # ---------------------------------------------------------------------
 
-        # Fixed to `memberNumber` (the Decidim user id, which every roster row
-        # we push carries). The Security tab does not let the admin pick auth
-        # fields for the demo — `memberNumber` is a stable, unique identifier
-        # over any Decidim organisation.
+        # Identity fields the CSP checks against the memberbase, chosen on
+        # the Security tab and stored on the sidecar. Forwarded verbatim as
+        # `authFields`. A sidecar with no key (predates the picker) falls
+        # back to `memberNumber` — the Decidim user id, which every roster
+        # row we push carries — so every existing election keeps working.
         def auth_fields
-          ["memberNumber"]
+          stored = Array(process.metadata.to_h.dig("settings", "auth_fields")).map(&:to_s).compact_blank
+          stored.presence || %w(memberNumber)
         end
 
         # Second-factor selection lives on the sidecar's settings, populated by
