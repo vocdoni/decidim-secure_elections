@@ -24,6 +24,22 @@ All notable changes to this module are documented here. The format follows
 - **`SyncProcessJob`** — mirrors the on-chain state of a published process into
   the sidecar so the admin dashboard reads from local columns rather than the
   SaaS.
+- **`EndProcessOnChainJob`** — subscribes to
+  `update_election_status:after` with `action == :end` and moves every
+  question of the Vocdoni process to status `ENDED` via
+  `PUT /processes/{id}/questions/status`, so clicking "End election" in the
+  admin also closes the process on chain (final tally, explorer flips out of
+  "Voting open / Provisional"). Chains a `SyncElectionResultsJob` so the
+  tally auto-populates once the chain has decrypted it.
+- **`SyncElectionResultsJob`** — subscribes to
+  `update_election_status:after` with `action == :publish_results` and pulls
+  `GET /processes/{id}/results` from the SaaS, mirroring the on-chain tally
+  into `Decidim::Elections::ResponseOption#votes_count` so the Decidim
+  results view stops rendering 0/0/0 after publish. Reschedules itself on a
+  bounded cadence (30 attempts × 120 s) until every question reports
+  `finalResults: true` — required for `secretUntilTheEnd` elections whose
+  chain-side tally is only decrypted after ENDED, on the order of minutes,
+  without any SaaS event to notify.
 - **`ApiClient`** — Ruby client for the Vocdoni SaaS REST API, no Node.js
   runtime on the server. Elections, organizations and async jobs surfaces.
 - **Static in-browser voting page** under `public/vocdoni/vote.html`, served by
