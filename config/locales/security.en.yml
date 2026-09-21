@@ -86,6 +86,26 @@ en:
                       secure: "None"
                     locked:
                       label: "Locked once published"
+              auth_fields:
+                legend: "Who the voter says they are"
+                lead: "The voting service checks these details against the members you push. Pick one or more; every voter has to have all of them."
+                simple_note: "A simple Decidim vote does not ask for any of these."
+                options:
+                  memberNumber:
+                    label: "Member number"
+                    help: "Unique to each person. Every Decidim user carries one, so this always works."
+                  nationalId:
+                    label: "National ID number"
+                    help: "Unique to each person. Requires the ID column on your roster."
+                  name:
+                    label: "First name"
+                    help: "Not unique on its own — combine it with another identifier."
+                  surname:
+                    label: "Last name"
+                    help: "Not unique on its own — combine it with another identifier."
+                  birthDate:
+                    label: "Date of birth"
+                    help: "Rarely unique. Combine with a name."
               two_factor:
                 legend: "Confirm voters' identity with a one-time code"
                 lead: "Each voter receives a one-time code when they open the ballot and types it in before voting. It stops someone voting on behalf of another person and makes the result harder to dispute."

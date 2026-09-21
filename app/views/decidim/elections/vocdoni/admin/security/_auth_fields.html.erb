@@ -1,0 +1,59 @@
+<%#
+  Card: who the voter says they are (`authFields`).
+
+  Only meaningful for a secret vote, so the whole fieldset is `disabled`
+  while the simple vote is selected; `security.js` flips it as the admin
+  changes the vote type. The five checkboxes are exactly the SaaS's
+  allowlist (`saas-backend/db/types.go:358-362`).
+%>
+<% scope = "decidim.elections.vocdoni.admin.security.show.auth_fields" %>
+<% enabled = @form.enable_vocdoni %>
+<% options = Decidim::Elections::Vocdoni::AdminForms::SecurityForm::AUTH_FIELD_OPTIONS %>
+<div class="card vocdoni-security__card">
+  <div class="card-divider">
+    <h2 class="card-title" id="security-auth-fields-title"><%= t("legend", scope:) %></h2>
+  </div>
+
+  <div class="card-section">
+    <div class="row column">
+      <fieldset id="js-security-auth-fields"
+                class="vocdoni-security__fieldset vocdoni-auth-fields"
+                aria-labelledby="security-auth-fields-title"
+                aria-describedby="security-auth-fields-lead"
+                <%= "disabled" unless enabled %>>
+        <p class="vocdoni-security__lead" id="security-auth-fields-lead"><%= t("lead", scope:) %></p>
+
+        <p class="vocdoni-security__note" data-auth-fields-note="simple" <%= "hidden" if enabled %>>
+          <%= icon "information-line" %>
+          <span><%= t("simple_note", scope:) %></span>
+        </p>
+
+        <%# Empty hidden field so an all-unchecked submit still reaches the
+            server (the "at least one" validation lives on the form). %>
+        <input type="hidden" name="security[auth_fields][]" value="">
+        <ul class="vocdoni-auth-fields__list">
+          <% options.each do |field| %>
+            <li class="vocdoni-auth-fields__item">
+              <label class="vocdoni-auth-fields__label" for="security_auth_fields_<%= field %>">
+                <%= check_box_tag "security[auth_fields][]",
+                                  field,
+                                  @form.auth_field_selected?(field),
+                                  id: "security_auth_fields_#{field}",
+                                  data: { auth_field: true },
+                                  aria: { describedby: "security-auth-fields-#{field}-help" } %>
+                <span><%= t("options.#{field}.label", scope:) %></span>
+              </label>
+              <p class="help-text vocdoni-auth-fields__help" id="security-auth-fields-<%= field %>-help">
+                <%= t("options.#{field}.help", scope:) %>
+              </p>
+            </li>
+          <% end %>
+        </ul>
+
+        <% if @form.errors[:auth_fields].any? %>
+          <p class="form-error is-visible" role="alert"><%= @form.errors[:auth_fields].to_sentence %></p>
+        <% end %>
+      </fieldset>
+    </div>
+  </div>
+</div>
