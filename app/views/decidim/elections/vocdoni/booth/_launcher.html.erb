@@ -28,7 +28,7 @@
   <% if process_id.present? %>
     <p class="mb-4">
       <%= t("decidim.elections.vocdoni.booth.launcher.help_html",
-             default: "Your ballot is signed and submitted in your browser. The Decidim server never sees a vote.") %>
+             default: "Your vote is cast using Vocdoni’s secure technology, guaranteeing complete anonymity and verifiability.") %>
     </p>
     <%
       booth_url = "/vocdoni/vote.html?api=#{CGI.escape(api_url)}&process=#{CGI.escape(process_id)}&locale=#{I18n.locale}&exit=#{CGI.escape(exit_path)}"
@@ -40,11 +40,6 @@
       <%= t("decidim.elections.vocdoni.booth.launcher.enter",
              default: "Open the voting booth") %>
     <% end %>
-    <p class="mt-4 text-sm text-gray-600">
-      <%= t("decidim.elections.vocdoni.booth.launcher.chain_note_html",
-             default: "Anchored on the Vocdoni chain <code>%{chain}</code>.",
-             chain: process.chain_id.to_s.presence || "…").html_safe %>
-    </p>
   <% else %>
     <p class="mb-4">
       <%= t("decidim.elections.vocdoni.booth.launcher.not_ready",
