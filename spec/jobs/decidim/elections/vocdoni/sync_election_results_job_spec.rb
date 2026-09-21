@@ -63,6 +63,23 @@ module Decidim
           described_class.perform_now(election.id, attempt: described_class::MAX_POLL_ATTEMPTS)
         end
 
+        it "applies the tally without rescheduling in :one_shot mode" do
+          stub_request(:get, "#{api_url}/processes/#{process_id}/results")
+            .to_return(status: 200, body: vocdoni_fixture("process_results"), headers: json_headers)
+
+          expect(described_class).not_to receive(:set)
+
+          described_class.perform_now(election.id, mode: :one_shot)
+
+          counts = question.response_options.order(:id).pluck(:votes_count)
+          expect(counts).to eq([1, 1])
+        end
+
+        it "rejects an unknown mode" do
+          expect { described_class.perform_now(election.id, mode: :bogus) }
+            .to raise_error(ArgumentError, /Unknown mode/)
+        end
+
         context "when the sidecar is not on chain yet" do
           let!(:vocdoni_process) do
             create(:vocdoni_process, :publishing,
