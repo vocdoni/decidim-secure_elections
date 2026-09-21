@@ -4,13 +4,17 @@ module Decidim
   module Elections
     module Vocdoni
       module AdminForms
-        # Security tab form. Owns two things:
+        # Security tab form. Owns three things:
         #
         #   1. Whether the election opts in to Vocdoni-backed secure voting
         #      (`enable_vocdoni`). Opt-in is materialised as the presence of
         #      the {Process} sidecar row.
         #
-        #   2. The second-factor challenge for CSP authentication. Two
+        #   2. The identity fields the CSP checks against the memberbase
+        #      (`auth_fields`). One-of / many-of choice over the SaaS's five
+        #      allowed `authFields`. Defaults to `["memberNumber"]`.
+        #
+        #   3. The second-factor challenge for CSP authentication. Two
         #      independent booleans — SMS and Email — that map onto the
         #      Vocdoni SaaS `twoFaFields` array (`"phone"` and `"email"`
         #      respectively). All four combinations are valid:
@@ -27,25 +31,38 @@ module Decidim
         class SecurityForm < Decidim::Form
           mimic :security
 
+          # Exactly the values `saas-backend/db/types.go:358-362` accepts as
+          # `OrgMemberAuthFields`. Order = the order the checkboxes render.
+          AUTH_FIELD_OPTIONS = %w(memberNumber nationalId name surname birthDate).freeze
+          DEFAULT_AUTH_FIELDS = %w(memberNumber).freeze
+
           attribute :enable_vocdoni, Boolean, default: false
           attribute :sms, Boolean, default: false
           attribute :email, Boolean, default: false
+          attribute :auth_fields, Array[String], default: -> { [] } # rubocop:disable Style/RedundantArrayConstructor -- Decidim attribute type
+
+          validate :auth_fields_allowed, if: :enable_vocdoni
+          validate :auth_fields_present, if: :enable_vocdoni
 
           # Reconstructs a form from the sidecar. An election that has never
           # visited the Security tab has no sidecar; every checkbox defaults
-          # to unchecked.
+          # to unchecked and the identity picker to `["memberNumber"]`.
           def self.from_model(election)
             sidecar = election.vocdoni_process
             return new if sidecar.blank?
 
             settings = sidecar.metadata.to_h["settings"].to_h
             two_fa = Array(settings["twofa_fields"]).map(&:to_s)
+            stored = Array(settings["auth_fields"]).map(&:to_s)
             new(enable_vocdoni: true,
                 sms: two_fa.include?("phone"),
-                email: two_fa.include?("email"))
+                email: two_fa.include?("email"),
+                auth_fields: stored)
           end
 
           # Summary levels shown on the tab, from least to most protected.
+          # Identity picks do not affect this — a code is what proves
+          # liveness, not the identifier.
           LEVELS = %w(basic strong strongest).freeze
 
           # The page presents `enable_vocdoni` as two cards: a simple vote
@@ -68,6 +85,33 @@ module Decidim
             fields << "email" if email
             fields << "phone" if sms
             fields.sort
+          end
+
+          # Overrides the raw attribute so views, the command, and the
+          # publish job all see the same filtered/sorted list. Simple vote
+          # collapses to the default: nothing to persist and nothing to
+          # ask a Decidim-only voter.
+          def auth_fields
+            picked = Array(super).map(&:to_s).compact_blank & AUTH_FIELD_OPTIONS
+            return DEFAULT_AUTH_FIELDS.dup unless enable_vocdoni
+
+            picked.sort
+          end
+
+          def auth_field_selected?(field)
+            auth_fields.include?(field)
+          end
+
+          private
+
+          def auth_fields_present
+            errors.add(:auth_fields, :blank) if auth_fields.empty?
+          end
+
+          def auth_fields_allowed
+            submitted = Array(read_attribute_for_validation(:auth_fields)).map(&:to_s).compact_blank
+            refused = submitted - AUTH_FIELD_OPTIONS
+            errors.add(:auth_fields, :inclusion) if refused.any?
           end
         end
       end
