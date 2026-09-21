@@ -12,7 +12,7 @@ module Decidim
         #
         #   2. The identity fields the CSP checks against the memberbase
         #      (`auth_fields`). One-of / many-of choice over the SaaS's five
-        #      allowed `authFields`. Defaults to `["memberNumber"]`.
+        #      allowed `authFields`. Defaults to {DEFAULT_AUTH_FIELDS}.
         #
         #   3. The second-factor challenge for CSP authentication. Two
         #      independent booleans — SMS and Email — that map onto the
@@ -34,13 +34,18 @@ module Decidim
           # Exactly the values `saas-backend/db/types.go:358-362` accepts as
           # `OrgMemberAuthFields`. Order = the order the checkboxes render.
           AUTH_FIELD_OPTIONS = %w(memberNumber nationalId name surname birthDate).freeze
-          DEFAULT_AUTH_FIELDS = %w(memberNumber).freeze
+          # National ID + date of birth: two details a person actually knows
+          # about themselves, harder to spoof together than a member number.
+          # Widening the roster to carry them is a separate change; until
+          # then, publishing with these defaults will fail the SaaS
+          # pre-flight and the admin has to uncheck to `memberNumber`.
+          DEFAULT_AUTH_FIELDS = %w(nationalId birthDate).freeze
 
           attribute :enable_vocdoni, Boolean, default: false
           attribute :sms, Boolean, default: false
           attribute :email, Boolean, default: false
-          # Default is memberNumber (the only value that always works), so
-          # `SecurityForm.new(enable_vocdoni: true)` — no params — is valid.
+          # Default is {DEFAULT_AUTH_FIELDS}, so `SecurityForm.new(enable_vocdoni:
+          # true)` — no params — is valid and the checkboxes come pre-ticked.
           # An explicit empty submit (`auth_fields: [""]` from the hidden
           # field that a fully-unchecked list sends) is NOT the default and
           # trips the `:blank` validator instead.
@@ -51,10 +56,10 @@ module Decidim
 
           # Reconstructs a form from the sidecar. An election that has never
           # visited the Security tab has no sidecar; every checkbox defaults
-          # to unchecked and the identity picker to `["memberNumber"]`. A
+          # to unchecked and the identity picker to {DEFAULT_AUTH_FIELDS}. A
           # sidecar that predates this feature stores nothing under
           # `auth_fields` — treat that the same as a fresh opt-in so the
-          # checkbox is pre-ticked instead of blank.
+          # checkboxes are pre-ticked instead of blank.
           def self.from_model(election)
             sidecar = election.vocdoni_process
             return new if sidecar.blank?

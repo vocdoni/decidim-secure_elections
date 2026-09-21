@@ -93,7 +93,7 @@ module Decidim
               subject(:form) { described_class.from_params(security: { enable_vocdoni: "false", auth_fields: [""] }) }
 
               it "collapses to the default" do
-                expect(form.selected_auth_fields).to eq(%w(memberNumber))
+                expect(form.selected_auth_fields).to eq(%w(nationalId birthDate))
               end
             end
 
@@ -132,8 +132,8 @@ module Decidim
 
               before { Vocdoni::Process.create!(election:, state: "pending") }
 
-              it "defaults to memberNumber" do
-                expect(form.selected_auth_fields).to eq(%w(memberNumber))
+              it "falls back to the current default" do
+                expect(form.selected_auth_fields).to eq(%w(birthDate nationalId))
               end
             end
 

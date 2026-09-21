@@ -14,11 +14,16 @@ noted otherwise. Five checkboxes — the five fields the SaaS accepts as
 
 | Field          | Default checked |
 |----------------|-----------------|
-| `memberNumber` | yes             |
-| `nationalId`   | no              |
+| `memberNumber` | no              |
+| `nationalId`   | yes             |
 | `name`         | no              |
 | `surname`      | no              |
-| `birthDate`    | no              |
+| `birthDate`    | yes             |
+
+The demo shows `nationalId` + `birthDate` pre-checked (two details a person
+knows about themselves, harder to spoof together than a member number).
+Widening the roster to carry them is a separate change; until then, the
+admin has to uncheck to `memberNumber` before publishing.
 
 The choices are stored on the same sidecar hash that already carries the 2FA
 selection and forwarded verbatim to the SaaS on publish.

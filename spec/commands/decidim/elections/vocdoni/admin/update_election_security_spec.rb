@@ -28,7 +28,7 @@ module Decidim
               expect(sidecar).to be_pending
               expect(sidecar.metadata["settings"]).to eq(
                 "twofa_fields" => %w(email),
-                "auth_fields" => %w(memberNumber)
+                "auth_fields" => %w(birthDate nationalId)
               )
             end
 
@@ -50,7 +50,7 @@ module Decidim
 
               expect(sidecar.metadata["settings"]).to eq(
                 "twofa_fields" => [],
-                "auth_fields" => %w(memberNumber)
+                "auth_fields" => %w(birthDate nationalId)
               )
               expect(sidecar.metadata).to have_key("questions")
             end
