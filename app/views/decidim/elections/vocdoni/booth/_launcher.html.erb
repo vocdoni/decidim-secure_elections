@@ -28,7 +28,7 @@
   <% if process_id.present? %>
     <p class="mb-4">
       <%= t("decidim.elections.vocdoni.booth.launcher.help_html",
-             default: "Your vote is cast using Vocdoni’s secure technology, guaranteeing complete anonymity and verifiability.") %>
+             default: "Your vote is cast using Vocdoni’s secure technology, guaranteeing anonymity and verifiability.") %>
     </p>
     <%
       booth_url = "/vocdoni/vote.html?api=#{CGI.escape(api_url)}&process=#{CGI.escape(process_id)}&locale=#{I18n.locale}&exit=#{CGI.escape(exit_path)}"

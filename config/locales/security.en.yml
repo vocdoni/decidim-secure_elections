@@ -112,6 +112,6 @@ en:
               invalid: "Security settings could not be saved. Please review the errors below."
         booth:
           launcher:
-            help_html: "Your vote is cast using Vocdoni’s secure technology, guaranteeing complete anonymity and verifiability."
+            help_html: "Your vote is cast using Vocdoni’s secure technology, guaranteeing anonymity and verifiability."
             enter: "Open the voting booth"
             not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."
