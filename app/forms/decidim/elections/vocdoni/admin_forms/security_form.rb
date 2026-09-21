@@ -46,18 +46,21 @@ module Decidim
 
           # Reconstructs a form from the sidecar. An election that has never
           # visited the Security tab has no sidecar; every checkbox defaults
-          # to unchecked and the identity picker to `["memberNumber"]`.
+          # to unchecked and the identity picker to `["memberNumber"]`. A
+          # sidecar that predates this feature stores nothing under
+          # `auth_fields` — treat that the same as a fresh opt-in so the
+          # checkbox is pre-ticked instead of blank.
           def self.from_model(election)
             sidecar = election.vocdoni_process
             return new if sidecar.blank?
 
             settings = sidecar.metadata.to_h["settings"].to_h
             two_fa = Array(settings["twofa_fields"]).map(&:to_s)
-            stored = Array(settings["auth_fields"]).map(&:to_s)
+            stored = Array(settings["auth_fields"]).map(&:to_s).compact_blank
             new(enable_vocdoni: true,
                 sms: two_fa.include?("phone"),
                 email: two_fa.include?("email"),
-                auth_fields: stored)
+                auth_fields: stored.presence || DEFAULT_AUTH_FIELDS)
           end
 
           # Summary levels shown on the tab, from least to most protected.
@@ -87,30 +90,38 @@ module Decidim
             fields.sort
           end
 
-          # Overrides the raw attribute so views, the command, and the
-          # publish job all see the same filtered/sorted list. Simple vote
-          # collapses to the default: nothing to persist and nothing to
-          # ask a Decidim-only voter.
-          def auth_fields
-            picked = Array(super).map(&:to_s).compact_blank & AUTH_FIELD_OPTIONS
+          # The canonical, filtered, sorted list. Simple vote collapses to
+          # the default — nothing to persist and nothing to ask a
+          # Decidim-only voter. Views use {#auth_field_selected?}, the
+          # command persists this, and the publish job reads the same value
+          # back through the sidecar.
+          def selected_auth_fields
+            picked = submitted_auth_fields & AUTH_FIELD_OPTIONS
             return DEFAULT_AUTH_FIELDS.dup unless enable_vocdoni
 
             picked.sort
           end
 
           def auth_field_selected?(field)
-            auth_fields.include?(field)
+            selected_auth_fields.include?(field)
           end
 
           private
 
+          # The raw list as it came from the form: normalised (strings,
+          # blanks removed) but NOT filtered against the allowlist. The
+          # validators must see this so a rejected field surfaces an error
+          # rather than silently disappearing.
+          def submitted_auth_fields
+            Array(auth_fields).map(&:to_s).compact_blank
+          end
+
           def auth_fields_present
-            errors.add(:auth_fields, :blank) if auth_fields.empty?
+            errors.add(:auth_fields, :blank) if submitted_auth_fields.empty?
           end
 
           def auth_fields_allowed
-            submitted = Array(read_attribute_for_validation(:auth_fields)).map(&:to_s).compact_blank
-            refused = submitted - AUTH_FIELD_OPTIONS
+            refused = submitted_auth_fields - AUTH_FIELD_OPTIONS
             errors.add(:auth_fields, :inclusion) if refused.any?
           end
         end

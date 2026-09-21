@@ -12,8 +12,8 @@ module Decidim
         #
         #   * `twofa_fields` — {SecurityForm#two_fa_fields}, forwarded
         #     verbatim as `twoFaFields`.
-        #   * `auth_fields`  — {SecurityForm#auth_fields}, forwarded verbatim
-        #     as `authFields` (the CSP identity check).
+        #   * `auth_fields`  — {SecurityForm#selected_auth_fields}, forwarded
+        #     verbatim as `authFields` (the CSP identity check).
         #
         # Semantics of the `enable_vocdoni` toggle:
         #   * OFF, no sidecar    → nothing to do.
@@ -53,7 +53,7 @@ module Decidim
             sidecar.metadata = sidecar.metadata.to_h.merge(
               "settings" => {
                 "twofa_fields" => form.two_fa_fields,
-                "auth_fields" => form.auth_fields
+                "auth_fields" => form.selected_auth_fields
               }
             )
             sidecar.save!

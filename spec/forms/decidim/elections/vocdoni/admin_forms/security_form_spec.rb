@@ -93,7 +93,7 @@ module Decidim
               subject(:form) { described_class.from_params(security: { enable_vocdoni: "false", auth_fields: [""] }) }
 
               it "collapses to the default" do
-                expect(form.auth_fields).to eq(%w(memberNumber))
+                expect(form.selected_auth_fields).to eq(%w(memberNumber))
               end
             end
 
@@ -101,7 +101,7 @@ module Decidim
               subject(:form) { described_class.from_params(security: { enable_vocdoni: "true", auth_fields: ["", "nationalId", "memberNumber"] }) }
 
               it "returns the allowlisted picks, sorted" do
-                expect(form.auth_fields).to eq(%w(memberNumber nationalId))
+                expect(form.selected_auth_fields).to eq(%w(memberNumber nationalId))
               end
 
               it "is valid" do
@@ -133,7 +133,7 @@ module Decidim
               before { Vocdoni::Process.create!(election:, state: "pending") }
 
               it "defaults to memberNumber" do
-                expect(form.auth_fields).to eq(%w(memberNumber))
+                expect(form.selected_auth_fields).to eq(%w(memberNumber))
               end
             end
 
@@ -146,7 +146,7 @@ module Decidim
               end
 
               it "reads them back, sorted" do
-                expect(form.auth_fields).to eq(%w(memberNumber nationalId))
+                expect(form.selected_auth_fields).to eq(%w(memberNumber nationalId))
               end
             end
           end
