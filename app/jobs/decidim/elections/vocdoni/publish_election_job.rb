@@ -332,15 +332,37 @@ module Decidim
           Decidim::User.where(id: ids)
         end
 
-        # Maps a `Decidim::User` onto the Vocdoni memberbase schema. The
+        # Maps a `Decidim::User` onto the Vocdoni memberbase schema.
+        #
         # `memberNumber` is the Decidim user id — stable, unique, and lets a
         # returning voter match up on the same identity across retries.
+        #
+        # The rest come from `extended_data` when populated: Decidim's core
+        # User model has none of them as columns, so an organisation that
+        # wants voters to authenticate on `nationalId`, `birthDate`,
+        # `surname`, or `phone` has to have populated the matching key on
+        # each user (via a profile-extension form, an importer, or a rake
+        # task in dev). Empty values are dropped by `compact`, so a user
+        # missing a field is pushed without it — the SaaS then rejects any
+        # ballot for that voter when the census's `authFields` include one
+        # they do not have. That surfaces the gap loudly instead of hiding
+        # it behind a silent match failure.
+        MEMBER_EXTENDED_KEYS = { "surname" => "surname",
+                                 "nationalId" => "national_id",
+                                 "birthDate" => "birth_date",
+                                 "phone" => "phone" }.freeze
+
         def user_to_member(user)
-          {
+          extended = user.extended_data.to_h
+          base = {
             "memberNumber" => user.id.to_s,
             "name" => user.name.to_s.strip.presence,
             "email" => user.email.to_s.strip.presence
-          }.compact
+          }
+          MEMBER_EXTENDED_KEYS.each do |saas_key, decidim_key|
+            base[saas_key] = extended[decidim_key].to_s.strip.presence
+          end
+          base.compact
         end
 
         def resolve_member_ids!

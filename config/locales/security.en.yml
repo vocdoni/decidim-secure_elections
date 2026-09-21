@@ -96,16 +96,16 @@ en:
                     help: "Unique to each person. Every Decidim user carries one, so this always works."
                   nationalId:
                     label: "National ID number"
-                    help: "Unique to each person. Requires the ID column on your roster."
+                    help: "Unique to each person. Pushed from each user's `national_id` profile field."
                   name:
                     label: "First name"
                     help: "Not unique on its own — combine it with another identifier."
                   surname:
                     label: "Last name"
-                    help: "Not unique on its own — combine it with another identifier."
+                    help: "Not unique on its own — combine it with another identifier. Pushed from each user's `surname` profile field."
                   birthDate:
                     label: "Date of birth"
-                    help: "Rarely unique. Combine with a name."
+                    help: "Rarely unique — combine with a name. Pushed from each user's `birth_date` profile field."
               two_factor:
                 legend: "Confirm voters' identity with a one-time code"
                 lead: "Each voter receives a one-time code when they open the ballot and types it in before voting. It stops someone voting on behalf of another person and makes the result harder to dispute."
