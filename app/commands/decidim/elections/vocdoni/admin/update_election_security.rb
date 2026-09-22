@@ -8,9 +8,12 @@ module Decidim
         #
         # The sidecar's presence is the opt-in signal read by the engine's
         # publish subscriber — if it exists, publish enqueues
-        # {PublishElectionJob}. Its `metadata["settings"]` hash carries the
-        # second-factor selection ({SecurityForm#two_fa_fields}) that the job
-        # forwards verbatim as `twoFaFields`.
+        # {PublishElectionJob}. Its `metadata["settings"]` hash carries:
+        #
+        #   * `twofa_fields` — {SecurityForm#two_fa_fields}, forwarded
+        #     verbatim as `twoFaFields`.
+        #   * `auth_fields`  — {SecurityForm#selected_auth_fields}, forwarded
+        #     verbatim as `authFields` (the CSP identity check).
         #
         # Semantics of the `enable_vocdoni` toggle:
         #   * OFF, no sidecar    → nothing to do.
@@ -48,7 +51,10 @@ module Decidim
           def enable!
             sidecar = election.vocdoni_process || Process.new(decidim_election_id: election.id, state: "pending")
             sidecar.metadata = sidecar.metadata.to_h.merge(
-              "settings" => { "twofa_fields" => form.two_fa_fields }
+              "settings" => {
+                "twofa_fields" => form.two_fa_fields,
+                "auth_fields" => form.selected_auth_fields
+              }
             )
             sidecar.save!
           end

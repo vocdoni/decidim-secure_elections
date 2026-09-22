@@ -4,13 +4,17 @@ module Decidim
   module Elections
     module Vocdoni
       module AdminForms
-        # Security tab form. Owns two things:
+        # Security tab form. Owns three things:
         #
         #   1. Whether the election opts in to Vocdoni-backed secure voting
         #      (`enable_vocdoni`). Opt-in is materialised as the presence of
         #      the {Process} sidecar row.
         #
-        #   2. The second-factor challenge for CSP authentication. Two
+        #   2. The identity fields the CSP checks against the memberbase
+        #      (`auth_fields`). One-of / many-of choice over the SaaS's five
+        #      allowed `authFields`. Defaults to {DEFAULT_AUTH_FIELDS}.
+        #
+        #   3. The second-factor challenge for CSP authentication. Two
         #      independent booleans — SMS and Email — that map onto the
         #      Vocdoni SaaS `twoFaFields` array (`"phone"` and `"email"`
         #      respectively). All four combinations are valid:
@@ -27,25 +31,51 @@ module Decidim
         class SecurityForm < Decidim::Form
           mimic :security
 
+          # Exactly the values `saas-backend/db/types.go:358-362` accepts as
+          # `OrgMemberAuthFields`. Order = the order the checkboxes render.
+          AUTH_FIELD_OPTIONS = %w(memberNumber nationalId name surname birthDate).freeze
+          # National ID + date of birth: two details a person actually knows
+          # about themselves, harder to spoof together than a member number.
+          # Widening the roster to carry them is a separate change; until
+          # then, publishing with these defaults will fail the SaaS
+          # pre-flight and the admin has to uncheck to `memberNumber`.
+          DEFAULT_AUTH_FIELDS = %w(nationalId birthDate).freeze
+
           attribute :enable_vocdoni, Boolean, default: false
           attribute :sms, Boolean, default: false
           attribute :email, Boolean, default: false
+          # Default is {DEFAULT_AUTH_FIELDS}, so `SecurityForm.new(enable_vocdoni:
+          # true)` — no params — is valid and the checkboxes come pre-ticked.
+          # An explicit empty submit (`auth_fields: [""]` from the hidden
+          # field that a fully-unchecked list sends) is NOT the default and
+          # trips the `:blank` validator instead.
+          attribute :auth_fields, Array[String], default: -> { DEFAULT_AUTH_FIELDS.dup } # rubocop:disable Style/RedundantArrayConstructor -- Decidim attribute type
+
+          validate :auth_fields_allowed, if: :enable_vocdoni
+          validate :auth_fields_present, if: :enable_vocdoni
 
           # Reconstructs a form from the sidecar. An election that has never
           # visited the Security tab has no sidecar; every checkbox defaults
-          # to unchecked.
+          # to unchecked and the identity picker to {DEFAULT_AUTH_FIELDS}. A
+          # sidecar that predates this feature stores nothing under
+          # `auth_fields` — treat that the same as a fresh opt-in so the
+          # checkboxes are pre-ticked instead of blank.
           def self.from_model(election)
             sidecar = election.vocdoni_process
             return new if sidecar.blank?
 
             settings = sidecar.metadata.to_h["settings"].to_h
             two_fa = Array(settings["twofa_fields"]).map(&:to_s)
+            stored = Array(settings["auth_fields"]).map(&:to_s).compact_blank
             new(enable_vocdoni: true,
                 sms: two_fa.include?("phone"),
-                email: two_fa.include?("email"))
+                email: two_fa.include?("email"),
+                auth_fields: stored.presence || DEFAULT_AUTH_FIELDS)
           end
 
           # Summary levels shown on the tab, from least to most protected.
+          # Identity picks do not affect this — a code is what proves
+          # liveness, not the identifier.
           LEVELS = %w(basic strong strongest).freeze
 
           # The page presents `enable_vocdoni` as two cards: a simple vote
@@ -68,6 +98,41 @@ module Decidim
             fields << "email" if email
             fields << "phone" if sms
             fields.sort
+          end
+
+          # The canonical, filtered, sorted list. Simple vote collapses to
+          # the default — nothing to persist and nothing to ask a
+          # Decidim-only voter. Views use {#auth_field_selected?}, the
+          # command persists this, and the publish job reads the same value
+          # back through the sidecar.
+          def selected_auth_fields
+            picked = submitted_auth_fields & AUTH_FIELD_OPTIONS
+            return DEFAULT_AUTH_FIELDS.dup unless enable_vocdoni
+
+            picked.sort
+          end
+
+          def auth_field_selected?(field)
+            selected_auth_fields.include?(field)
+          end
+
+          private
+
+          # The raw list as it came from the form: normalised (strings,
+          # blanks removed) but NOT filtered against the allowlist. The
+          # validators must see this so a rejected field surfaces an error
+          # rather than silently disappearing.
+          def submitted_auth_fields
+            Array(auth_fields).map(&:to_s).compact_blank
+          end
+
+          def auth_fields_present
+            errors.add(:auth_fields, :blank) if submitted_auth_fields.empty?
+          end
+
+          def auth_fields_allowed
+            refused = submitted_auth_fields - AUTH_FIELD_OPTIONS
+            errors.add(:auth_fields, :inclusion) if refused.any?
           end
         end
       end

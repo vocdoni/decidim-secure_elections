@@ -300,6 +300,36 @@
   }
 }
 
+// Auth-fields checkbox list. Same visual language as the two-factor card:
+// each row is a boxed option with a label and a help line underneath.
+.vocdoni-security {
+  .vocdoni-auth-fields__list {
+    @apply grid gap-3 mt-4 list-none m-0 p-0;
+  }
+
+  .vocdoni-auth-fields__item {
+    @apply p-4 rounded-lg border border-background-4 bg-white;
+  }
+
+  .vocdoni-auth-fields__label {
+    @apply flex flex-wrap items-center gap-3 m-0 text-md font-semibold text-black cursor-pointer;
+
+    input[type="checkbox"] {
+      @apply w-5 h-5 m-0 shrink-0 accent-[var(--secondary)];
+    }
+  }
+
+  .vocdoni-auth-fields__help {
+    @apply mt-1 mb-0 ml-8;
+  }
+
+  .vocdoni-auth-fields:disabled {
+    .vocdoni-auth-fields__label {
+      @apply opacity-60 cursor-not-allowed;
+    }
+  }
+}
+
 // Summary strip.
 .vocdoni-security {
   .vocdoni-summary {

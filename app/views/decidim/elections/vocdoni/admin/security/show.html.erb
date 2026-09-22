@@ -32,6 +32,7 @@
                        method: :put,
                        html: { id: "security-form", class: "form-defaults form" }) do |f| %>
     <%= render "decidim/elections/vocdoni/admin/security/choice", f: %>
+    <%= render "decidim/elections/vocdoni/admin/security/auth_fields", f: %>
     <%= render "decidim/elections/vocdoni/admin/security/two_factor", f: %>
     <%= render "decidim/elections/vocdoni/admin/security/summary" %>
 

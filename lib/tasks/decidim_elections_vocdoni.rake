@@ -111,6 +111,48 @@ namespace :decidim_elections_vocdoni do
     end
   end
 
+  desc "Seed demo extended_data (nationalId, birthDate, phone, surname) on every user of the first org"
+  task seed_demo_extended_data: :environment do
+    # Development-only convenience so a fresh `db:seed` on a demo app can
+    # authenticate voters on `nationalId` / `birthDate` / `surname` / `phone`
+    # end-to-end: Decidim's core User model does not carry these, so without
+    # something like this the SaaS rejects any ballot that requires them.
+    #
+    # Values are deterministic from the user id so the same seed run twice
+    # gives the same members, and they read as visibly-fake on inspection
+    # ("DNI-00000042", "1990-01-15"), so nobody mistakes them for real
+    # identity documents. Idempotent: only fills keys that are blank.
+    abort "Refusing to run in production." if Rails.env.production?
+
+    updated = 0
+    Decidim::User.find_each do |user|
+      data = user.extended_data.to_h
+      changed = false
+      demo = {
+        "national_id" => format("DNI-%08d", user.id),
+        "birth_date" => (Date.new(1970, 1, 1) + (user.id * 37).days).iso8601,
+        "phone" => format("+34600%06d", user.id),
+        "surname" => "Demo-#{user.id}"
+      }
+      demo.each do |key, value|
+        next if data[key].to_s.strip.present?
+
+        data[key] = value
+        changed = true
+      end
+      next unless changed
+
+      # rubocop:disable Rails/SkipsModelValidations -- Decidim::User's
+      # validations trip on `password_confirmation` when writing anything
+      # else, and we are only touching an unvalidated JSON blob.
+      user.update_column(:extended_data, data)
+      # rubocop:enable Rails/SkipsModelValidations
+      updated += 1
+    end
+
+    puts "Filled demo extended_data on #{updated} user(s)."
+  end
+
   # Reports whether a Sidekiq worker is running that listens on the `vocdoni`
   # queue. Sidekiq is queried through its own API rather than by parsing
   # sidekiq.yml, because the answer that matters is what is *running*, not

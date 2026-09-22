@@ -87,6 +87,69 @@ module Decidim
               end
             end
           end
+
+          describe "#auth_fields" do
+            context "when the fieldset is disabled (simple vote)" do
+              subject(:form) { described_class.from_params(security: { enable_vocdoni: "false", auth_fields: [""] }) }
+
+              it "collapses to the default" do
+                expect(form.selected_auth_fields).to eq(%w(nationalId birthDate))
+              end
+            end
+
+            context "when the admin picks two fields" do
+              subject(:form) { described_class.from_params(security: { enable_vocdoni: "true", auth_fields: ["", "nationalId", "memberNumber"] }) }
+
+              it "returns the allowlisted picks, sorted" do
+                expect(form.selected_auth_fields).to eq(%w(memberNumber nationalId))
+              end
+
+              it "is valid" do
+                expect(form).to be_valid
+              end
+            end
+
+            context "when the admin unchecks every box" do
+              subject(:form) { described_class.from_params(security: { enable_vocdoni: "true", auth_fields: [""] }) }
+
+              it "is invalid" do
+                expect(form).not_to be_valid
+                expect(form.errors[:auth_fields]).to be_present
+              end
+            end
+
+            context "when the params contain a field the SaaS rejects" do
+              subject(:form) { described_class.from_params(security: { enable_vocdoni: "true", auth_fields: ["", "memberNumber", "email"] }) }
+
+              it "is invalid" do
+                expect(form).not_to be_valid
+                expect(form.errors[:auth_fields]).to be_present
+              end
+            end
+
+            context "when reading a sidecar that predates this feature" do
+              subject(:form) { described_class.from_model(election) }
+
+              before { Vocdoni::Process.create!(election:, state: "pending") }
+
+              it "falls back to the current default" do
+                expect(form.selected_auth_fields).to eq(%w(birthDate nationalId))
+              end
+            end
+
+            context "when reading a sidecar that stored auth_fields" do
+              subject(:form) { described_class.from_model(election) }
+
+              before do
+                Vocdoni::Process.create!(election:, state: "pending",
+                                         metadata: { "settings" => { "auth_fields" => %w(nationalId memberNumber) } })
+              end
+
+              it "reads them back, sorted" do
+                expect(form.selected_auth_fields).to eq(%w(memberNumber nationalId))
+              end
+            end
+          end
         end
       end
     end

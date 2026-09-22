@@ -7,8 +7,8 @@
  * 1. The whole vote-type card selects its option, and the selected card is
  *    highlighted (browsers without `:has()`). Without JavaScript the radio
  *    and the card title still do.
- * 2. The one-time code card is only usable while the secret vote is
- *    selected.
+ * 2. The auth-fields card and the one-time code card are only usable while
+ *    the secret vote is selected.
  * 3. The summary line follows the selection.
  *
  * All copy comes from the page; selectors are ids with a `js-` prefix or
@@ -16,6 +16,7 @@
  */
 
 const CHOICE_ID = "js-security-choice";
+const AUTH_FIELDS_ID = "js-security-auth-fields";
 const TWO_FACTOR_ID = "js-security-two-factor";
 const SUMMARY_ID = "js-security-summary";
 
@@ -36,6 +37,7 @@ const securityLevel = (choice, oneTimeCode) => {
 
 const setupSecurity = () => {
   const choice = document.getElementById(CHOICE_ID);
+  const authFields = document.getElementById(AUTH_FIELDS_ID);
   const twoFactor = document.getElementById(TWO_FACTOR_ID);
   const summary = document.getElementById(SUMMARY_ID);
 
@@ -47,6 +49,9 @@ const setupSecurity = () => {
   const cards = Array.from(choice.querySelectorAll("[data-security-choice-card]"));
   const codes = Array.from(twoFactor.querySelectorAll("[data-security-code]"));
   const notes = Array.from(twoFactor.querySelectorAll("[data-two-factor-note]"));
+  const authNotes = authFields
+    ? Array.from(authFields.querySelectorAll("[data-auth-fields-note]"))
+    : [];
 
   const selected = () => {
     const radio = radios.find((input) => input.checked);
@@ -58,6 +63,17 @@ const setupSecurity = () => {
   const syncCards = (value) => {
     cards.forEach((card) => {
       card.classList.toggle("is-selected", card.dataset.securityChoiceCard === value);
+    });
+  };
+
+  const syncAuthFields = (value) => {
+    if (!authFields) {
+      return;
+    }
+    const usable = value === "secure";
+    authFields.disabled = !usable;
+    authNotes.forEach((element) => {
+      element.hidden = usable;
     });
   };
 
@@ -86,6 +102,7 @@ const setupSecurity = () => {
   const sync = () => {
     const value = selected();
     syncCards(value);
+    syncAuthFields(value);
     syncSummary(securityLevel(value, syncTwoFactor(value)));
   };
 
