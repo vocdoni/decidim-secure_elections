@@ -314,47 +314,90 @@ module Decidim
         # ---------------------------------------------------------------------
 
         def voter_payloads
-          @voter_payloads ||= census_users.map { |user| user_to_member(user) }.compact_blank
+          roster
         end
 
-        # Demo roster: every registered user of the org that has an email,
+        # Roster resolved from the election's census manifest. Returns an
+        # array of `{ memberNumber, name?, email? }` hashes — the exact shape
+        # `POST /organizations/{addr}/members` expects.
+        #
+        # The manifest determines the source: `token_csv` pushes what the
+        # admin uploaded (CSV rows land in `Decidim::Elections::Voter`);
+        # everything else falls back to the capped Decidim::User demo roster
+        # so an admin who never picked a census still gets a workable stg
+        # push.
+        #
+        # Local dedup by `memberNumber` mirrors the upstream-index dedup in
+        # `ensure_members_pushed!`: `POST /members` is not upsert-by-
+        # `memberNumber`, so two rows sharing one would either be rejected
+        # or clone into duplicate `OrgMember` docs. The CSV parser dedupes
+        # by email (see `CsvCensus::Data`), not by token, so a repeated
+        # token in an otherwise valid CSV would fall through without this.
+        def roster
+          @roster ||= build_roster.uniq { |m| m["memberNumber"] }
+        end
+
+        def build_roster
+          case election.census&.name.to_s
+          when "token_csv"
+            csv_voter_payloads
+          else
+            demo_user_payloads
+          end
+        end
+
+        # Maps `Decidim::Elections::Voter` rows created by the token-CSV
+        # upload onto the Vocdoni memberbase schema. `token` is what the
+        # voter will present at the booth, so it lands as `memberNumber`
+        # (the sole authField). `email` rides along to power the optional
+        # email 2FA challenge; if it is missing the voter simply cannot use
+        # 2FA on this row, but auth on the token still works.
+        def csv_voter_payloads
+          Decidim::Elections::Voter.where(election:).find_each.filter_map do |voter|
+            data = voter.data.is_a?(Hash) ? voter.data : {}
+            token = data["token"].to_s.strip
+            next nil if token.blank?
+
+            {
+              "memberNumber" => token,
+              "email" => data["email"].to_s.strip.presence
+            }.compact
+          end
+        end
+
+        # Demo fallback: every registered user of the org that has an email,
         # capped at `DEMO_ROSTER_LIMIT`. The cap is applied through a
         # `pluck` + `where(id:)` so it survives the outer `.limit` the
         # census-manifest paging composes on the returned relation (an outer
-        # `.limit` on ActiveRecord overrides a chained inner `.limit`).
-        def census_users
+        # `.limit` on ActiveRecord overrides a chained inner `.limit`). The
+        # `memberNumber` is the Decidim user id — stable, unique, and lets a
+        # returning voter match up on the same identity across retries.
+        def demo_user_payloads
           ids = Decidim::User
                 .where(organization: election.organization)
                 .where.not(email: nil)
                 .order(id: :asc)
                 .limit(DEMO_ROSTER_LIMIT)
                 .pluck(:id)
-          Decidim::User.where(id: ids)
-        end
-
-        # Maps a `Decidim::User` onto the Vocdoni memberbase schema. The
-        # `memberNumber` is the Decidim user id — stable, unique, and lets a
-        # returning voter match up on the same identity across retries.
-        def user_to_member(user)
-          {
-            "memberNumber" => user.id.to_s,
-            "name" => user.name.to_s.strip.presence,
-            "email" => user.email.to_s.strip.presence
-          }.compact
+          Decidim::User.where(id: ids).map do |user|
+            {
+              "memberNumber" => user.id.to_s,
+              "name" => user.name.to_s.strip.presence,
+              "email" => user.email.to_s.strip.presence
+            }.compact
+          end
         end
 
         def resolve_member_ids!
           @step = "list_members"
           index = upstream_member_index
 
-          census_users.map do |user|
-            id = index["memberNumber:#{user.id}"] ||
-                 (user.email.present? && index["email:#{user.email.strip.downcase}"])
+          roster.filter_map do |member|
+            number = member["memberNumber"].to_s.strip.downcase
+            email = member["email"].to_s.strip.downcase
 
-            next nil if id.blank?
-
-            id
-          end.compact
+            index["memberNumber:#{number}"] || (email.present? ? index["email:#{email}"] : nil)
+          end
         end
 
         # Memoized so ensure_members_pushed! (which reads it to dedupe against
