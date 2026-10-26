@@ -61,7 +61,8 @@ Layout, top to bottom, inside upstream's `.item__edit-form` column (815 px wide 
 3. **One outer card** (`7701:25972`): white, 1 px `border/neutral/light`, radius 8 px,
    padding 16 px, vertical gap 24 px. Everything on the tab lives inside it.
    1. **Section header** (`7701:25973`): a disclosure row, gap 8 px: chevron icon 24 px
-      (Remixicon `arrow-down-s-line`, pointing up when expanded) + "How do you want to run
+      (Remixicon `arrow-down-s-line`, pointing down while the section is open, as in the
+      PNG, and rotated to point right when it is closed) + "How do you want to run
       this vote?" in `Secondary/Blue`, SemiBold 16 px; below it a full-width 1 px separator
       (`border/neutral/light`), 8 px under the row.
    2. **Lead** (`7701:25980`): Regular 16 px `text/neutral/dark`.
