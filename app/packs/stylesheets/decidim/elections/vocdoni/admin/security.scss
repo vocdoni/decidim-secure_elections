@@ -1,40 +1,108 @@
-// The Security tab (`admin/security/show.html.erb`).
+// The Security tab (`admin/security/show.html.erb`) and the Dashboard card
+// (`admin/dashboard/_security.html.erb`), after the Decidim 2026 design:
+// `docs/design/security-tab/README.md`.
 //
-// Everything is scoped under `.vocdoni-security`, which sits on the same
-// element as upstream's `.item__edit-form`. That matters for labels:
+// Every colour and type size is a token from `_tokens.scss` (a Design System
+// variable with the Figma value as fallback; the contrast of each pair is
+// recorded there). Spacing and radii are Tailwind utilities carrying the same
+// measures. `spec/lib/decidim/elections/vocdoni/security_stylesheet_spec.rb`
+// fails on a Tailwind colour utility or a raw colour in this file.
+//
+// The tab is scoped under `.vocdoni-security`, which sits on the same element
+// as upstream's `.item__edit-form`. That matters for labels:
 // `.item__edit-form label` makes every label small and grey, and a scoped
 // class selector (two classes) is what outranks it without `!important`.
-//
-// Colours are Decidim's tokens only. Text never uses the raw
-// `success`/`warning`/`alert` fills (they fail contrast as text — see
-// `vocdoni.scss`); state pills are `.label` variants from decidim-core.
+
+// Decidim's Sass loader compiles from a string, so imports resolve through
+// the registered `app/packs` load path, never relative to this file.
+@use "stylesheets/decidim/elections/vocdoni/admin/tokens" as *;
 
 .vocdoni-security {
   [hidden] {
     display: none !important;
   }
 
-  .vocdoni-security__card {
-    @apply mb-6;
-
-    .card-section > .row:last-child {
-      @apply pb-6;
-    }
-  }
-
   .vocdoni-security__fieldset {
     @apply m-0 p-0 border-0 min-w-0;
   }
+}
 
-  .vocdoni-security__lead {
-    @apply mb-4 text-md text-gray-2 max-w-3xl;
+// The one outer card, its disclosure header and the lead.
+//
+// The header is a native `<details open>`/`<summary>`, so the chevron is a
+// working disclosure without JavaScript. Open, the chevron points down (as in
+// Figma); closed, it points right.
+.vocdoni-security {
+  .vocdoni-security__card {
+    @apply mb-6 p-4 rounded-lg;
+
+    border: 1px solid $color-border-neutral-light;
+    color: $color-text-neutral-dark;
   }
 
+  .vocdoni-security__summary {
+    @apply flex items-center gap-2 pb-2 list-none cursor-pointer;
+
+    border-bottom: 1px solid $color-border-neutral-light;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &:focus-visible {
+      @apply outline outline-2 outline-offset-2;
+
+      outline-color: $color-secondary;
+    }
+  }
+
+  .vocdoni-security__chevron {
+    @apply w-6 h-6 shrink-0 transition-transform;
+
+    fill: $color-icon-secondary;
+  }
+
+  .vocdoni-security__section:not([open]) .vocdoni-security__chevron {
+    @apply -rotate-90;
+  }
+
+  .vocdoni-security__legend {
+    @apply m-0 font-semibold;
+
+    font-size: $font-size-md;
+    line-height: $line-height-md;
+    color: $color-secondary;
+  }
+
+  .vocdoni-security__content {
+    @apply flex flex-col gap-6 pt-6;
+  }
+
+  .vocdoni-security__lead {
+    @apply m-0;
+
+    font-size: $font-size-md;
+    line-height: $line-height-md;
+    color: $color-text-neutral-dark;
+  }
+
+  // "Good to know" and the closing note of the one-time code: a plain row,
+  // no box and no background.
   .vocdoni-security__note {
-    @apply flex items-start gap-2 mt-4 mb-0 p-3 rounded bg-background text-sm text-gray-2;
+    @apply flex items-start gap-2 m-0;
+
+    font-size: $font-size-sm;
+    line-height: $line-height-sm;
+    color: $color-text-neutral-light;
 
     svg {
-      @apply w-4 h-4 mt-0.5 shrink-0 fill-secondary;
+      @apply w-5 h-5 shrink-0;
+
+      fill: $color-icon-neutral-light;
+    }
+
+    strong {
+      @apply font-semibold;
     }
   }
 }
@@ -45,285 +113,208 @@
 // `security.js` makes the rest of the card select the option, without an
 // overlay that would stop admins selecting the text.
 .vocdoni-security {
-  // Two columns only from `xl`: next to Decidim's two admin sidebars the
-  // form is under 650px wide below that, too narrow for side-by-side cards.
-  .vocdoni-choices {
-    @apply grid gap-4 pt-3 xl:grid-cols-2;
+  .vocdoni-security__choice {
+    @apply flex flex-col gap-6;
   }
 
-  .vocdoni-choice {
-    @apply relative flex flex-col gap-3 p-5 rounded-lg border-2 border-background-4 bg-white cursor-pointer transition-colors;
+  // Two columns only from `xl`: next to Decidim's two admin sidebars the
+  // form is under 650px wide below that, too narrow for side-by-side cards.
+  // Grid rows stretch, so both cards are as tall as the tallest.
+  .vocdoni-choices {
+    @apply grid gap-5 xl:grid-cols-2;
+  }
 
-    &:hover {
-      @apply border-secondary/50;
+  // The selected border is 2 px: the 1 px border plus a 1 px ring outside
+  // it, so selecting a card does not move its content.
+  .vocdoni-choice {
+    @apply relative flex flex-col gap-4 pt-4 rounded-lg cursor-pointer transition-colors;
+
+    border: 1px solid $color-border-neutral-light;
+
+    &:hover,
+    &.is-selected,
+    &:has(.vocdoni-choice__input:checked) {
+      border-color: $color-border-secondary;
     }
 
     &.is-selected,
     &:has(.vocdoni-choice__input:checked) {
-      @apply border-secondary bg-secondary/5;
+      box-shadow: 0 0 0 1px $color-border-secondary;
 
-      .vocdoni-choice__icon {
-        @apply bg-secondary;
-
-        svg {
-          @apply fill-white;
-        }
-      }
-
-      .vocdoni-choice__point-icon {
-        @apply fill-secondary;
+      .vocdoni-choice__footer {
+        background-color: $color-bg-info-light;
       }
     }
 
     &:has(.vocdoni-choice__input:focus-visible) {
-      @apply outline outline-2 outline-offset-2 outline-secondary;
+      @apply outline outline-2 outline-offset-4;
+
+      outline-color: $color-secondary;
     }
   }
 
   .vocdoni-choice__header {
-    @apply flex flex-wrap items-center gap-3;
+    @apply flex items-center gap-2 px-4;
   }
 
   .vocdoni-choice__input {
-    @apply w-5 h-5 m-0 shrink-0 cursor-pointer accent-[var(--secondary)];
-  }
+    @apply w-4 h-4 m-0 shrink-0 cursor-pointer;
 
-  .vocdoni-choice__icon {
-    @apply flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-background transition-colors;
-
-    svg {
-      @apply w-5 h-5 fill-secondary;
-    }
+    accent-color: $color-secondary;
   }
 
   .vocdoni-choice__title {
-    @apply m-0 text-lg font-semibold text-black cursor-pointer;
+    @apply m-0 font-semibold cursor-pointer;
+
+    font-size: $font-size-md;
+    line-height: $line-height-md;
+    color: $color-text-neutral-dark;
   }
 
-  // "Recommended" sits on the card's top edge, so both cards keep their
-  // headers aligned whatever the width.
+  // "Recommended for binding decisions" sits on the secure card's top edge,
+  // half above it, so both cards keep their headers aligned.
   .vocdoni-choice__badge {
-    @apply absolute -top-3 right-4 z-[1] shadow-sm;
+    @apply absolute -top-3 right-4 z-[1] px-2 py-0.5 rounded font-semibold;
+
+    font-size: $font-size-sm;
+    line-height: $line-height-sm;
+    color: $color-secondary;
+    background-color: $color-bg-info-light;
   }
 
   .vocdoni-choice__body {
-    @apply flex flex-col flex-1 gap-3;
-  }
-
-  .vocdoni-choice__summary {
-    @apply m-0 text-md font-semibold text-gray-2;
+    @apply flex flex-col flex-1 gap-4;
   }
 
   .vocdoni-choice__points {
-    @apply grid gap-2 m-0 p-0 list-none;
+    @apply my-0 mx-4 ps-[21px] list-disc list-outside;
+
+    font-size: $font-size-sm;
+    line-height: $line-height-sm;
+    color: $color-text-neutral-light;
 
     li {
-      @apply flex items-start gap-2 m-0 text-sm text-gray-2;
+      @apply m-0;
     }
   }
 
-  .vocdoni-choice__point-icon {
-    @apply w-4 h-4 mt-0.5 shrink-0 fill-gray-2;
-  }
+  // The footer band is pushed to the bottom of the card; its corners follow
+  // the card's 8 px radius inside the 1 px border.
+  .vocdoni-choice__footer {
+    @apply flex flex-col mt-auto px-4 pt-2 pb-4 rounded-b-[7px];
 
-  .vocdoni-choice__best {
-    @apply mt-auto mb-0 pt-3 border-t border-background-4 text-sm text-gray-2;
+    font-size: $font-size-sm;
+    line-height: $line-height-sm;
+    color: $color-text-neutral-light;
+    background-color: $color-bg-neutral-dark;
+
+    p {
+      @apply m-0;
+    }
 
     strong {
-      @apply text-black;
-    }
-  }
+      @apply font-normal;
 
-  .vocdoni-choice__footnote {
-    @apply self-start m-0 text-xs text-gray-2;
+      color: $color-text-neutral-dark;
+    }
 
     a {
-      @apply text-secondary underline;
+      @apply underline;
+
+      color: $color-secondary;
     }
   }
 }
 
-// "Why it matters" disclosure and the comparison table.
+// One-time code block: inside the same card, shown only for the secret vote.
 .vocdoni-security {
-  .vocdoni-why {
-    @apply mt-6 rounded-lg border border-background-4 bg-background;
-
-    &[open] .vocdoni-why__chevron {
-      @apply rotate-90;
-    }
+  .vocdoni-two-factor {
+    @apply flex flex-col gap-6;
   }
 
-  .vocdoni-why__summary {
-    @apply flex items-center gap-2 p-4 rounded-lg list-none cursor-pointer font-semibold text-secondary;
-
-    &::-webkit-details-marker {
-      display: none;
-    }
-
-    &:focus-visible {
-      @apply outline outline-2 outline-offset-2 outline-secondary;
-    }
-
-    svg {
-      @apply w-5 h-5 shrink-0 fill-current;
-    }
+  .vocdoni-two-factor__header {
+    @apply flex flex-col gap-4;
   }
 
-  .vocdoni-why__chevron {
-    @apply transition-transform;
+  .vocdoni-two-factor__title {
+    @apply m-0 font-semibold;
+
+    font-size: $font-size-md;
+    line-height: $line-height-md;
+    color: $color-text-neutral-dark;
   }
 
-  .vocdoni-why__content {
-    @apply px-4 pb-4;
-  }
+  .vocdoni-two-factor__lead {
+    @apply m-0;
 
-  .vocdoni-why__reasons {
-    @apply grid gap-4 m-0 p-0 list-none xl:grid-cols-2;
-  }
-
-  .vocdoni-why__reason {
-    @apply flex items-start gap-3 m-0 p-4 rounded border border-background-4 bg-white;
-  }
-
-  .vocdoni-why__reason-icon {
-    @apply flex items-center justify-center w-9 h-9 shrink-0 rounded-full bg-secondary/10;
-
-    svg {
-      @apply w-5 h-5 fill-secondary;
-    }
-  }
-
-  .vocdoni-why__reason-title {
-    @apply mb-1 text-md font-semibold text-black;
-  }
-
-  .vocdoni-why__reason-body {
-    @apply m-0 text-sm leading-relaxed text-gray-2;
-  }
-
-  .vocdoni-why__table-title {
-    @apply mt-6 mb-2 text-md font-semibold text-black;
-  }
-
-  .vocdoni-compare {
-    table {
-      @apply m-0 rounded bg-white text-sm text-gray-2;
-    }
-
-    th,
-    td {
-      @apply p-3 text-left align-middle;
-    }
-
-    thead th {
-      @apply bg-background-2 font-semibold text-black;
-    }
-
-    tbody tr {
-      @apply border-b border-background-4 last:border-b-0;
-    }
-
-    tbody th {
-      @apply block font-semibold text-black md:table-cell;
-    }
-
-    .vocdoni-compare__secure {
-      @apply md:bg-secondary/5;
-    }
-  }
-
-  .vocdoni-compare__cell {
-    @apply inline-flex items-center gap-2;
-  }
-
-  .vocdoni-compare__icon {
-    @apply w-4 h-4 shrink-0;
-  }
-
-  .vocdoni-compare__icon--yes {
-    @apply fill-success;
-  }
-
-  .vocdoni-compare__icon--no {
-    @apply fill-gray-2;
-  }
-}
-
-// One-time code options.
-.vocdoni-security {
-  .vocdoni-two-factor__options {
-    @apply grid gap-3 mt-4;
+    font-size: $font-size-md;
+    line-height: $line-height-md;
+    color: $color-text-neutral-dark;
   }
 
   .vocdoni-two-factor__option {
-    @apply p-4 rounded-lg border border-background-4 bg-white;
+    @apply flex flex-col gap-2;
   }
 
   .vocdoni-two-factor__control {
-    @apply flex flex-wrap items-center gap-3;
+    @apply flex items-center gap-2;
 
     input[type="checkbox"] {
-      @apply w-5 h-5 m-0 shrink-0 accent-[var(--secondary)];
+      @apply w-4 h-4 m-0 shrink-0 rounded cursor-pointer;
+
+      accent-color: $color-secondary;
     }
   }
 
+  // Figma 16/22 and 14/18: no Design System line-height token for either.
   .vocdoni-two-factor__label {
-    @apply flex items-center gap-2 m-0 text-md font-semibold text-black cursor-pointer;
+    @apply m-0 cursor-pointer;
 
-    svg {
-      @apply w-5 h-5 shrink-0 fill-secondary;
-    }
-  }
-
-  .vocdoni-two-factor__both {
-    @apply mt-3 mb-0;
+    font-size: $font-size-md;
+    line-height: 22px;
+    color: $color-text-neutral-dark;
   }
 
   .vocdoni-two-factor__help {
-    @apply mt-1 mb-0 ml-8;
+    @apply m-0;
 
-    a {
-      @apply text-secondary underline;
-    }
-  }
-
-  // Only the controls fade: the help text explains why they are off, so it
-  // keeps its full contrast.
-  .vocdoni-two-factor:disabled {
-    .vocdoni-two-factor__control {
-      @apply opacity-60;
-    }
-
-    .vocdoni-two-factor__label {
-      @apply cursor-not-allowed;
-    }
+    font-size: $font-size-sm;
+    line-height: 18px;
+    color: $color-text-neutral-light;
   }
 }
 
-// Summary strip.
-.vocdoni-security {
-  .vocdoni-summary {
-    @apply flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 p-4 rounded-lg border border-background-4 bg-white;
+// Dashboard card. The chrome (`card`, `card-divider`, `card-title`) is
+// upstream's, as on its sibling cards; only the icon and the sentence are
+// styled here. The icon selector has to outrank upstream's
+// `.item__edit-form .card-divider *:not(.button--title) > svg` (24 px).
+.vocdoni-security-summary {
+  @apply my-6 pb-4;
+
+  .card-divider .card-title {
+    @apply gap-2;
   }
 
-  .vocdoni-summary__title {
-    @apply flex items-center gap-2 font-semibold text-black;
+  .card-divider .card-title > svg.vocdoni-security-summary__icon {
+    @apply w-5 h-5 shrink-0;
 
-    svg {
-      @apply w-5 h-5 fill-secondary;
-    }
+    fill: $color-icon-secondary;
   }
 
-  .vocdoni-summary__status {
-    @apply flex flex-wrap items-center gap-2 m-0 text-sm text-gray-2;
+  // Figma 14/16: no Design System line-height token for 16.
+  .vocdoni-security-summary__sentence {
+    @apply m-0;
+
+    font-size: $font-size-sm;
+    line-height: 16px;
+    color: $color-text-neutral-light;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .vocdoni-security {
     .vocdoni-choice,
-    .vocdoni-choice__icon,
-    .vocdoni-why__chevron {
+    .vocdoni-security__chevron {
       transition: none;
     }
   }
