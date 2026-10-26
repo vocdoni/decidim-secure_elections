@@ -11,7 +11,7 @@
 %>
 <% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 <% level = Decidim::Elections::Vocdoni::AdminForms::SecurityForm.level_for(election) %>
-<div class="card vocdoni-security-summary" id="vocdoni-security-summary">
+<div class="card vocdoni-security-summary">
   <div class="card-divider">
     <h2 class="card-title">
       <%= icon "shield-line", class: "vocdoni-security-summary__icon" %>

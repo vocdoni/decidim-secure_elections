@@ -350,23 +350,25 @@ module Decidim
           end
         end
 
-        # Every remixicon name referenced under app/views, app/cells and
-        # app/helpers. Decidim 0.33 raises on an unregistered name at render
-        # time rather than falling back to a placeholder, so this list is
-        # not decoration — a missing entry is a 500 on the page that uses
-        # it.
+        # Every remixicon name this gem renders from app/views, app/cells,
+        # app/helpers and the admin menu, plus the ones core modules that may
+        # not be installed would otherwise register. Decidim 0.33 raises on an
+        # unregistered name at render time rather than falling back to a
+        # placeholder, so this list is not decoration — a missing entry is a
+        # 500 on the page that uses it. `arrow-down-s-line` (Security tab
+        # header) is registered by decidim-core itself.
         ICONS = %w(
           add-line arrow-down-line arrow-left-line arrow-up-line
           bar-chart-box-line bill-line calendar-line calendar-schedule-line
-          check-double-line check-line close-circle-line close-line
-          computer-line dashboard-line database-2-line delete-bin-2-line
+          check-double-line check-line close-circle-line
+          dashboard-line delete-bin-2-line
           delete-bin-line draft-line edit-line error-warning-line
-          external-link-line eye-line eye-off-line file-shield-2-line
-          fingerprint-line government-line group-2-line information-line
-          list-check loader-line lock-2-line lock-line mail-lock-line more-fill
-          pause-circle-line pencil-line play-circle-line question-answer-line
-          question-line refresh-line scales-3-line search-eye-line
-          shield-check-line shield-keyhole-line shield-line smartphone-line
+          external-link-line eye-line
+          fingerprint-line group-2-line information-line
+          list-check loader-line lock-line more-fill
+          pause-circle-line play-circle-line question-answer-line
+          question-line refresh-line
+          shield-keyhole-line shield-line
           stop-circle-line upload-2-line user-follow-line
         ).freeze
 

@@ -47,6 +47,20 @@ module Decidim
             expect(value).to match(/\Avar\(--(?:color-color-[a-z-]+|secondary), #\h{6}\)\z/), "$#{name}: #{value}"
           end
         end
+
+        # decidim/decidim#17722 ships the Design System variables under
+        # decidim-core/app/packs/stylesheets/decidim/tokens/. Once they are in
+        # the Decidim this module runs on, every custom property named in
+        # `_tokens.scss` must exist there, or the fallbacks hide the drift.
+        it "names only custom properties that Decidim's Design System tokens define" do
+          tokens_dir = Decidim::Core::Engine.root.join("app/packs/stylesheets/decidim/tokens")
+          skip "Design System tokens not shipped by this Decidim (decidim/decidim#17722)" unless tokens_dir.directory?
+
+          shipped = tokens_dir.glob("*.css").flat_map { |file| file.read(encoding: "UTF-8").scan(/--[a-z0-9-]+(?=\s*:)/) }.uniq
+          named = tokens.scan(/var\((--[a-z0-9-]+),/).flatten.uniq - ["--secondary"]
+
+          expect(named - shipped).to be_empty
+        end
       end
     end
   end
