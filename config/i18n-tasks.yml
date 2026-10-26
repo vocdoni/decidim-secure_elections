@@ -18,11 +18,22 @@ search:
   paths:
     - app/
     - lib/
+  # The copy of upstream's Dashboard view uses upstream's keys, relative to
+  # upstream's path; they are upstream's to keep.
+  exclude:
+    - app/views/overrides
 
 ignore_unused:
   # The voting page is a static page built by `npm run build:vote`; the whole
-  # subtree is read by JavaScript, not by Ruby.
+  # subtree is read by JavaScript, not by Ruby. `build/vote.mjs` also folds in
+  # the census field labels and the question number.
   - decidim.elections.vocdoni.votes.page.*
+  - decidim.elections.vocdoni.census.fields.*
+  - decidim.elections.vocdoni.elections.show.question_number
 
 ignore_missing:
   - decidim.participatory_processes.scopes.global
+  # Upstream decidim-elections keys, reused so the Security tab reads like
+  # its sibling tabs.
+  - decidim.elections.admin.elections.edit.title
+  - decidim.elections.admin.elections.form.save
