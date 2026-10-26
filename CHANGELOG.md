@@ -57,6 +57,29 @@ All notable changes to this module are documented here. The format follows
 - **`decidim_elections_vocdoni:create_organization`**,
   **`decidim_elections_vocdoni:doctor`** and
   **`decidim_elections_vocdoni:purge_stale_drafts`** rake tasks.
+- **"Your security configuration" card on the Dashboard tab** — one sentence
+  stating the election's saved security level (simple vote, secret and
+  verifiable vote, or secret and verifiable vote with a one-time code). Shown
+  after the Results card of a published election and before the Main card of
+  an unpublished one. Upstream's Dashboard has no view hook, so the module
+  ships a copy of its `dashboard.html.erb` with the card added, on the view
+  path of `Decidim::Elections::Admin::ElectionsController` only; a spec pins
+  the SHA-256 of upstream's file and fails when upstream changes it.
+
+### Changed
+
+- **Security tab redesigned to the Decidim 2026 design** (Decidim Design
+  System): one card with a collapsible "How do you want to run this vote?"
+  header, two option cards with plain bullet points and a "Best for" footer
+  band, the "Recommended for binding decisions" pill, an inline "Good to know"
+  row, and the one-time-code block inside the same card, shown only while the
+  secret vote is selected. The page title is now "Edit election", as on the
+  other election tabs. The "Why it matters" section, the comparison table and
+  the configuration summary line are gone from the tab; the summary moves to
+  the Dashboard card. Colours and type sizes are Design System tokens
+  (`--color-color-*` and `--measure-*` custom properties from
+  decidim/decidim#17722) with the Figma values as fallbacks, so the tab looks
+  the same before and after that pull request reaches Decidim.
 
 ### Security
 
