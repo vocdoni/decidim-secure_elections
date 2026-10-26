@@ -45,7 +45,15 @@ module Decidim
                 email: two_fa.include?("email"))
           end
 
-          # Summary levels shown on the tab, from least to most protected.
+          # The saved level of an election, for read-only surfaces such as the
+          # Dashboard card: the level of the form the Security tab would
+          # render for it.
+          def self.level_for(election)
+            from_model(election).level
+          end
+
+          # Security levels, from least to most protected; each has a
+          # sentence on the Dashboard card (`show.summary.sentences.*`).
           LEVELS = %w(basic strong strongest).freeze
 
           # The page presents `enable_vocdoni` as two cards: a simple vote
