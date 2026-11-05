@@ -13,10 +13,12 @@ concurrency:
 env:
   CI: "true"
 
+# Runners are pinned to 24.04: ruby/setup-ruby has no prebuilt Ruby 3.4.7
+# for ubuntu-26.04 and fails with a 404 before any step runs.
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -43,7 +45,7 @@ jobs:
 
   javascript:
     name: JavaScript tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -64,7 +66,7 @@ jobs:
   # deterministic, so rebuilding and diffing is the whole check.
   build-artefact:
     name: Built voting page is in step with its sources
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -88,7 +90,7 @@ jobs:
 
   ruby:
     name: Ruby tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     services:
       postgres:
