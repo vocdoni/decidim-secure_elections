@@ -38,23 +38,21 @@ module Decidim
             let(:results_availability) { "real_time" }
 
             it "fires a :one_shot SyncElectionResultsJob and reschedules on the live cadence" do
-              expect(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
-                .to receive(:perform_later).with(election.id, mode: :one_shot)
               expect(described_class)
                 .to receive(:set).with(wait: described_class::LIVE_CADENCE_S.seconds).and_call_original
 
-              described_class.perform_now(election.id)
+              expect { described_class.perform_now(election.id) }
+                .to have_enqueued_job(Decidim::Elections::Vocdoni::SyncElectionResultsJob).with(election.id, mode: :one_shot)
             end
           end
 
           context "and the election has after_end results" do
             it "does not fire SyncElectionResultsJob and reschedules on the idle cadence" do
-              expect(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
-                .not_to receive(:perform_later)
               expect(described_class)
                 .to receive(:set).with(wait: described_class::IDLE_CADENCE_S.seconds).and_call_original
 
-              described_class.perform_now(election.id)
+              expect { described_class.perform_now(election.id) }
+                .not_to have_enqueued_job(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
             end
           end
         end
@@ -65,11 +63,10 @@ module Decidim
           before { stub_saas_get(status: "ENDED") }
 
           it "stops rescheduling and does not touch the results job" do
-            expect(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
-              .not_to receive(:perform_later)
             expect(described_class).not_to receive(:set)
 
-            described_class.perform_now(election.id)
+            expect { described_class.perform_now(election.id) }
+              .not_to have_enqueued_job(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
           end
         end
 
@@ -84,12 +81,11 @@ module Decidim
           before { stub_saas_get(status: "READY", published: false) }
 
           it "reschedules on the publishing cadence and does not fire results-sync" do
-            expect(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
-              .not_to receive(:perform_later)
             expect(described_class)
               .to receive(:set).with(wait: described_class::PUBLISHING_CADENCE_S.seconds).and_call_original
 
-            described_class.perform_now(election.id)
+            expect { described_class.perform_now(election.id) }
+              .not_to have_enqueued_job(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
           end
         end
       end

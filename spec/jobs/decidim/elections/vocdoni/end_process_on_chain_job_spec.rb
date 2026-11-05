@@ -32,10 +32,9 @@ module Decidim
                           .with(body: { "status" => "ENDED" })
                           .to_return(status: 200, body: vocdoni_fixture("status_change_enqueued"), headers: json_headers)
 
-          expect(Decidim::Elections::Vocdoni::SyncProcessJob).to receive(:perform_later).with(election.id)
-          expect(Decidim::Elections::Vocdoni::SyncElectionResultsJob).to receive(:perform_later).with(election.id)
-
-          described_class.perform_now(election.id)
+          expect { described_class.perform_now(election.id) }
+            .to have_enqueued_job(Decidim::Elections::Vocdoni::SyncProcessJob).with(election.id)
+            .and have_enqueued_job(Decidim::Elections::Vocdoni::SyncElectionResultsJob).with(election.id)
 
           expect(status_change).to have_been_requested
         end
