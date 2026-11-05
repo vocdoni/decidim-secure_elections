@@ -1,0 +1,52 @@
+// Decidim Design System tokens used by this module's admin screens.
+//
+// Decidim is landing the Design System variables as CSS custom properties in
+// decidim/decidim#17722 (`decidim-core/app/packs/stylesheets/decidim/tokens/`,
+// generated from Figma). Until that PR is in the Decidim version this module
+// runs on, the variables are undefined, so every token carries the Figma value
+// as its fallback: the screens render the same before and after it lands.
+// Names, values and uses: `docs/design/security-tab/README.md`.
+//
+// Only colour and type live here. Spacing and radii are the Tailwind
+// utilities whose values already equal the Design System measures (`gap-2`
+// 8px, `p-4` 16px, `gap-5` 20px, `gap-6` 24px, `rounded` 4px, `rounded-lg`
+// 8px), so nothing changes when the PR maps the measures onto that scale.
+//
+// Contrast of every pair these tokens form (WCAG 2.1 AA, measured; text needs
+// 4.5:1, non-text 3:1):
+//   #525252 on #fafafa  7.3:1   footer band text, helper text
+//   #525252 on #ffffff  7.8:1   points, notes
+//   #303030 on #e8eff9 10.9:1   "Best for:" on the selected band
+//   #525252 on #e8eff9  6.6:1   selected band text
+//   #155abf on #e8eff9  5.4:1   "Recommended" pill
+//   #155abf on #ffffff  6.3:1   section title
+//   #303030 on #fafafa 12.6:1   "Best for:" on the unselected band
+//   #155abf on #fafafa  6.2:1   guide link on the unselected band
+//   #6b7280 on #ffffff  4.0:1   radio border (native control, non-text)
+// Do not pair these tokens any other way without measuring first.
+
+// Text
+$color-text-neutral-dark: var(--color-color-text-neutral-dark, #303030);
+$color-text-neutral-light: var(--color-color-text-neutral-light, #525252);
+
+// Backgrounds
+$color-bg-neutral-dark: var(--color-color-bg-neutral-dark, #fafafa);
+$color-bg-info-light: var(--color-color-bg-info-light, #e8eff9);
+
+// Borders
+$color-border-neutral-light: var(--color-color-border-neutral-light, #e7e7e7);
+$color-border-secondary: var(--color-color-border-secondary, #155abf);
+
+// Icons
+$color-icon-neutral-light: var(--color-color-icon-neutral-light, #525252);
+$color-icon-secondary: var(--color-color-icon-secondary, #155abf);
+
+// `Secondary/Blue`. The PR keeps Decidim's `--secondary` as an alias, and the
+// admin already defines it (`decidim/admin/application.scss`).
+$color-secondary: var(--secondary, #155abf);
+
+// Type: `typography/fontSize/*` and `typography/lineHeight/*`.
+$font-size-sm: var(--measure-font-size-typography-fontsize-sm, 14px);
+$line-height-sm: var(--measure-line-height-typography-lineheight-sm, 21px);
+$font-size-md: var(--measure-font-size-typography-fontsize-md, 16px);
+$line-height-md: var(--measure-line-height-typography-lineheight-md, 24px);

@@ -16,7 +16,9 @@ module Decidim
       # Dashboard, where the admin opts in and picks the second-factor
       # challenge. Opt-in is materialised by the presence of a
       # {Decidim::Elections::Vocdoni::Process} sidecar row keyed to the
-      # upstream election. No upstream file is patched at runtime.
+      # upstream election. No upstream file is patched at runtime; one
+      # upstream view, the Dashboard, is shadowed for its own controller by
+      # a pinned copy (see `extend_upstream`).
       #
       # The voter-facing "engine" surface is deliberately tiny: the voting
       # page is a static SPA under `public/vocdoni/` served by middleware
@@ -153,6 +155,29 @@ module Decidim
             Decidim::Elections::VotesController.include(
               Decidim::Elections::Vocdoni::RedirectsVoterToBooth
             )
+
+            # The "Your security configuration" card on upstream's Dashboard
+            # tab. Upstream's dashboard has no view hook, so this gem ships a
+            # copy of it with the card's render line added, and puts the
+            # copy's directory first on this one controller's view path.
+            #
+            # Why a directory of its own, `app/views/overrides`: every
+            # engine's `app/views` is on every controller's view path, in an
+            # order this gem does not control, so a copy under `app/views`
+            # proper might or might not win, and would shadow upstream's file
+            # for every controller that renders it. `app/views/overrides` is
+            # added here, to `ElectionsController` only, and holds that one
+            # file (a spec lists it). Through the shared `app/views` path the
+            # copy is only reachable as `overrides/…`, which nothing renders;
+            # it holds no Ruby file, so Zeitwerk skips it.
+            #
+            # The copy's header names the upstream file and Decidim commit,
+            # and `spec/lib/decidim/elections/vocdoni/dashboard_override_spec.rb`
+            # fails as soon as upstream changes it. Guarded so a reload that
+            # keeps the class does not stack the path twice.
+            overrides = File.expand_path("app/views/overrides", Decidim::Elections::Vocdoni::Engine.root)
+            elections_controller = Decidim::Elections::Admin::ElectionsController
+            elections_controller.prepend_view_path(overrides) unless elections_controller.view_paths.map(&:to_s).include?(overrides)
           end
         end
 
@@ -325,23 +350,25 @@ module Decidim
           end
         end
 
-        # Every remixicon name referenced under app/views, app/cells and
-        # app/helpers. Decidim 0.33 raises on an unregistered name at render
-        # time rather than falling back to a placeholder, so this list is
-        # not decoration — a missing entry is a 500 on the page that uses
-        # it.
+        # Every remixicon name this gem renders from app/views, app/cells,
+        # app/helpers and the admin menu, plus the ones core modules that may
+        # not be installed would otherwise register. Decidim 0.33 raises on an
+        # unregistered name at render time rather than falling back to a
+        # placeholder, so this list is not decoration — a missing entry is a
+        # 500 on the page that uses it. `arrow-down-s-line` (Security tab
+        # header) is registered by decidim-core itself.
         ICONS = %w(
           add-line arrow-down-line arrow-left-line arrow-up-line
           bar-chart-box-line bill-line calendar-line calendar-schedule-line
-          check-double-line check-line close-circle-line close-line
-          computer-line dashboard-line database-2-line delete-bin-2-line
+          check-double-line check-line close-circle-line
+          dashboard-line delete-bin-2-line
           delete-bin-line draft-line edit-line error-warning-line
-          external-link-line eye-line eye-off-line file-shield-2-line
-          fingerprint-line government-line group-2-line information-line
-          list-check loader-line lock-2-line lock-line mail-lock-line more-fill
-          pause-circle-line pencil-line play-circle-line question-answer-line
-          question-line refresh-line scales-3-line search-eye-line
-          shield-check-line shield-keyhole-line smartphone-line
+          external-link-line eye-line
+          fingerprint-line group-2-line information-line
+          list-check loader-line lock-line more-fill
+          pause-circle-line play-circle-line question-answer-line
+          question-line refresh-line
+          shield-keyhole-line shield-line
           stop-circle-line upload-2-line user-follow-line
         ).freeze
 

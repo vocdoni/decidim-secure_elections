@@ -1,21 +1,25 @@
 <%#
   Security tab, shown on every election between Census and Dashboard.
 
-  1. How the vote runs — a simple Decidim vote or a secret, verifiable one
-     on Vocdoni (`enable_vocdoni`; opting in creates the `Vocdoni::Process`
-     sidecar), with the reasons an organisation would pick one or the other.
-  2. The one-time code sent to voters of a secret vote (`twoFaFields`).
-  3. A one-line summary of the resulting configuration.
+  One card, as in the Decidim 2026 design (docs/design/security-tab/README.md):
+  how the vote runs — a simple Decidim vote or a secret, verifiable one on
+  Vocdoni (`enable_vocdoni`; opting in creates the `Vocdoni::Process`
+  sidecar) — and, for the secret vote only, the one-time code sent to voters
+  (`twoFaFields`). The resulting configuration is summarised on the
+  Dashboard (`admin/dashboard/_security`), not here.
 
-  The server renders every state; `security.js` only keeps the page in step
-  with unsaved changes.
+  The section header is a native `<details open>`, so it opens and closes
+  without JavaScript. The server renders every state; `security.js` only
+  keeps the page in step with unsaved changes.
 %>
 <% add_decidim_page_title(t(".title")) %>
 <% append_javascript_pack_tag "decidim_elections_vocdoni_admin" %>
 <% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 
 <div class="item_show__header border-none">
-  <h1 class="item_show__header-title"><%= t(".title") %></h1>
+  <%# The same title as upstream's Main, Questions, Census and Dashboard
+      tabs; the browser title above keeps naming this tab. %>
+  <h1 class="item_show__header-title"><%= t("decidim.elections.admin.elections.edit.title") %></h1>
 </div>
 
 <%# Upstream's tabs menu (admin_elections_menu), where this engine
@@ -31,9 +35,21 @@
                        url: request.path,
                        method: :put,
                        html: { id: "security-form", class: "form-defaults form" }) do |f| %>
-    <%= render "decidim/elections/vocdoni/admin/security/choice", f: %>
-    <%= render "decidim/elections/vocdoni/admin/security/two_factor", f: %>
-    <%= render "decidim/elections/vocdoni/admin/security/summary" %>
+    <div class="vocdoni-security__card">
+      <details class="vocdoni-security__section" open>
+        <summary class="vocdoni-security__summary">
+          <%= icon "arrow-down-s-line", class: "vocdoni-security__chevron" %>
+          <h2 class="vocdoni-security__legend" id="security-choice-title">
+            <%= t("legend", scope: "decidim.elections.vocdoni.admin.security.show.choice") %>
+          </h2>
+        </summary>
+
+        <div class="vocdoni-security__content">
+          <%= render "decidim/elections/vocdoni/admin/security/choice", f: %>
+          <%= render "decidim/elections/vocdoni/admin/security/two_factor", f: %>
+        </div>
+      </details>
+    </div>
 
     <div class="item__edit-sticky">
       <div class="item__edit-sticky-container">

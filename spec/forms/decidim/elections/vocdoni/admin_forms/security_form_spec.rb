@@ -47,6 +47,25 @@ module Decidim
             end
           end
 
+          describe ".level_for" do
+            it "is basic for an election that has not opted in" do
+              expect(described_class.level_for(election)).to eq("basic")
+            end
+
+            it "is strong for a secret vote without a code" do
+              Vocdoni::Process.create!(election:, state: "pending")
+
+              expect(described_class.level_for(election.reload)).to eq("strong")
+            end
+
+            it "is strongest for a secret vote with a code" do
+              Vocdoni::Process.create!(election:, state: "pending",
+                                       metadata: { "settings" => { "twofa_fields" => %w(phone) } })
+
+              expect(described_class.level_for(election.reload)).to eq("strongest")
+            end
+          end
+
           describe "from the submitted page" do
             subject(:form) { described_class.from_params(security: params) }
 
