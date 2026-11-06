@@ -1,0 +1,162 @@
+ca:
+  decidim:
+    elections:
+      vocdoni:
+        census:
+          fields:
+            birthDate: Data de naixement
+            email: Adreça de correu electrònic
+            memberNumber: Número de membre
+            name: Nom
+            nationalId: DNI / NIF
+            phone: Número de telèfon
+            surname: Cognoms
+        elections:
+          show:
+            question_number: "Pregunta %{number}:"
+        votes:
+          page:
+            auth:
+              body: Per obrir la teva papereta necessitem comprovar que ets al cens d'aquesta elecció. Aquestes dades s'envien a la xarxa de votació i mai no es desen en aquest lloc web.
+              channel:
+                email: Correu electrònic
+                phone: Missatge de text
+              channel_legend: Com vols rebre el codi?
+              channel_required: Tria on vols que t'enviem el codi.
+              contact:
+                email: Adreça de correu electrònic
+                phone: Número de mòbil
+              legend: Dades del cens
+              privacy_note: Les teves dades s'utilitzen únicament per acreditar que pots votar. Mai s'associen a la teva papereta.
+              required: Omple tots els camps abans de continuar.
+              submit: Continuar
+              title: Identifica't
+              twofa_help:
+                email: Fes servir l'adreça de correu electrònic que els organitzadors d'aquesta elecció tenen registrada. Contacta'ls si no saps quina és. Només l'usem per enviar-te el codi.
+                phone: Fes servir el número de mòbil que els organitzadors d'aquesta elecció tenen registrat. Contacta'ls si no saps quin és. Només l'usem per enviar-te el codi.
+              twofa_legend: On t'enviem el codi?
+            ballot:
+              already_recorded:
+                body: Només se t'estan mostrant les preguntes que encara no has respost. Els rebuts de les respostes ja enregistrades apareixeran al final.
+                list_label: "Ja enregistrades:"
+                title: Part de la teva papereta ja està enregistrada
+              back: Pregunta anterior
+              counter: "Pregunta %{current} de %{total}"
+              next: Següent
+              pick_many: "Tria entre %{min} i %{max} opcions."
+              pick_one: Tria una opció.
+              review: Revisa la meva papereta
+              secret: La teva resposta a aquesta pregunta es manté xifrada fins que acabi l'elecció.
+              title: "Papereta per a %{title}"
+            blocked:
+              already_voted:
+                body: Ja has votat en aquesta elecció. Cada persona pot votar una sola vegada, de manera que no tens res més per emetre.
+                title: Ja has votat
+              back: Tornar a l'elecció
+              not_in_census:
+                body: Les dades que has introduït no figuren al cens d'aquesta elecció. Comprova-les i torna a intentar-ho, o contacta els organitzadors si creus que hauries de poder votar.
+                title: No ets al cens d'aquesta elecció
+              not_open:
+                body: En aquest moment no hi ha cap pregunta oberta per votar. Pot ser que la votació encara no hagi començat o que ja hagi tancat.
+                title: La votació no està oberta
+            cancel: Cancel·lar
+            closed_notice: La votació d'aquesta elecció no està oberta en aquest moment. Pots identificar-te igualment per consultar el rebut d'un vot que ja hagis emès.
+            error:
+              retry: Torna-ho a provar
+              title: S'ha produït un error
+            errors:
+              auth_cooldown: "Massa intents. Espera %{seconds} segons i torna-ho a provar."
+              auth_rejected: No hem pogut verificar les teves dades. Comprova-les i torna a intentar-ho.
+              ballot_unsupported: Aquesta pregunta utilitza un format de papereta que aquesta pàgina no entén. Contacta els organitzadors.
+              keys_unavailable: Aquesta pregunta es manté xifrada fins al final i les claus de xifratge encara no s'han publicat. El teu vot no s'ha emès — torna-ho a provar d'aquí a uns minuts.
+              network: No hem pogut connectar amb la xarxa de votació. Comprova la connexió i torna a intentar-ho.
+              otp_expired: Aquest codi ja no és vàlid. Torna a identificar-te per obtenir-ne un de nou.
+              otp_rejected: El codi no coincideix. Comprova'l i torna a introduir-lo, o demana'n un de nou.
+              otp_resend_failed: No hem pogut enviar-te un codi nou. Espera un moment i torna a intentar-ho.
+              process_unavailable: En aquest moment no s'ha pogut carregar aquesta elecció des de la xarxa de votació.
+              relay_rejected: La xarxa de votació ha rebutjat aquest vot. No s'ha comptat.
+              relay_unconfirmed: Hem perdut la connexió mentre s'enviava el teu vot. Pot ser que s'hagi comptat igualment — no votes de nou fins que ho hagis comprovat.
+              sign_rejected: El cens no ha autoritzat aquest vot. Pot ser que ja s'hagi emès des d'un altre dispositiu.
+              unknown: Ha passat alguna cosa inesperada. El teu vot no s'ha emès.
+            exit: Tornar a l'elecció
+            loading:
+              body: Estem llegint aquesta elecció des de la xarxa de votació.
+              title: Preparant la teva papereta
+            noscript: La teva papereta es xifra i se signa al teu navegador, de manera que aquesta pàgina necessita JavaScript per funcionar. Activa JavaScript i torna a carregar-la.
+            otp:
+              body_email: T'hem enviat un codi d'un sol ús per correu electrònic. Introdueix-lo a continuació per confirmar la teva identitat.
+              body_phone: T'hem enviat un codi d'un sol ús per missatge de text. Introdueix-lo a continuació per confirmar la teva identitat.
+              hint: Pots enganxar el codi directament des del missatge.
+              label: Codi d'un sol ús
+              required: Introdueix el codi que t'hem enviat.
+              resend: Envia'm un codi nou
+              resend_ready: Ja pots demanar un codi nou.
+              resend_wait: "Podràs demanar un codi nou en %{seconds} segons."
+              resent: Un codi nou està en camí.
+              restart: Tornar a començar
+              restart_body: Has posat l'adreça o el número equivocats?
+              submit: Confirmar
+              title: Confirma el codi que t'hem enviat
+            page_title: Votar
+            progress:
+              auth: Identificació
+              ballot: Tria
+              label: Passos de la votació
+              receipt: Rebut
+              review: Revisió
+            receipt:
+              already_voted: Ja havies votat en aquesta elecció. Aquests són els rebuts dels vots que hem trobat.
+              body: Cada rebut aquí sota prova que un vot ha quedat registrat a la xarxa de votació. No revela el que has votat.
+              copied: Codi del rebut copiat al porta-retalls.
+              copy: Copiar
+              copy_label: "Copia el codi del rebut per a %{question}"
+              copy_manual: El codi del rebut està seleccionat, a punt per copiar.
+              empty: No hem trobat cap vot registrat per a tu en aquesta elecció.
+              exit: Tornar a l'elecció
+              nullifier_label: Codi del rebut
+              open: Comprova el meu rebut
+              recorded_title: El teu vot ha quedat registrat
+              return_note: Pots veure aquests rebuts en qualsevol moment tornant a aquesta elecció i identificant-te.
+              title: Rebut del teu vot
+            review:
+              back: Canvia les meves respostes
+              body: Encara no s'ha enviat res. Revisa les teves respostes i emet el vot quan estiguis a punt.
+              body_partial: Les respostes que apareixen a continuació encara no s'han enviat. Revisa-les i emet el vot quan estiguis a punt.
+              cast: Emetre el meu vot
+              edit: Canviar
+              edit_label: "Canvia la meva resposta a %{question}"
+              not_answered: Sense resposta
+              title: Revisa la teva papereta
+            status:
+              authenticating: Verificant les teves dades…
+              casting: "Emetent el teu vot per a %{question}…"
+              checking: Comprovant les votacions disponibles…
+              confirming: Esperant la confirmació de la xarxa de votació…
+              done: Fet.
+              loading: Carregant l'elecció…
+              preparing: Preparant la papereta…
+              relaying: Enviant el teu vot…
+              sending_code: Enviant-te un codi nou…
+              signing: Signant el teu vot…
+              waiting_keys: Esperant que es publiquin les claus de xifratge…
+            submit:
+              confirmed_missing: No registrat. Pots tornar-ho a provar.
+              done: Registrat
+              failed: No registrat
+              in_flight: S'està emetent el teu vot. Pot trigar alguns segons per pregunta — mantén aquesta pàgina oberta.
+              in_progress: Enviant…
+              pending: En espera
+              recheck: Comprova si el meu vot ha quedat registrat
+              rechecking: Consultant la xarxa de votació…
+              retry: Torna a provar les preguntes fallides
+              summary_failed: Alguns dels teus vots no s'han pogut emetre. No s'ha registrat res per a ells, de manera que pots tornar-ho a provar sense riscos.
+              summary_unconfirmed: Hem perdut la connexió mentre s'enviaven alguns dels teus vots. Pot ser que s'hagin registrat igualment — comprova-ho abans de tornar-los a enviar per no duplicar-los.
+              title: Emetent el teu vot
+              unconfirmed: No confirmat
+            theme:
+              label: Tema fosc
+            unavailable: Aquesta pàgina no ha pogut iniciar-se. Torna a carregar-la i contacta els organitzadors si el problema persisteix.
+            validation:
+              max_choices: "Tria com a màxim %{max} opcions."
+              min_choices: "Tria com a mínim %{min} opcions."
+              required: Tria una opció per continuar.
