@@ -1,0 +1,7 @@
+es:
+  decidim:
+    elections:
+      vocdoni:
+        booth:
+          receipt:
+            final: Este voto no se puede modificar.

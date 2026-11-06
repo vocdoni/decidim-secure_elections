@@ -9,6 +9,13 @@ import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
  *
  * Config (from the gem's `booth_config`): apiUrl, processId, chainId,
  * explorerUrl, credentials, contact, questions, i18n.
+ *
+ * Adapter contract (all async):
+ *   prepare(ctx)  -> { canVote, alreadyVoted, receipts?, priorReceipts?,
+ *                      pendingQuestionIds?, message? }
+ *   cast(ctx, ballot) -> { receipts, unconfirmed, failed }
+ *   recheck(ctx)  -> { receipts } — re-fetches CSP receipts; call after
+ *                    an unconfirmed result to see whether the vote landed.
  */
 const NAME = "vocdoni";
 const REGISTERED_EVENT = "decidim:voting-backend:registered";
@@ -157,8 +164,21 @@ const createAdapter = () => {
         });
 
         const voted = config.questions.filter((question) => question.hasVoted);
-        if (voted.length > 0) {
+        const stillVotable = config.questions.filter((question) => question.canVote && !question.hasVoted);
+
+        if (voted.length > 0 && stillVotable.length === 0) {
+          // Every question has a recorded vote — show the receipt.
           return { canVote: false, alreadyVoted: true, receipts: receiptsFrom(config, await flow.receipts()) };
+        }
+
+        if (voted.length > 0 && stillVotable.length > 0) {
+          // Some questions are already cast; let the voter finish the rest.
+          return {
+            canVote: true,
+            alreadyVoted: false,
+            priorReceipts: receiptsFrom(config, await flow.receipts()),
+            pendingQuestionIds: stillVotable.map((question) => String(question.questionId))
+          };
         }
 
         if (!config.questions.some((question) => question.canVote)) {
@@ -171,10 +191,21 @@ const createAdapter = () => {
       }
     },
 
+    /**
+     * Casts all votable ballot entries. Never throws: errors per question are
+     * collected into `unconfirmed` (RELAY_UNCONFIRMED — the vote may have
+     * landed) or `failed` (definitive failure — safe to retry).
+     *
+     * @param {Object} ctx - booth context (config, i18n, progress).
+     * @param {Array} ballot - `[{ questionId, responseOptionIds }]` for every question.
+     * @returns {Promise<{receipts: Array, unconfirmed: Array, failed: Array}>} per-question outcome.
+     */
     async cast(ctx, ballot) {
       const { config } = ctx;
       const { i18n } = config;
       const receipts = [];
+      const unconfirmed = [];
+      const failed = [];
 
       const votable = ballot.filter((entry) => {
         const question = questionsByDecidimId.get(String(entry.questionId));
@@ -197,11 +228,40 @@ const createAdapter = () => {
           });
           receipts.push({ questionId: question.questionId, code: nullifier, verifyUrl: verifyUrl(config, nullifier) });
         } catch (error) {
-          throw new Error(message(i18n, error));
+          // Use the error's own code when present (duck-type, avoids cross-module
+          // instanceof mismatches in test environments).
+          const code = error && typeof error.code === "string"
+            ? error.code
+            : ErrorCode.UNKNOWN;
+
+          if (code === ErrorCode.RELAY_UNCONFIRMED) {
+            unconfirmed.push({ questionId: question.questionId, label: question.title });
+          } else {
+            failed.push({ questionId: question.questionId, label: question.title, error: message(i18n, error) });
+          }
         }
       }
 
-      return { receipts };
+      return { receipts, unconfirmed, failed };
+    },
+
+    /**
+     * Re-fetches the CSP receipt store. Call this after an unconfirmed result
+     * to find out whether the vote arrived on chain in the meantime.
+     *
+     * @param {Object} ctx - booth context (config).
+     * @returns {Promise<{receipts: Array}>} only the questions that now have a receipt.
+     */
+    async recheck(ctx) {
+      const { config } = ctx;
+
+      try {
+        const consumed = await flow.receipts();
+
+        return { receipts: receiptsFrom(config, consumed) };
+      } catch {
+        return { receipts: [] };
+      }
     }
   };
 };
