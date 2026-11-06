@@ -37,15 +37,21 @@ module Decidim
             manifest.supports_per_question = false
 
             manifest.applies_to { |election| enabled? && election.vocdoni_process.present? }
-            manifest.booth_config { |election, voter_uid:, current_user:| booth_config(election, current_user) }
+            manifest.booth_config { |election, voter_uid:, **| booth_config(election, voter_uid:) }
             # The CSP's `check` is authoritative, in the browser.
             manifest.voted { |_election, _voter_uid| false }
             manifest.csp_directives { |_election| { "connect-src" => [Vocdoni.api_url.to_s.sub(%r{/+\z}, "")] } }
           end
         end
 
-        def self.booth_config(election, user)
+        # `voter_uid` is what the election's census minted for this session:
+        # a signed-in participant for `internal_users`, a CSV row for
+        # `token_csv` (whose voters need not have a Decidim account).
+        def self.booth_config(election, voter_uid:)
           process = election.vocdoni_process
+          subject = VoterCredential.subject_for(election, voter_uid)
+          email = CensusMember.email(subject)
+          phone = CensusMember.phone(subject) if process.metadata.to_h.dig("settings", "twofa_fields").to_a.include?("phone")
           meta = process.questions_metadata.index_by { |row| row["decidim_question_id"].to_i }
           ready = process.published? && process.vocdoni_process_id.present?
 
@@ -54,9 +60,8 @@ module Decidim
             processId: ready ? process.vocdoni_process_id : nil,
             chainId: process.chain_id,
             explorerUrl: Vocdoni.explorer_url,
-            # Demo: memberNumber is the Decidim user id, as PublishElectionJob pushes it.
-            credentials: { memberNumber: user&.id.to_s },
-            contact: { email: user&.email, masked: mask(user&.email) },
+            credentials: { memberNumber: VoterCredential.for(election, subject) },
+            contact: { email:, phone:, masked: mask(email) }.compact,
             questions: election.questions.map do |question|
               row = meta[question.id] || {}
               {
