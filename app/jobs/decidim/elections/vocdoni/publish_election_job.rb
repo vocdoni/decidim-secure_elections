@@ -35,16 +35,20 @@ module Decidim
         # creates fresh duplicated members upstream on each attempt.
         retry_on Decidim::Elections::Vocdoni::ApiError, wait: :polynomially_longer, attempts: 3
 
-        MEMBER_IDENTITY_FIELDS = %w(memberNumber nationalId email phone).freeze
+        # The SaaS's largest page size for `GET /organizations/{addr}/members`.
+        MEMBERS_PAGE_SIZE = 100
 
-        # Defensive bound on the memberbase pagination walk.
-        MAX_MEMBER_PAGES = 200
+        # Defensive bound on the memberbase pagination walk: enough pages to
+        # read a full memberbase (the SaaS caps one at 50,000 members).
+        MAX_MEMBER_PAGES = 600
 
-        # Cap on the demo roster — mirrors the original
-        # `:vocdoni_secure` `user_query`. Keeps publish + memberbase upload
-        # fast against the stg SaaS. Real deployments will replace this
-        # inline query with a proper roster picked from the admin form.
-        DEMO_ROSTER_LIMIT = 20
+        # Members per `POST /organizations/{addr}/members`. The SaaS sets no
+        # per-call cap, but it hashes every phone with Argon2 one after
+        # another, so a batch has to finish within `Vocdoni.job_timeout`.
+        # Override with `VOCDONI_MEMBER_BATCH_SIZE`.
+        def self.member_batch_size
+          [ENV.fetch("VOCDONI_MEMBER_BATCH_SIZE", "200").to_i, 1].max
+        end
 
         def perform(election_id, scheduled_start_at = nil) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
           return unless bootstrap!(election_id)
@@ -115,6 +119,7 @@ module Decidim
         end
 
         def prepare_census!
+          ensure_census_ready!
           ensure_members_pushed!
           ensure_group_created!
           ensure_census_validated!
@@ -155,6 +160,19 @@ module Decidim
         # Census
         # ---------------------------------------------------------------------
 
+        # Upstream's own gate: the publish button stays disabled until the
+        # census is ready. A scheduled push checks it again, because the
+        # census can change between the click and the run.
+        def ensure_census_ready!
+          @step = "census"
+          return if election.census_ready?
+
+          raise Decidim::Elections::Vocdoni::ApiError.new(
+            "This election's census is not ready: finish it on the Census tab before publishing",
+            transient: false
+          )
+        end
+
         def ensure_members_pushed!
           @step = "add_members"
           # Skip when we already have a group id from a previous attempt.
@@ -174,20 +192,25 @@ module Decidim
           # on the (censusId, loginHash) unique index because the clones all
           # hash to the same auth-field value. Filter by what is already there.
           existing = upstream_member_index
-          fresh = payloads.reject { |p| existing.has_key?("memberNumber:#{p["memberNumber"].to_s.strip.downcase}") }
+          fresh = payloads.reject { |p| existing.has_key?(p["memberNumber"]) }
           return if fresh.empty?
 
-          response = client.organizations.add_members(org_address, fresh).to_h
-          await_job!(response["jobId"])
+          # A failed batch stops the push; a retry skips the batches already in.
+          fresh.each_slice(self.class.member_batch_size) { |batch| push_members!(batch) }
           # The push added rows the memoized index has not seen; drop it so
           # resolve_member_ids! rewalks and picks up the new ids.
           @upstream_member_index = nil
+        end
 
-          errors = Array(response["errors"]).map(&:to_s).compact_blank
+        def push_members!(batch)
+          response = client.organizations.add_members(org_address, batch).to_h
+          job = await_job!(response["jobId"]).to_h
+
+          errors = (Array(response["errors"]) + Array(job["errors"])).map(&:to_s).compact_blank
           return if errors.empty?
 
           raise Decidim::Elections::Vocdoni::ApiError.new(
-            "The Vocdoni memberbase rejected #{errors.size} of #{fresh.size} voters: #{errors.join("; ")}",
+            "The Vocdoni memberbase rejected #{errors.size} of #{batch.size} voters: #{errors.join("; ")}",
             body: response,
             transient: false
           )
@@ -314,54 +337,75 @@ module Decidim
         # ---------------------------------------------------------------------
 
         def voter_payloads
-          @voter_payloads ||= census_users.map { |user| user_to_member(user) }.compact_blank
+          @voter_payloads ||= census_subjects.map do |subject|
+            CensusMember.payload(election, subject, two_fa_fields:)
+          end.compact_blank
         end
 
-        # Demo roster: every registered user of the org that has an email,
-        # capped at `DEMO_ROSTER_LIMIT`. The cap is applied through a
-        # `pluck` + `where(id:)` so it survives the outer `.limit` the
-        # census-manifest paging composes on the returned relation (an outer
-        # `.limit` on ActiveRecord overrides a chained inner `.limit`).
-        def census_users
-          ids = Decidim::User
-                .where(organization: election.organization)
-                .where.not(email: nil)
-                .order(id: :asc)
-                .limit(DEMO_ROSTER_LIMIT)
-                .pluck(:id)
-          Decidim::User.where(id: ids)
+        # The voters of the election's upstream census, whatever its type:
+        # `Decidim::User`s for `internal_users`, `Decidim::Elections::Voter`
+        # rows for `token_csv`. The manifest's own query picks them, so the
+        # roster follows the same rules as Decidim's census check.
+        def census_subjects
+          @census_subjects ||= census_records.select { |record| admitted?(record) }
         end
 
-        # Maps a `Decidim::User` onto the Vocdoni memberbase schema. The
-        # `memberNumber` is the Decidim user id — stable, unique, and lets a
-        # returning voter match up on the same identity across retries.
-        def user_to_member(user)
-          {
-            "memberNumber" => user.id.to_s,
-            "name" => user.name.to_s.strip.presence,
-            "email" => user.email.to_s.strip.presence
-          }.compact
+        # `users(election, 0, nil)` is the manifest's whole relation (a nil
+        # limit is no limit); `find_each` walks it in id order, in batches.
+        def census_records
+          census = election.census
+          return [] if census.nil?
+
+          records = census.users(election, 0, nil)
+          records = records.respond_to?(:find_each) ? records.find_each.to_a : Array(records)
+          unsupported = records.reject { |record| record.is_a?(Decidim::User) || record.is_a?(Decidim::Elections::Voter) }
+          return records if unsupported.empty?
+
+          raise Decidim::Elections::Vocdoni::ApiError.new(
+            "The #{election.census_manifest} census lists #{unsupported.first.class.name} records, which cannot be pushed to Vocdoni",
+            transient: false
+          )
         end
 
+        # `internal_users` only queries who holds the authorizations; the
+        # handlers' options (say, a postal code) are checked by the census's
+        # voter form. `valid_user?` runs that same check, so a participant
+        # Decidim would turn away from the booth is not pushed either.
+        # CSV rows are the census as uploaded.
+        def admitted?(record)
+          return true unless record.is_a?(Decidim::User)
+
+          election.census.valid_user?(election, {}, current_user: record)
+        end
+
+        # The memberbase is shared by every election of the organization, so
+        # members are matched by the credential alone: an email or phone
+        # match may be the same person's member from another election, whose
+        # memberNumber is not this election's credential.
         def resolve_member_ids!
           @step = "list_members"
           index = upstream_member_index
 
-          census_users.map do |user|
-            id = index["memberNumber:#{user.id}"] ||
-                 (user.email.present? && index["email:#{user.email.strip.downcase}"])
-
-            next nil if id.blank?
-
+          missing = 0
+          ids = voter_payloads.filter_map do |payload|
+            id = index[payload["memberNumber"]]
+            missing += 1 if id.blank?
             id
-          end.compact
+          end
+          return ids.uniq if missing.zero?
+
+          raise Decidim::Elections::Vocdoni::ApiError.new(
+            "#{missing} of #{voter_payloads.size} voters are missing from the Vocdoni memberbase after the push",
+            transient: false
+          )
         end
 
         # Memoized so ensure_members_pushed! (which reads it to dedupe against
         # the memberbase) and resolve_member_ids! (which reads it to look up
         # ids for the group) share one walk. Callers that add members must
         # invalidate `@upstream_member_index` so the next read rewalks.
-        def upstream_member_index # rubocop:disable Metrics/CyclomaticComplexity
+        # Maps memberNumber to member id.
+        def upstream_member_index
           return @upstream_member_index if @upstream_member_index
 
           index = {}
@@ -369,20 +413,14 @@ module Decidim
           pages = 0
 
           while pages < MAX_MEMBER_PAGES
-            response = client.organizations.members(org_address, page:).to_h
+            response = client.organizations.members(org_address, page:, limit: MEMBERS_PAGE_SIZE).to_h
             members = Array(response["members"]).grep(Hash)
             break if members.empty?
 
             members.each do |member|
               id = member["id"].presence
-              next if id.blank?
-
-              MEMBER_IDENTITY_FIELDS.each do |field|
-                value = member[field].to_s.strip.downcase
-                next if value.blank?
-
-                index["#{field}:#{value}"] ||= id
-              end
+              number = member["memberNumber"].to_s.strip
+              index[number] ||= id if id.present? && number.present?
             end
 
             pages += 1
@@ -471,10 +509,9 @@ module Decidim
           election.results_availability.to_s != "real_time"
         end
 
-        # Fixed to `memberNumber` (the Decidim user id, which every roster row
-        # we push carries). The Security tab does not let the admin pick auth
-        # fields for the demo — `memberNumber` is a stable, unique identifier
-        # over any Decidim organisation.
+        # Fixed to `memberNumber`: the {VoterCredential} every member we push
+        # carries and the booth hands the CSP. Voters never type it, so the
+        # census needs no other identifier, whatever its type.
         def auth_fields
           ["memberNumber"]
         end

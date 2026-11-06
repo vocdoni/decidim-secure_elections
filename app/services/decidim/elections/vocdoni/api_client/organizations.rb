@@ -79,11 +79,13 @@ module Decidim
           #
           # @param org_address [String] `0x…` organization address.
           # @param page [Integer, nil] 1-based page number.
+          # @param limit [Integer, nil] page size; the SaaS defaults to 10 and
+          #   caps it at 100.
           # @return [Hash] `{"members" => [{"id" => …, "memberNumber" => …, …}],
           #   "pagination" => {"nextPage" => …, "lastPage" => …}}`.
           # @raise [Decidim::Elections::Vocdoni::ApiError]
-          def members(org_address, page: nil)
-            params = page.nil? ? nil : { "page" => page }
+          def members(org_address, page: nil, limit: nil)
+            params = { "page" => page, "limit" => limit }.compact.presence
 
             client.get("/organizations/#{org_address}/members", params:)
           end
