@@ -1,0 +1,19 @@
+<%# Pre-ballot panel for the `vocdoni` voting backend: the one-time code the CSP emailed. Shown by the adapter. %>
+<% otp = t("decidim.elections.vocdoni.votes.page.otp") %>
+<h2 class="h3 mb-4" tabindex="-1"><%= otp[:title] %></h2>
+<p class="mb-4">
+  <%= otp[:body_email] %>
+  <% if booth_config.dig(:contact, :masked).present? %>
+    (<strong><%= booth_config.dig(:contact, :masked) %></strong>)
+  <% end %>
+</p>
+<form data-vocdoni-otp-form class="form-defaults" novalidate>
+  <label for="vocdoni-otp-code"><%= otp[:label] %></label>
+  <input id="vocdoni-otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" data-vocdoni-otp-code>
+  <p class="help-text"><%= otp[:hint] %></p>
+  <p class="form-error is-visible" role="alert" data-vocdoni-otp-feedback></p>
+  <div class="flex justify-between mt-6 gap-4">
+    <button type="button" class="button button__lg button__transparent-secondary" data-vocdoni-otp-resend disabled><%= otp[:resend] %></button>
+    <button type="submit" class="button button__lg button__secondary"><%= otp[:submit] %></button>
+  </div>
+</form>
