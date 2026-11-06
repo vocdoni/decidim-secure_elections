@@ -1,0 +1,63 @@
+ca:
+  decidim:
+    admin:
+      menu:
+        elections_menu:
+          security: "Seguretat"
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            security:
+              title: "La teva configuració de seguretat"
+          security:
+            show:
+              title: "Seguretat"
+              choice:
+                legend: "Com vols dur a terme aquesta votació?"
+                lead: "Aquesta tria determina qui pot llegir les paperetes i si el recompte pot ser verificat per algú aliè a l'organització."
+                recommended: "Recomanat per a decisions vinculants"
+                best_for: "Ideal per a:"
+                simple:
+                  title: "Vot senzill"
+                  points:
+                    stored: "Les paperetes es guarden a la base de dades d'aquesta plataforma."
+                    readable: "Els administradors de la plataforma poden llegir-les tècnicament."
+                    unverifiable: "Els resultats es calculen en aquest servidor; ningú extern pot comprovar-los."
+                    editable: "Es pot modificar fins que comenci la votació."
+                  best_for: "Enquestes informals, consultes ràpides, decisions que és poc probable que es contestin."
+                secure:
+                  title: "Vot secret i verificable"
+                  points:
+                    anonymous: "Ningú — ni tan sols els administradors — pot vincular una papereta a un votant."
+                    tamper: "Qualsevol manipulació és detectable: cada votant rep un rebut per comprovar-ho en un explorador públic, i l'exportació de resultats hi fa referència."
+                    minimal: "Només s'utilitzen les dades necessàries per verificar qui pot votar; les paperetes no contenen cap dada personal."
+                    locked: "Bloquejada un cop publicada — és el que la fa fiable."
+                  best_for: "Eleccions de càrrecs, votacions estatutàries, pressupostos — qualsevol cosa que hagi de resistir un impugnament."
+                  powered_by: "Impulsat pel protocol de votació Vocdoni."
+                  guide_url: ""
+                  guide_link: "Llegeix la guia completa"
+                good_to_know_html: "<strong>Bon a saber:</strong> pots canviar aquesta tria fins que l'elecció estigui publicada. Les persones votants no notaran cap diferència, excepte el codi d'un sol ús si l'actives."
+              two_factor:
+                legend: "Confirma la identitat dels votants amb un codi d'un sol ús"
+                lead: "Cada votant rep un codi d'un sol ús quan obre la papereta i l'ha d'introduir abans de votar. Evita que algú voti en nom d'una altra persona i fa el resultat més difícil d'impugnar."
+                email:
+                  label: "Codi per correu electrònic"
+                  help: "El codi s'envia a l'adreça de correu electrònic amb la qual cada participant s'ha registrat."
+                sms:
+                  label: "Codi per SMS"
+                  help: "El codi s'envia per missatge de text, de manera que cada votant necessita un número de telèfon registrat al servei de votació."
+                both_note: "Si totes dues opcions estan activades, cada votant tria com rebre el codi."
+              summary:
+                sentences:
+                  basic: "Les paperetes es guarden en aquesta plataforma. Adequat per a consultes informals."
+                  strong: "Paperetes anònimes, resultat verificable per qualsevol persona."
+                  strongest: "Paperetes anònimes, resultat verificable per qualsevol persona. Els votants confirmen la seva identitat amb un codi d'un sol ús."
+            update:
+              success: "Configuració de seguretat actualitzada."
+              invalid: "No s'ha pogut desar la configuració de seguretat. Revisa els errors que apareixen a continuació."
+        booth:
+          launcher:
+            help_html: "El teu vot s'emet mitjançant la tecnologia segura de Vocdoni, que garanteix l'anonimat i la verificabilitat."
+            enter: "Obrir la cabina de votació"
+            not_ready: "Aquesta elecció encara no està a punt per acceptar vots a la xarxa. Torna-ho a provar d'aquí a uns instants."

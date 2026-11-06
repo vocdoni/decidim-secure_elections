@@ -1,7 +1,7 @@
 ---
 
 base_locale: en
-locales: [en]
+locales: [en, ca, es]
 
 # `data.read` names every English source file this gem ships. Two survive:
 # the Security tab / booth strings, and the strings the static voting page is

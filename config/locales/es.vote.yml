@@ -1,0 +1,162 @@
+es:
+  decidim:
+    elections:
+      vocdoni:
+        census:
+          fields:
+            birthDate: Fecha de nacimiento
+            email: Dirección de correo electrónico
+            memberNumber: Número de miembro
+            name: Nombre
+            nationalId: DNI / NIF
+            phone: Número de teléfono
+            surname: Apellidos
+        elections:
+          show:
+            question_number: "Pregunta %{number}:"
+        votes:
+          page:
+            auth:
+              body: Para abrir tu papeleta necesitamos comprobar que estás en el censo de esta elección. Estos datos se envían a la red de votación y nunca se almacenan en este sitio web.
+              channel:
+                email: Correo electrónico
+                phone: Mensaje de texto
+              channel_legend: ¿Cómo quieres recibir el código?
+              channel_required: Elige dónde quieres que te enviemos el código.
+              contact:
+                email: Dirección de correo electrónico
+                phone: Número de móvil
+              legend: Datos del censo
+              privacy_note: Tus datos se utilizan únicamente para acreditar que puedes votar. Nunca se asocian a tu papeleta.
+              required: Rellena todos los campos antes de continuar.
+              submit: Continuar
+              title: Identifícate
+              twofa_help:
+                email: Usa la dirección de correo electrónico que los organizadores de esta elección tienen registrada. Contacta con ellos si no sabes cuál es. Solo la usamos para enviarte el código.
+                phone: Usa el número de móvil que los organizadores de esta elección tienen registrado. Contacta con ellos si no sabes cuál es. Solo lo usamos para enviarte el código.
+              twofa_legend: ¿A dónde te enviamos el código?
+            ballot:
+              already_recorded:
+                body: Solo se te muestran las preguntas que aún no has respondido. Los justificantes de las respuestas ya registradas aparecerán al final.
+                list_label: "Ya registradas:"
+                title: Parte de tu papeleta ya está registrada
+              back: Pregunta anterior
+              counter: "Pregunta %{current} de %{total}"
+              next: Siguiente
+              pick_many: "Elige entre %{min} y %{max} opciones."
+              pick_one: Elige una opción.
+              review: Revisar mi papeleta
+              secret: Tu respuesta a esta pregunta permanece cifrada hasta que finalice la elección.
+              title: "Papeleta para %{title}"
+            blocked:
+              already_voted:
+                body: Ya has votado en esta elección. Cada persona puede votar una sola vez, así que no tienes nada más que emitir.
+                title: Ya has votado
+              back: Volver a la elección
+              not_in_census:
+                body: Los datos que has introducido no figuran en el censo de esta elección. Compruébalos e inténtalo de nuevo, o contacta con los organizadores si crees que deberías poder votar.
+                title: No estás en el censo de esta elección
+              not_open:
+                body: En este momento no hay ninguna pregunta abierta para votar. Es posible que la votación no haya comenzado todavía o que ya haya cerrado.
+                title: La votación no está abierta
+            cancel: Cancelar
+            closed_notice: La votación de esta elección no está abierta en este momento. Puedes identificarte igualmente para consultar el justificante de un voto que ya hayas emitido.
+            error:
+              retry: Intentar de nuevo
+              title: Algo ha ido mal
+            errors:
+              auth_cooldown: "Demasiados intentos. Espera %{seconds} segundos e inténtalo de nuevo."
+              auth_rejected: No hemos podido verificar tus datos. Compruébalos e inténtalo de nuevo.
+              ballot_unsupported: Esta pregunta utiliza un formato de papeleta que esta página no entiende. Contacta con los organizadores.
+              keys_unavailable: Esta pregunta permanece cifrada hasta el final y las claves de cifrado aún no se han publicado. Tu voto no se ha emitido — inténtalo de nuevo en unos minutos.
+              network: No hemos podido conectar con la red de votación. Comprueba tu conexión e inténtalo de nuevo.
+              otp_expired: Este código ya no es válido. Vuelve a identificarte para obtener uno nuevo.
+              otp_rejected: El código no coincide. Compruébalo e introdúcelo de nuevo, o solicita uno nuevo.
+              otp_resend_failed: No hemos podido enviarte un código nuevo. Espera un momento e inténtalo de nuevo.
+              process_unavailable: En este momento no se ha podido cargar esta elección desde la red de votación.
+              relay_rejected: La red de votación ha rechazado este voto. No se ha contabilizado.
+              relay_unconfirmed: Hemos perdido la conexión mientras se enviaba tu voto. Es posible que se haya contabilizado igualmente — no votes de nuevo hasta que lo hayas comprobado.
+              sign_rejected: El censo no ha autorizado este voto. Es posible que ya se haya emitido desde otro dispositivo.
+              unknown: Ha ocurrido algo inesperado. Tu voto no se ha emitido.
+            exit: Volver a la elección
+            loading:
+              body: Estamos leyendo esta elección desde la red de votación.
+              title: Preparando tu papeleta
+            noscript: Tu papeleta se cifra y se firma en tu navegador, por lo que esta página necesita JavaScript para funcionar. Activa JavaScript y vuelve a cargarla.
+            otp:
+              body_email: Te hemos enviado un código de un solo uso por correo electrónico. Introdúcelo a continuación para confirmar tu identidad.
+              body_phone: Te hemos enviado un código de un solo uso por mensaje de texto. Introdúcelo a continuación para confirmar tu identidad.
+              hint: Puedes pegar el código directamente desde el mensaje.
+              label: Código de un solo uso
+              required: Introduce el código que te hemos enviado.
+              resend: Envíame un código nuevo
+              resend_ready: Ya puedes solicitar un código nuevo.
+              resend_wait: "Podrás solicitar un código nuevo en %{seconds} segundos."
+              resent: Un código nuevo está en camino.
+              restart: Volver a empezar
+              restart_body: ¿Has puesto la dirección o el número equivocados?
+              submit: Confirmar
+              title: Confirma el código que te hemos enviado
+            page_title: Votar
+            progress:
+              auth: Identificación
+              ballot: Elige
+              label: Pasos de la votación
+              receipt: Justificante
+              review: Revisión
+            receipt:
+              already_voted: Ya habías votado en esta elección. Estos son los justificantes de los votos que hemos encontrado.
+              body: Cada justificante aquí abajo demuestra que un voto ha quedado registrado en la red de votación. No revela lo que has votado.
+              copied: Código del justificante copiado al portapapeles.
+              copy: Copiar
+              copy_label: "Copia el código del justificante para %{question}"
+              copy_manual: El código del justificante está seleccionado, listo para copiar.
+              empty: No hemos encontrado ningún voto registrado para ti en esta elección.
+              exit: Volver a la elección
+              nullifier_label: Código del justificante
+              open: Comprobar mi justificante
+              recorded_title: Tu voto ha quedado registrado
+              return_note: Puedes ver estos justificantes en cualquier momento volviendo a esta elección e identificándote.
+              title: Justificante de tu voto
+            review:
+              back: Cambiar mis respuestas
+              body: Todavía no se ha enviado nada. Revisa tus respuestas y emite tu voto cuando estés listo.
+              body_partial: Las respuestas que aparecen a continuación todavía no se han enviado. Revísalas y emite tu voto cuando estés listo.
+              cast: Emitir mi voto
+              edit: Cambiar
+              edit_label: "Cambiar mi respuesta a %{question}"
+              not_answered: Sin respuesta
+              title: Revisar tu papeleta
+            status:
+              authenticating: Verificando tus datos…
+              casting: "Emitiendo tu voto para %{question}…"
+              checking: Comprobando las votaciones disponibles…
+              confirming: Esperando la confirmación de la red de votación…
+              done: Hecho.
+              loading: Cargando la elección…
+              preparing: Preparando la papeleta…
+              relaying: Enviando tu voto…
+              sending_code: Enviándote un código nuevo…
+              signing: Firmando tu voto…
+              waiting_keys: Esperando que se publiquen las claves de cifrado…
+            submit:
+              confirmed_missing: No registrado. Puedes intentarlo de nuevo.
+              done: Registrado
+              failed: No registrado
+              in_flight: Se está emitiendo tu voto. Puede tardar unos segundos por pregunta — mantén esta página abierta.
+              in_progress: Enviando…
+              pending: En espera
+              recheck: Comprobar si mi voto ha quedado registrado
+              rechecking: Consultando la red de votación…
+              retry: Reintentar las preguntas fallidas
+              summary_failed: Algunos de tus votos no se han podido emitir. No se ha registrado nada para ellos, así que puedes intentarlo de nuevo sin riesgo.
+              summary_unconfirmed: Hemos perdido la conexión mientras se enviaban algunos de tus votos. Es posible que se hayan registrado igualmente — compruébalo antes de volver a enviarlos para no duplicarlos.
+              title: Emitiendo tu voto
+              unconfirmed: No confirmado
+            theme:
+              label: Tema oscuro
+            unavailable: Esta página no ha podido iniciarse. Vuelve a cargarla y contacta con los organizadores si el problema persiste.
+            validation:
+              max_choices: "Elige como máximo %{max} opciones."
+              min_choices: "Elige como mínimo %{min} opciones."
+              required: Elige una opción para continuar.
