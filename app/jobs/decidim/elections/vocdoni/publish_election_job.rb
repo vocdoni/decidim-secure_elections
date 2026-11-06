@@ -439,7 +439,8 @@ module Decidim
             "type" => type,
             "choices" => question.response_options.order(:id).map.with_index do |option, idx|
               { "title" => localize(option.body), "value" => idx }
-            end
+            end,
+            "secretUntilTheEnd" => secret_until_the_end?
           }
 
           description = localize(question.description)
@@ -462,6 +463,13 @@ module Decidim
         # ---------------------------------------------------------------------
         # Config
         # ---------------------------------------------------------------------
+
+        # Ballots are encrypted on chain unless the election shows live results:
+        # with `after_end` and `per_question` nobody may see partial tallies
+        # before the question (or election) closes.
+        def secret_until_the_end?
+          election.results_availability.to_s != "real_time"
+        end
 
         # Fixed to `memberNumber` (the Decidim user id, which every roster row
         # we push carries). The Security tab does not let the admin pick auth
