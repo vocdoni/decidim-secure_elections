@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "securerandom"
 require "decidim/elections/vocdoni/version"
 require "decidim/elections/vocdoni/engine"
 
@@ -204,3 +205,6 @@ module Decidim
     end
   end
 end
+
+# CSP errors subclass ConfigurationError above, so this loads last.
+require "decidim/elections/vocdoni/csp"
