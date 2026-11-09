@@ -240,6 +240,47 @@ module Decidim
           end
         end
 
+        # Voter CSP endpoints on the frontend elections engine, next to the
+        # votes routes: `/elections/:election_id/csp/{status,sign,confirm}`. The
+        # leading slash escapes upstream's `isolate_namespace`, as for the
+        # Security tab.
+        initializer "decidim_elections_vocdoni.csp_routes" do |app|
+          Decidim::Elections::Engine.routes.append do
+            resources :elections, only: [] do
+              get "csp/status", to: "/decidim/elections/vocdoni/voter_csp#status", as: :csp_status
+              post "csp/sign", to: "/decidim/elections/vocdoni/voter_csp#sign", as: :csp_sign
+              post "csp/confirm", to: "/decidim/elections/vocdoni/voter_csp#confirm", as: :csp_confirm
+            end
+          end
+
+          # Per IP on top of the per-voter limits in the controller. Rack::Attack
+          # is loaded by decidim-core in production (and test) only.
+          app.config.after_initialize do
+            if defined?(Rack::Attack)
+              Rack::Attack.throttle("vocdoni/csp/ip", limit: 120, period: 60) do |req|
+                req.ip if req.path.include?("/csp/")
+              end
+            end
+          end
+        end
+
+        # The gem never logs a voter's address or nullifier, and Rails logs
+        # every request's parameters at info. Rails matches these as
+        # substrings, so host keys such as `email_address` are filtered in logs
+        # too; nothing else changes.
+        #
+        # Active Record copies `filter_parameters` when it loads, which can be
+        # before this runs, so the pin columns join its filter too: SQL logs
+        # (debug) and `inspect` show a pin's `address` and `nullifier` as
+        # [FILTERED]. Exact names there, so columns such as `email_address`
+        # elsewhere still inspect normally.
+        initializer "decidim_elections_vocdoni.csp_filter_parameters" do |app|
+          app.config.filter_parameters += [:address, :nullifier, :pinnedAddress]
+          ActiveSupport.on_load(:active_record) do
+            self.filter_attributes += [/\Aaddress\z/, /\Anullifier\z/]
+          end
+        end
+
         # Publish subscriber. Handles two shapes at publish time; a third
         # (manual-start) is intentionally delegated to `subscribe_to_start`
         # below. Opt-in is signalled by the presence of the {Process}
