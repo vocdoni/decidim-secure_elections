@@ -78,14 +78,27 @@ module Decidim
         end
 
         # An error message rendered in the admin UI must never carry a
-        # credential (ARCHITECTURE §0.2). Called by the subclasses before
-        # they hand the message off to `Process#record_failure!`.
+        # credential (ARCHITECTURE §0.2): neither the integrator key nor a
+        # voter's {VoterCredential}. Called by the subclasses before they
+        # hand the message off to `Process#record_failure!`.
         def redact(message)
           text = message.to_s
           key = Decidim::Elections::Vocdoni.api_key
           text = text.gsub(key, "[REDACTED]") if key.present?
-          text.gsub(/vsk_[A-Za-z0-9._-]+/, "[REDACTED]")
-              .gsub(/\bBearer\s+\S+/i, "Bearer [REDACTED]")
+          text = text.gsub(/vsk_[A-Za-z0-9._-]+/, "[REDACTED]")
+                     .gsub(/\bBearer\s+\S+/i, "Bearer [REDACTED]")
+          VoterCredential.redact(text)
+        end
+
+        # {#redact} over every string of a SaaS error payload (keys included),
+        # keeping its shape, so the stored `data` is as clean as the message.
+        def redact_data(value)
+          case value
+          when Hash then value.to_h { |key, nested| [key.is_a?(String) ? redact(key) : key, redact_data(nested)] }
+          when Array then value.map { |nested| redact_data(nested) }
+          when String then redact(value)
+          else value
+          end
         end
       end
     end

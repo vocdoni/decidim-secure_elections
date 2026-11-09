@@ -202,6 +202,20 @@ module Decidim
             expect(error.message).to include("POST")
           end
 
+          it "masks a voter credential the SaaS echoes in its error, keeping the URL" do
+            credential = "ab" * 32
+            url_id = "cd" * 32
+            stub_request(:post, "#{api_url}/processes/#{url_id}/members")
+              .to_return(status: 400, body: { error: "duplicated memberNumber #{credential}", code: 40_004 }.to_json,
+                         headers: json_headers)
+
+            error = captured_api_error { client.post("/processes/#{url_id}/members", body: {}) }
+
+            expect(error.message).to include("duplicated memberNumber [CREDENTIAL]")
+            expect(error.message).not_to include(credential)
+            expect(error.message).to include(url_id)
+          end
+
           it "maps a 401" do
             stub_request(:get, "#{api_url}/processes/#{process_id}/validation")
               .to_return(status: 401, body: vocdoni_fixture("error_unauthorized"), headers: json_headers)
