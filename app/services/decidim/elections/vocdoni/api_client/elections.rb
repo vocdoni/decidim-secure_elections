@@ -212,6 +212,40 @@ module Decidim
             client.put("/processes/#{process_id}/external-csp", body: { "censusRoots" => roots.to_h })
           end
 
+          # Raises the declared census size of a published external-CSP process
+          # — `POST /processes/{id}/external-csp/size`.
+          #
+          # Answers 202 `{"jobId" => "…"}` while the open elections are resized
+          # on chain, or 200 `{"jobId" => ""}` when all of them already have the
+          # room. A size the process has not paid for answers 402; the room is
+          # bought through {#census_checkout}.
+          #
+          # @param process_id [String] SaaS process id.
+          # @param size [Integer] the new size; it never shrinks.
+          # @return [Hash] `{"jobId" => "…"}`.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def external_csp_size(process_id, size)
+            client.post("/processes/#{process_id}/external-csp/size", body: { "size" => size.to_i })
+          end
+
+          # Buys census room on a published process —
+          # `POST /processes/{id}/census/checkout`.
+          #
+          # A managed organization pays from its integrator wallet and gets a
+          # 200 with no `sessionId`; a short wallet answers 402 with code 40175.
+          # Any other organization gets a Stripe session (`sessionId`) that a
+          # person has to complete.
+          #
+          # @param process_id [String] SaaS process id.
+          # @param census_size [Integer] the size to buy room for.
+          # @param return_url [String] where Stripe sends the payer back.
+          # @return [Hash] `{"clientSecret", "sessionId", "amountCents", "currency"}`.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def census_checkout(process_id, census_size:, return_url:)
+            client.post("/processes/#{process_id}/census/checkout",
+                        body: { "censusSize" => census_size.to_i, "returnURL" => return_url.to_s })
+          end
+
           private
 
           # @param authenticated [Boolean]
