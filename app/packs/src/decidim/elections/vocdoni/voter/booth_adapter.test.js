@@ -244,3 +244,44 @@ describe("recheck()", () => {
     expect(result.receipts).toHaveLength(0);
   });
 });
+
+describe("prepare() — attested census", () => {
+  const attestation = { attestation: { voterId: "ab" }, signature: "ef", contact: "alice@example.org", salt: "01" };
+
+  beforeEach(() => {
+    const meta = document.createElement("meta");
+    meta.name = "csrf-token";
+    meta.content = "csrf-1";
+    document.head.replaceChildren(meta);
+    mockFlow.check.mockResolvedValue(checkResponse());
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, "fetch");
+  });
+
+  it("authenticates with the attestation Decidim signs instead of credentials", async () => {
+    window.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(attestation) });
+    const ctx = makeCtx();
+    ctx.config.credentials = null;
+    ctx.config.attestationUrl = "/processes/p/f/1/elections/7/vocdoni_attestation";
+
+    await expect(adapter.prepare(ctx)).resolves.toEqual({ canVote: true, alreadyVoted: false });
+    expect(window.fetch).toHaveBeenCalledWith("/processes/p/f/1/elections/7/vocdoni_attestation", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json", "X-CSRF-Token": "csrf-1" }
+    });
+    expect(mockFlow.authenticate).toHaveBeenCalledWith(attestation, {});
+  });
+
+  it("stops before the CSP when Decidim refuses to sign", async () => {
+    window.fetch = jest.fn().mockResolvedValue({ ok: false, status: 401 });
+    const ctx = makeCtx();
+    ctx.config.attestationUrl = "/attestation";
+    ctx.config.i18n.errors.auth_rejected = "Rejected"; // eslint-disable-line camelcase
+
+    await expect(adapter.prepare(ctx)).rejects.toThrow("Rejected");
+    expect(mockFlow.authenticate).not.toHaveBeenCalled();
+  });
+});

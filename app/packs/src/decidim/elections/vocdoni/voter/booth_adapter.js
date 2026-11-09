@@ -5,6 +5,7 @@ import { message } from "src/decidim/elections/vocdoni/voter/booth_text";
 import { runOtp } from "src/decidim/elections/vocdoni/voter/booth_otp";
 import { closedMessage, splitClosed } from "src/decidim/elections/vocdoni/voter/closed_gate";
 import { createNextQuestionWatcher, holdUntilOpen } from "src/decidim/elections/vocdoni/voter/per_question";
+import { fetchAttestation } from "src/decidim/elections/vocdoni/voter/attestation";
 
 /**
  * The `vocdoni` voting backend for Decidim's client-side booth. Authenticates
@@ -13,8 +14,10 @@ import { createNextQuestionWatcher, holdUntilOpen } from "src/decidim/elections/
  * question from the browser with `cast.js`.
  *
  * Config (from the gem's `booth_config`): apiUrl, processId, chainId,
- * explorerUrl, credentials, contact, questions, i18n; and for a per-question
- * election perQuestion, waitingUrl, perQuestionI18n (see `per_question.js`).
+ * explorerUrl, credentials, contact, questions, i18n; attestationUrl for an
+ * attested census, whose voters authenticate with an attestation Decidim
+ * signs instead of credentials; and for a per-question election
+ * perQuestion, waitingUrl, perQuestionI18n (see `per_question.js`).
  *
  * Adapter contract (all async):
  *   prepare(ctx)  -> { canVote, alreadyVoted, receipts?, priorReceipts?,
@@ -68,7 +71,10 @@ const createAdapter = () => {
 
     ctx.progress(i18n.status.authenticating);
     const channel = flow.twoFaChannels()[0] || null;
-    const { needsOtp } = await flow.authenticate(config.credentials, channel
+    const credentials = config.attestationUrl
+      ? await fetchAttestation(config.attestationUrl)
+      : config.credentials;
+    const { needsOtp } = await flow.authenticate(credentials, channel
       ? { channel, contact: (config.contact || {})[channel] }
       : {});
 
