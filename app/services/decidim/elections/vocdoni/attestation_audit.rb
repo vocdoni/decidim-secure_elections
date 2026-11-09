@@ -47,7 +47,9 @@ module Decidim
           loop do
             body = client.attestations(process.vocdoni_process_id, page:, limit: PAGE_SIZE).to_h
             records.concat(Array(body["attestations"]))
-            return [records, body["maxCensusSize"]] if page >= body.dig("pagination", "lastPage").to_i
+            last_page = body.dig("pagination", "lastPage").to_i
+            raise ApiError.new("attestations response has no pagination", transient: false) if last_page < 1
+            return [records, body["maxCensusSize"]] if page >= last_page
 
             page += 1
           end
