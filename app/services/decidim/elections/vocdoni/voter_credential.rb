@@ -44,15 +44,26 @@ module Decidim
         def subject_for(election, voter_uid)
           return nil if voter_uid.blank?
 
-          subject = GlobalID::Locator.locate(voter_uid)
+          subject = GlobalID::Locator.locate(voter_uid, only: [Decidim::User, Decidim::Elections::Voter])
           case subject
           when Decidim::User
             subject if subject.decidim_organization_id == election.organization.id
           when Decidim::Elections::Voter
             subject if subject.election_id == election.id
           end
-        rescue ActiveRecord::RecordNotFound, URI::Error
+        rescue ActiveRecord::RecordNotFound, URI::Error, NameError
           nil
+        end
+
+        # What a credential looks like, to scrub it from anything an admin or
+        # a log may read: error messages and the SaaS error payloads kept in
+        # the process metadata.
+        PATTERN = /\b[0-9a-f]{64}\b/i
+
+        # @param text [String, nil]
+        # @return [String]
+        def redact(text)
+          text.to_s.gsub(PATTERN, "[CREDENTIAL]")
         end
 
         # Users are hashed as `"<election id>:<user id>"`; CSV rows carry a

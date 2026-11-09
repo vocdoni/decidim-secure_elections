@@ -153,7 +153,7 @@ module Decidim
           body_data = extract_error_data(error)
           error_code = error.respond_to?(:code) ? error.try(:code) : nil
 
-          process.record_failure!(message, step: @step, code: error_code, data: body_data)
+          process.record_failure!(message, step: @step, code: error_code, data: redact_data(body_data))
         end
 
         # ---------------------------------------------------------------------
@@ -209,9 +209,11 @@ module Decidim
           errors = (Array(response["errors"]) + Array(job["errors"])).map(&:to_s).compact_blank
           return if errors.empty?
 
+          # The SaaS may echo a rejected member's credential; this error also
+          # reaches the job's logs when re-raised, so scrub it here.
           raise Decidim::Elections::Vocdoni::ApiError.new(
-            "The Vocdoni memberbase rejected #{errors.size} of #{batch.size} voters: #{errors.join("; ")}",
-            body: response,
+            redact("The Vocdoni memberbase rejected #{errors.size} of #{batch.size} voters: #{errors.join("; ")}"),
+            body: redact_data(response),
             transient: false
           )
         end
@@ -248,9 +250,10 @@ module Decidim
           client.elections.validate_census(org_address, census_payload)
         rescue Decidim::Elections::Vocdoni::ApiError => e
           if e.status == 400
+            # A 400's `data` lists the offending members by credential.
             raise Decidim::Elections::Vocdoni::ApiError.new(
-              e.message.to_s,
-              body: e.try(:body),
+              redact(e.message),
+              body: redact_data(e.try(:body)),
               status: e.try(:status),
               code: e.try(:code),
               transient: false

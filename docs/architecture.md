@@ -223,6 +223,18 @@ are therefore matched by `memberNumber` only, never by email or phone. Members a
 carry `name`, `email`, and `phone` when SMS is a second factor (from a CSV row, or from
 the metadata of a participant's granted authorization).
 
+Consequences of the credential:
+
+- Only the integrated booth can authenticate voters. `VOCDONI_INTEGRATED_BOOTH=false`
+  falls back to the static voting page (`public/vocdoni/vote.html`), where voters type
+  their `memberNumber`; nobody knows their credential, so nobody can log in there.
+- An election published under an earlier credential scheme has members whose
+  `memberNumber` the booth no longer hands out. Republish it to push the current
+  credentials.
+- Credentials never reach admin-visible errors or logs: error messages and the stored
+  SaaS error `data` replace every 64-hex-character token with `[CREDENTIAL]`, so any
+  other value of that shape (an on-chain id or hash) is masked there too.
+
 Endpoints, in order:
 
 ```

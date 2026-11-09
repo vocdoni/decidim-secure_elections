@@ -50,10 +50,12 @@ module Decidim
           value.to_s.strip.presence
         end
 
+        # The first phone across the user's granted authorizations, oldest
+        # first, so the publish push and the booth pick the same one.
         def phone(subject)
           sources = case subject
                     when Decidim::User
-                      Decidim::Authorization.where(user: subject).where.not(granted_at: nil).map { |auth| auth.metadata.to_h }
+                      Decidim::Authorization.where(user: subject).where.not(granted_at: nil).order(:id).map { |auth| auth.metadata.to_h }
                     when Decidim::Elections::Voter
                       [subject.data.to_h]
                     else

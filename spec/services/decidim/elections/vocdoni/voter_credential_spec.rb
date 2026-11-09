@@ -86,6 +86,22 @@ module Decidim
             expect(described_class.subject_for(election, nil)).to be_nil
             expect(described_class.subject_for(election, "gid://#{GlobalID.app}/Decidim::User/0")).to be_nil
           end
+
+          it "is nil for a voter_uid of any other model, known or not" do
+            expect(described_class.subject_for(election, organization.to_global_id.to_s)).to be_nil
+            expect(described_class.subject_for(election, "gid://#{GlobalID.app}/No::Such::Model/1")).to be_nil
+            expect(described_class.subject_for(election, "gid://#{GlobalID.app}/Kernel/1")).to be_nil
+          end
+        end
+
+        describe ".redact" do
+          it "masks every credential-shaped token and nothing else" do
+            credential = described_class.for(election, user)
+            text = "rejected #{credential} and #{credential.upcase}; id 6885f0c2c1a4e2f0b1d33a01"
+
+            expect(described_class.redact(text)).to eq("rejected [CREDENTIAL] and [CREDENTIAL]; id 6885f0c2c1a4e2f0b1d33a01")
+            expect(described_class.redact(nil)).to eq("")
+          end
         end
       end
     end

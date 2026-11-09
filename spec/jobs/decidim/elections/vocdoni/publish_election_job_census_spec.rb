@@ -17,7 +17,8 @@ module Decidim
 
         let(:organizations_api) { instance_double(ApiClient::Organizations) }
         let(:jobs_api) { instance_double(ApiClient::Jobs) }
-        let(:client) { instance_double(ApiClient, organizations: organizations_api, jobs: jobs_api) }
+        let(:elections_api) { instance_double(ApiClient::Elections) }
+        let(:client) { instance_double(ApiClient, organizations: organizations_api, jobs: jobs_api, elections: elections_api) }
 
         def bootstrap!
           job.send(:bootstrap!, election.id)
@@ -98,6 +99,14 @@ module Decidim
               expect(roster.find { |member| member["memberNumber"] == credential(ada) }["phone"]).to eq("+34600000001")
               expect(roster.find { |member| member["memberNumber"] == credential(grace) }).not_to have_key("phone")
             end
+
+            it "picks the oldest authorization's phone, as the booth does" do
+              create(:authorization, :granted, user: ada, organization:, name: "another_dummy_authorization_handler",
+                                               metadata: { "phone_number" => "+34600000009" })
+
+              expect(roster.find { |member| member["memberNumber"] == credential(ada) }["phone"]).to eq("+34600000001")
+              expect(CensusMember.phone(ada)).to eq("+34600000001")
+            end
           end
 
           context "when SMS is not a second factor" do
@@ -152,6 +161,30 @@ module Decidim
           end
         end
 
+        describe "a census validation 400" do
+          let(:election) { create(:election, component:, census_manifest: "token_csv") }
+          let!(:voter) { create(:election_voter, election:, data: { "email" => "v@example.org", "token" => "t" }) }
+
+          before { bootstrap! }
+
+          it "records which members failed without their credentials" do
+            allow(job).to receive(:census_payload).and_return({})
+            allow(elections_api).to receive(:validate_census).and_raise(
+              ApiError.new("invalid census: #{credential(voter)}", status: 400, code: 40_004,
+                                                                   body: { "data" => { "duplicates" => [credential(voter)] } })
+            )
+
+            error = nil
+            expect { job.send(:ensure_census_validated!) }.to raise_error(ApiError) { |raised| error = raised }
+            job.send(:record_step_failure!, error)
+
+            last_error = vocdoni_process.reload.metadata["last_error"]
+            expect(last_error["message"]).to eq("invalid census: [CREDENTIAL]")
+            expect(last_error["data"]).to eq("duplicates" => ["[CREDENTIAL]"])
+            expect(error.message).not_to include(credential(voter))
+          end
+        end
+
         describe "pushing the roster" do
           let(:election) { create(:election, component:, census_manifest: "token_csv") }
           let!(:voters) { Array.new(5) { |n| create(:election_voter, election:, data: { "email" => "v#{n}@example.org", "token" => "t#{n}" }) } }
@@ -203,6 +236,23 @@ module Decidim
             upstream.pop
 
             expect { job.send(:resolve_member_ids!) }.to raise_error(ApiError, /1 of 5 voters are missing/)
+          end
+
+          it "keeps a credential the SaaS echoes out of the error and the admin's view of it" do
+            echoed = nil
+            allow(jobs_api).to receive(:wait_for) do
+              echoed = pushed.last.first["memberNumber"]
+              { "status" => "completed", "errors" => ["duplicate #{echoed}"] }
+            end
+            job.instance_variable_set(:@step, "add_members")
+
+            error = nil
+            expect { job.send(:ensure_members_pushed!) }.to raise_error(ApiError) { |raised| error = raised }
+            job.send(:record_step_failure!, error)
+
+            expect(error.message).to include("duplicate [CREDENTIAL]")
+            expect(error.message).not_to include(echoed)
+            expect(vocdoni_process.reload.metadata["last_error"].to_json).not_to include(echoed)
           end
 
           it "stops at a batch the SaaS rejects" do

@@ -350,7 +350,9 @@ module Decidim
 
           message = "Vocdoni API #{response.env.method.to_s.upcase} #{response.env.url} failed with HTTP #{response.status}"
           message << " (code #{code})" if code
-          message << ": #{detail}" if detail.present?
+          # The detail is the SaaS's own text and may echo a voter credential;
+          # the URL is ours and keeps its ids for debugging.
+          message << ": #{VoterCredential.redact(detail)}" if detail.present?
           message
         end
 
