@@ -222,7 +222,7 @@ end
 
 # Helper to set environment variables for the duration of a block.
 def with_env(vars)
-  old = vars.to_h { |k, _| [k, ENV[k]] }
+  old = vars.to_h { |k, _| [k, ENV.fetch(k, nil)] }
   vars.each { |k, v| v.nil? ? ENV.delete(k) : (ENV[k] = v) }
   yield
 ensure
