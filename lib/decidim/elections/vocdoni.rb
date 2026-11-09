@@ -2,6 +2,7 @@
 
 require "decidim/elections/vocdoni/version"
 require "decidim/elections/vocdoni/engine"
+require "decidim/elections/vocdoni/attestation"
 
 module Decidim
   # Decidim component that delegates the ballot to the Vocdoni protocol through
