@@ -63,6 +63,18 @@ module Decidim
         # `token_csv` (whose voters need not have a Decidim account).
         def self.booth_config(election, voter_uid:)
           process = election.vocdoni_process
+          config = base_booth_config(election, process, voter_uid)
+          return config unless process.attested?
+
+          # An attested voter authenticates with an attestation fetched from attestationUrl in place
+          # of a member credential; the code still goes to the email of their census entry.
+          config.merge(
+            credentials: nil,
+            attestationUrl: Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_attestation_path(election)
+          )
+        end
+
+        def self.base_booth_config(election, process, voter_uid)
           subject = VoterCredential.subject_for(election, voter_uid)
           email = CensusMember.email(subject)
           phone = CensusMember.phone(subject) if process.metadata.to_h.dig("settings", "twofa_fields").to_a.include?("phone")
