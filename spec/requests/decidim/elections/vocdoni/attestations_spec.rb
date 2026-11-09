@@ -121,6 +121,20 @@ module Decidim
             expect(process.reload.metadata["attestation_verifying_contract"]).to eq(contract)
           end
         end
+
+        context "when the voter has already hit the issuance cap" do
+          before do
+            voter_id = Decidim::Elections::Vocdoni::Attestation.bytes_to_hex(process.voter_id_for(voter_uid))
+            process.issued_attestations.create!(voter_id:, issued_count: AttestationsController::MAX_ATTESTATIONS_PER_VOTER)
+          end
+
+          it "refuses with 429" do
+            post(path, headers:)
+
+            expect(response).to have_http_status(:too_many_requests)
+            expect(process.issued_attestations.sole.issued_count).to eq(AttestationsController::MAX_ATTESTATIONS_PER_VOTER)
+          end
+        end
       end
     end
   end
