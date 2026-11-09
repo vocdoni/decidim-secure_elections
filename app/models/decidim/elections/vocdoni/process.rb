@@ -13,13 +13,21 @@ module Decidim
         self.table_name = "decidim_vocdoni_processes"
 
         STATES = %w(pending publishing published failed).freeze
+        CENSUS_MODES = %w(memberbase attested).freeze
 
         belongs_to :election,
                    class_name: "Decidim::Elections::Election",
                    foreign_key: "decidim_election_id",
                    inverse_of: :vocdoni_process
 
+        has_many :issued_attestations,
+                 class_name: "Decidim::Elections::Vocdoni::IssuedAttestation",
+                 foreign_key: "decidim_vocdoni_process_id",
+                 inverse_of: :process,
+                 dependent: :delete_all
+
         validates :state, inclusion: { in: STATES }
+        validates :census_mode, inclusion: { in: CENSUS_MODES }
         validates :vocdoni_process_id, uniqueness: true, allow_nil: true
 
         # Once the election on chain is anchored the draft is gone from SaaS
@@ -50,6 +58,73 @@ module Decidim
         def published? = state == "published"
 
         def failed? = state == "failed"
+
+        def attested? = census_mode == "attested"
+
+        # The key of a voter in the voterId preimage, from the GlobalID `voter_uid` Decidim's census
+        # access gives the booth: "user:<id>" for an internal user, "row:<id>" for a census row.
+        def self.voter_key(voter_uid)
+          gid = GlobalID.parse(voter_uid.to_s)
+          case gid&.model_name
+          when "Decidim::User" then "user:#{gid.model_id}"
+          when "Decidim::Elections::Voter" then "row:#{gid.model_id}"
+          else raise ArgumentError, "unknown voter_uid"
+          end
+        end
+
+        # Draws the per-election signer key and voterId secret, once. Both are stored encrypted.
+        def ensure_attestation_secrets!
+          return if attestation_signer_key.present? && voter_id_secret.present?
+
+          update!(
+            attestation_signer_key: attestation_signer_key.presence || encryptor.encrypt(new_signer_key_hex),
+            voter_id_secret: voter_id_secret.presence || encryptor.encrypt(SecureRandom.hex(32))
+          )
+        end
+
+        # The private scalar of the election's attestation signer.
+        def signer_private_key
+          raise ArgumentError, "no attestation signer" if attestation_signer_key.blank?
+
+          Attestation.b2i(Attestation.hex_to_bytes(encryptor.decrypt(attestation_signer_key)))
+        end
+
+        # The 0x address of the election's attestation signer.
+        def signer_address = Attestation.bytes_to_hex(Attestation.address(signer_private_key))
+
+        # Draws a new signer key and yields its address, storing the key only when the block
+        # returns: the caller registers the address with the SaaS first, so a failed rotation keeps
+        # the key the SaaS still accepts.
+        def rotate_attestation_signer!
+          key_hex = new_signer_key_hex
+          address = Attestation.bytes_to_hex(Attestation.address(Attestation.b2i(Attestation.hex_to_bytes(key_hex))))
+          yield address
+          update!(attestation_signer_key: encryptor.encrypt(key_hex))
+          address
+        end
+
+        # voterId = HMAC-SHA256(secret, voter_key ‖ processId): stable for a voter within the election,
+        # unlinkable across elections and meaningless to the SaaS.
+        def voter_id_for(voter_uid)
+          raise ArgumentError, "no voterId secret" if voter_id_secret.blank?
+          raise ArgumentError, "no SaaS process id" if vocdoni_process_id.blank?
+
+          secret = Attestation.hex_to_bytes(encryptor.decrypt(voter_id_secret))
+          preimage = self.class.voter_key(voter_uid).b + Attestation.hex_to_bytes(vocdoni_process_id)
+          OpenSSL::HMAC.digest("SHA256", secret, preimage)
+        end
+
+        # Counts one more attestation issued to voter_id (0x hex), one row per voterId.
+        def record_issued_attestation!(voter_id)
+          now = Time.current
+          IssuedAttestation.upsert( # rubocop:disable Rails/SkipsModelValidations -- voter_id is always present here
+            { decidim_vocdoni_process_id: id, voter_id:, issued_count: 1, created_at: now, updated_at: now },
+            unique_by: :index_vocdoni_attestations_on_process_and_voter,
+            on_duplicate: Arel.sql(
+              "issued_count = decidim_vocdoni_attestations.issued_count + 1, updated_at = EXCLUDED.updated_at"
+            )
+          )
+        end
 
         # Per-question upstream ids and chain-side statuses. Written by
         # PublishElectionJob after the process is on chain; read by the voter
@@ -125,6 +200,12 @@ module Decidim
           self.state = "failed"
           save!
         end
+
+        private
+
+        def encryptor = Decidim::AttributeEncryptor.new(secret: "vocdoni-attestation")
+
+        def new_signer_key_hex = Attestation.i2b(SecureRandom.random_number(Attestation::N - 1) + 1).unpack1("H*")
       end
     end
   end
