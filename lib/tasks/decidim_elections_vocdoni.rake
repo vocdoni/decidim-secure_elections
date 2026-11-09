@@ -1,6 +1,19 @@
 # frozen_string_literal: true
 
 namespace :decidim_elections_vocdoni do
+  desc "Rotate the attestation signer of an attested election (registers the new signer with the SaaS first)"
+  task :rotate_attestation_signer, [:election_id] => :environment do |_t, args|
+    process = Decidim::Elections::Vocdoni::Process.find_by!(decidim_election_id: args[:election_id])
+    abort "election #{args[:election_id]} does not use an attested census" unless process.attested?
+    abort "election #{args[:election_id]} has no SaaS process yet" if process.vocdoni_process_id.blank?
+
+    client = Decidim::Elections::Vocdoni::ApiClient.new
+    address = process.rotate_attestation_signer! do |signer|
+      client.elections.rotate_attestation_signer(process.vocdoni_process_id, signer)
+    end
+    puts "attestation signer rotated to #{address}"
+  end
+
   desc "Create a managed Vocdoni organization and print the address to configure as VOCDONI_ORG_ADDRESS"
   task :create_organization, [:name] => :environment do |_t, args|
     organization_name = Decidim::Organization.first&.name

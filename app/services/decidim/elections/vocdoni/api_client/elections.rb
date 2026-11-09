@@ -200,6 +200,48 @@ module Decidim
             client.get("/processes/#{process_id}/participants", params: { "field" => field.to_s, "value" => value.to_s })
           end
 
+          # Makes signer the only address whose attestations the SaaS accepts for the process —
+          # `PUT /processes/{id}/attestation-signer`. Tokens issued under the previous signer stop
+          # signing.
+          #
+          # @param process_id [String] SaaS process id.
+          # @param signer [String] 0x address.
+          # @return [Hash] the attested census: `signer`, `signerHistory`, `maxCensusSize`, `verifyingContract`.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def rotate_attestation_signer(process_id, signer)
+            client.put("/processes/#{process_id}/attestation-signer", body: { "signer" => signer })
+          end
+
+          # Grows the declared size of a published attested census — `PUT /processes/{id}/census/size`.
+          #
+          # @return [Hash] `{"size" => …}`, with `"jobId"` when open questions are resized on chain.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def grow_census_size(process_id, size)
+            client.put("/processes/#{process_id}/census/size", body: { "size" => size })
+          end
+
+          # One attested voter, with their per-question signed and voted status —
+          # `GET /processes/{id}/participants?field=voterId`.
+          #
+          # @param process_id [String] SaaS process id.
+          # @param voter_id [String] 0x hex voterId.
+          # @return [Hash, nil] the participant entry, nil when the SaaS signed nothing for them.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def attested_participant(process_id, voter_id)
+            participants(process_id, field: "voterId", value: voter_id.delete_prefix("0x"))
+              .to_h.fetch("participants", []).first
+          end
+
+          # The published attestation records of an ended attested census —
+          # `GET /processes/{id}/attestations`. Public; 409 until every question has ended.
+          #
+          # @return [Hash] `domain`, `signerHistory`, `maxCensusSize`, `attestations`, `pagination`.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def attestations(process_id, page: 1, limit: 100)
+            client.get("/processes/#{process_id}/attestations",
+                       params: { "page" => page, "limit" => limit }, auth: read_auth(false))
+          end
+
           private
 
           # @param authenticated [Boolean]

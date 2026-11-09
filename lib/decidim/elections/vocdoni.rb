@@ -125,6 +125,13 @@ module Decidim
           @job_timeout ||= ENV.fetch("VOCDONI_JOB_TIMEOUT", "120").to_i
         end
 
+        # How a newly published election tells the SaaS who may vote: "memberbase" pushes the roster
+        # as organization members, "attested" signs an attestation per voter at booth time. An
+        # election keeps the mode it was created with.
+        def census_mode
+          @census_mode ||= ENV.fetch("VOCDONI_CENSUS_MODE", "memberbase")
+        end
+
         private
 
         # Credentials are unavailable until the application is initialized, and
