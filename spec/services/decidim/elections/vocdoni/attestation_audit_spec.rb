@@ -47,6 +47,16 @@ module Decidim
 
           expect(audit).to eq(issued_voters: 2, issued_total: 3)
         end
+
+        it "reports :error (not silently under-reporting) when the response has no pagination" do
+          stub_request(:get, url).with(query: hash_including({})).to_return(
+            status: 200, headers: json_headers, body: { maxCensusSize: 12, attestations: [] }.to_json
+          )
+
+          result = described_class.new(process).call
+          expect(result).to include(issued_voters: 2, unavailable: :error)
+          expect(result).not_to have_key(:published)
+        end
       end
     end
   end
