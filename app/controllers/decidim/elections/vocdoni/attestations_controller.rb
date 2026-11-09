@@ -10,6 +10,8 @@ module Decidim
       # After the end, `show` tells the voter on which questions the SaaS reports having signed a
       # ballot for them: a question they never voted on exposes a signature issued in their name.
       class AttestationsController < Decidim::Elections::ApplicationController
+        # Maximum attestations a voter may request per election, bounding CPU on ECDSA and issued_total growth.
+        MAX_ATTESTATIONS_PER_VOTER = 50
         include Decidim::Elections::UsesCensusAccess
 
         helper_method :signed_questions, :check_state
@@ -26,6 +28,10 @@ module Decidim
           enforce_permission_to(:create, :vote, election:)
           return head(:unauthorized) unless session_authenticated? && voter_uid.present?
           return head(:not_found) unless attested_process&.published?
+
+          voter_id = Decidim::Elections::Vocdoni::Attestation.bytes_to_hex(attested_process.voter_id_for(voter_uid))
+          issued = attested_process.issued_attestations.where(voter_id:).pick(:issued_count).to_i
+          return head(:too_many_requests) if issued >= MAX_ATTESTATIONS_PER_VOTER
 
           render json: VoterAttestation.new(attested_process, voter_uid).call
         rescue VoterAttestation::NoContact
