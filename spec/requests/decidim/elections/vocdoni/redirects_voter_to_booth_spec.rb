@@ -29,7 +29,11 @@ module Decidim
           # Bypass the census gate so we can reach the booth before_action.
           # We are testing RedirectsVoterToBooth, not the census; the gate is
           # covered by VotesController's own specs.
-          allow_any_instance_of(Decidim::Elections::VotesController).to receive(:session_authenticated?).and_return(false)
+          #
+          # Stub AuthorizedUsers so session_authenticated? sees an empty census
+          # and returns false, without allow_any_instance_of on the controller.
+          authorized_users_dbl = instance_double(Decidim::AuthorizedUsers, query: Decidim::User.none)
+          allow(Decidim::AuthorizedUsers).to receive(:new).and_return(authorized_users_dbl)
           login_as user, scope: :user
         end
 
@@ -45,7 +49,7 @@ module Decidim
             before { allow(VotingBackend).to receive(:active_for?).and_return(false) }
 
             it "renders the standalone Vocdoni SPA booth template" do
-              get new_vote_path, headers: headers
+              get(new_vote_path, headers:)
               expect(response).to have_http_status(:ok)
               # The SPA template is decidim/elections/vocdoni/booth/show.
               # It is rendered as an inline response body, not a redirect.
@@ -59,10 +63,10 @@ module Decidim
             before { allow(VotingBackend).to receive(:active_for?).and_return(true) }
 
             it "does not render the standalone SPA booth (passes through to upstream)" do
-              get new_vote_path, headers: headers
+              get(new_vote_path, headers:)
               # Upstream renders its own new-vote template for an unauthenticated voter.
               expect(response).to have_http_status(:ok)
-              expect(response.body).not_to match(%r{data-vocdoni-spa})
+              expect(response.body).not_to include("data-vocdoni-spa")
             end
           end
         end
@@ -74,7 +78,7 @@ module Decidim
           end
 
           it "passes through to the upstream controller" do
-            get new_vote_path, headers: headers
+            get(new_vote_path, headers:)
             # With no sidecar the before_action returns immediately.
             expect(response).to have_http_status(:ok)
           end

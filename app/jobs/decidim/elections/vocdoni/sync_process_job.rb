@@ -194,7 +194,7 @@ module Decidim
         def aggregate_status(remote)
           statuses = Array(remote["questions"]).map { |q| q["status"].to_s.upcase }.compact_blank
           return nil if statuses.empty?
-          return "ONGOING" if statuses.any? { |s| ACTIVE_STATUSES.include?(s) }
+          return "ONGOING" if statuses.intersect?(ACTIVE_STATUSES)
 
           statuses.first
         end
