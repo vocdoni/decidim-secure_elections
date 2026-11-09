@@ -30,6 +30,20 @@ module Decidim
           def code = "pin_secret_mismatch"
         end
 
+        # The chain does not hold the census Decidim derived for a process
+        # (root, origin, mode, organization or chain). The process is marked
+        # `compromised` and never signs again; the admin has to end it.
+        class Compromised < Error
+          def code = "csp_compromised"
+        end
+
+        # The SaaS answered ids that cannot belong to this process: a
+        # malformed seed or upstream id, or one that differs from the one
+        # recorded. Seeds and upstream ids are written once.
+        class IntegrityError < Error
+          def code = "csp_integrity"
+        end
+
         # The database trigger that keeps pins immutable is not installed.
         class TriggerMissing < Error
           def code = "csp_trigger_missing"

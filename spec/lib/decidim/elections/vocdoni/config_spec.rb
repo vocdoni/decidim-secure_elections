@@ -50,6 +50,29 @@ module Decidim
         end
       end
 
+      describe ".declared_census_size" do
+        let(:internal_users) { instance_double(Decidim::Elections::Election, census_manifest: "internal_users") }
+        let(:token_csv) { instance_double(Decidim::Elections::Election, census_manifest: "token_csv") }
+
+        it "adds the default headroom and rounds up, in exact arithmetic" do
+          with_csp_env do
+            expect(described_class.declared_census_size(internal_users, 5)).to eq(6)
+            expect(described_class.declared_census_size(internal_users, 10)).to eq(12)
+            expect(described_class.declared_census_size(internal_users, 1)).to eq(2)
+          end
+        end
+
+        it "keeps the exact row count of a token_csv census" do
+          with_csp_env { expect(described_class.declared_census_size(token_csv, 5)).to eq(5) }
+        end
+
+        it "declares the roster itself with no headroom" do
+          with_csp_env("VOCDONI_CENSUS_HEADROOM" => "0") do
+            expect(described_class.declared_census_size(internal_users, 5)).to eq(5)
+          end
+        end
+      end
+
       describe ".chain_api_url" do
         it "strips a trailing slash" do
           with_csp_env("VOCDONI_CHAIN_API_URL" => "https://api.example.org/v2/") do

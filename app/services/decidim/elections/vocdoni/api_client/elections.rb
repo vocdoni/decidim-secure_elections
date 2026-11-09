@@ -200,6 +200,18 @@ module Decidim
             client.get("/processes/#{process_id}/participants", params: { "field" => field.to_s, "value" => value.to_s })
           end
 
+          # Stores the per-question census roots of an external-CSP draft —
+          # `PUT /processes/{id}/external-csp`. Must precede the publish.
+          #
+          # @param process_id [String] SaaS process id.
+          # @param roots [Hash{String => String}] SaaS question id → compressed
+          #   public key in hex (`0x02…`/`0x03…`). Public data only.
+          # @return [Hash] empty on 204.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def set_external_csp_roots(process_id, roots)
+            client.put("/processes/#{process_id}/external-csp", body: { "censusRoots" => roots.to_h })
+          end
+
           private
 
           # @param authenticated [Boolean]

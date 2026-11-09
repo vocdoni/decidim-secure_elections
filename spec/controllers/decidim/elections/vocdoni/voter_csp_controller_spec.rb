@@ -180,6 +180,19 @@ module Decidim
             it_behaves_like "a closed question"
           end
 
+          context "when a chain check finds another root on a verified process" do
+            before do
+              other = Csp::Crypto.public_key(SecureRandom.random_number(Csp::Crypto::N - 1) + 1).unpack1("H*")
+              stub_request(:get, "#{chain_url}/elections/#{upstream_id}")
+                .to_return(json_response(chain_election(csp_election, census_root: other)))
+              CspVerifier.new(vocdoni_process).recheck!
+            rescue Csp::Compromised
+              nil # the process is now compromised; signing must refuse
+            end
+
+            it_behaves_like "a closed question"
+          end
+
           context "when the chain election is not READY" do
             let(:vocdoni_status) { "PAUSED" }
 

@@ -14,6 +14,10 @@ module Decidim
       # and, for a live-results election, the tally on `response_options.
       # votes_count` stays fresh throughout voting.
       #
+      # On an external-CSP process each tick also runs the {CspVerifier}
+      # against the chain: `verify_roots!` until the process is verified,
+      # `recheck!` afterwards.
+      #
       # ## Cadence
       #
       # Rescheduling is decided from the SaaS `status` returned by
@@ -80,6 +84,7 @@ module Decidim
 
           remote = client.elections.get(process.vocdoni_process_id).to_h
           persist!(remote)
+          check_csp!(remote)
           sync_live_results!(remote)
           reschedule_if_needed!(remote)
         rescue Decidim::Elections::Vocdoni::ApiError => e
@@ -87,6 +92,10 @@ module Decidim
           # recorded on the sidecar so the admin dashboard can surface it.
           process&.record_failure!(redact(e.message), step: "sync") unless e.transient?
           raise
+        rescue Csp::IntegrityError => e
+          # The SaaS reports an upstream id that differs from the recorded one.
+          # Nothing is overwritten; the admin sees it and a retry would not help.
+          process.record_failure!(e.message, step: "sync", code: e.code, state: nil)
         end
 
         private
@@ -97,13 +106,17 @@ module Decidim
         # be missing on a given call — the SaaS fills them in as the on-chain
         # confirmation lands.
         def persist!(remote)
-          size = remote.dig("census", "size") || remote["censusSize"]
-
           attrs = {
             chain_id: remote["chainId"].to_s.presence || process.chain_id,
-            vocdoni_upstream_id: remote["upstreamId"].to_s.presence || process.vocdoni_upstream_id,
-            census_size: size.to_i.positive? ? size.to_i : process.census_size
+            vocdoni_upstream_id: remote["upstreamId"].to_s.presence || process.vocdoni_upstream_id
           }
+          # On an external-CSP process census_size is the size Decidim has
+          # confirmed on chain; the SaaS stores a requested size before the
+          # resize mines, so its echo is never copied.
+          unless csp_process?
+            size = remote.dig("census", "size") || remote["censusSize"]
+            attrs[:census_size] = size.to_i.positive? ? size.to_i : process.census_size
+          end
 
           questions_meta = extract_questions_meta(remote)
           new_metadata = process.metadata.merge("last_synced_at" => Time.current.iso8601)
@@ -134,16 +147,60 @@ module Decidim
           end
         end
 
+        # Maps each SaaS question to its Decidim question by the
+        # `decidimQuestionId` in the question metadata, never by position. A
+        # question without it keeps the Decidim id it was recorded with,
+        # matched by SaaS question id.
         def extract_questions_meta(remote)
-          Array(remote["questions"]).each_with_index.map do |upstream, index|
-            local = election.questions[index]
+          known = process.questions_metadata.to_h { |m| [m["vocdoni_question_id"].to_s, m["decidim_question_id"]] }
+
+          Array(remote["questions"]).grep(Hash).map do |upstream|
+            vocdoni_question_id = (upstream["id"] || upstream["questionId"]).to_s.presence
+            decidim_id = upstream.dig("metadata", "decidimQuestionId").to_s
+            decidim_id = decidim_id.match?(/\A\d+\z/) ? decidim_id.to_i : known[vocdoni_question_id.to_s]
+            bind_upstream_id!(decidim_id, upstream["upstreamId"])
             {
-              "decidim_question_id" => local&.id,
-              "vocdoni_question_id" => (upstream["id"] || upstream["questionId"]).to_s.presence,
+              "decidim_question_id" => decidim_id,
+              "vocdoni_question_id" => vocdoni_question_id,
               "vocdoni_upstream_id" => upstream["upstreamId"].to_s.presence,
               "vocdoni_status" => upstream["status"].to_s.presence
             }
           end
+        end
+
+        # Upstream ids that reach the SaaS after the publish job gave up
+        # waiting land on the csp elections here. Written once (CspElection).
+        def bind_upstream_id!(decidim_question_id, upstream_id)
+          return if decidim_question_id.blank? || upstream_id.blank? || !csp_process?
+
+          process.csp_elections.find_by(decidim_question_id:)&.bind_upstream_id!(upstream_id)
+        end
+
+        def csp_process?
+          return @csp_process if defined?(@csp_process)
+
+          @csp_process = process.csp_elections.exists?
+        end
+
+        # Signing waits for `verify_roots!` on the first published tick; a
+        # verified process is rechecked on every tick. The chain being down
+        # is not a failure: csp_state stays as it is and the next tick retries.
+        def check_csp!(remote)
+          return unless csp_process? && remote["published"] == true
+
+          verifier = CspVerifier.new(process)
+          case process.csp_state
+          when nil then verifier.verify_roots!
+          when "verified" then verifier.recheck!
+          end
+        rescue Decidim::Elections::Vocdoni::ApiError => e
+          raise unless e.transient?
+
+          Rails.logger.warn({ event: "csp.check_deferred", process_id: process.id, error: redact(e.message) }.to_json)
+        rescue Csp::Compromised
+          # Recorded by the verifier; the sync keeps mirroring the SaaS so the
+          # admin can still end the election.
+          nil
         end
 
         # Fires a `:one_shot` `SyncElectionResultsJob` on every tick while the

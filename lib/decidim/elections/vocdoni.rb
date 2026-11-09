@@ -160,6 +160,16 @@ module Decidim
           raise Csp::ConfigurationError, "VOCDONI_CENSUS_HEADROOM must be a number between 0 and 1"
         end
 
+        # maxCensusSize declared for a roster: token_csv censuses are frozen
+        # after publish, so they keep the exact row count; internal_users get
+        # the configured headroom. Rational, never Float (5 * 1.2 in Float
+        # ceils to 7).
+        def declared_census_size(election, roster)
+          return roster.to_i if election.census_manifest.to_s == "token_csv"
+
+          (roster.to_i * (1 + census_headroom)).ceil
+        end
+
         # LTS chain ids are `vocdoni/LTS/<version>`; that chain is production.
         def lts_chain_id?(chain_id) = chain_id.to_s.start_with?("vocdoni/LTS/")
 

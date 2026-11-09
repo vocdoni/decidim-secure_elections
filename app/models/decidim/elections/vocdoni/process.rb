@@ -134,7 +134,11 @@ module Decidim
         # `missingData` and `notFound` lists from a census validation 400 —
         # so the admin sees *which* voters are the problem, not just "invalid
         # data provided".
-        def record_failure!(message, step: nil, code: nil, data: nil)
+        #
+        # `state: nil` keeps the lifecycle state: a failure on a process that
+        # is already on chain (a census resize, a failed root check) must not
+        # turn it `failed`, or ending it from the admin would be refused.
+        def record_failure!(message, step: nil, code: nil, data: nil, state: "failed")
           self.metadata = metadata.merge(
             "last_error" => {
               "message" => message.to_s,
@@ -145,7 +149,7 @@ module Decidim
             }.compact
           )
           self.last_error = message.to_s.truncate(255)
-          self.state = "failed"
+          self.state = state if state
           save!
         end
       end
