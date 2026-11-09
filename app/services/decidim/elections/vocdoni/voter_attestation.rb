@@ -69,7 +69,9 @@ module Decidim
             address = ApiClient.new.elections.get(process.vocdoni_process_id).to_h.dig("census", "attested", "verifyingContract")
             raise ApiError.new("the SaaS process has no attestation domain", transient: false) if address.blank?
 
-            process.update!(metadata: process.metadata.to_h.merge("attestation_verifying_contract" => address))
+            process.with_lock do
+              process.update!(metadata: process.metadata.to_h.merge("attestation_verifying_contract" => address))
+            end
           end
           Attestation.hex_to_bytes(address)
         end
