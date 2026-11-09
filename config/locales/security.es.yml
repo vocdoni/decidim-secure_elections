@@ -19,6 +19,15 @@ es:
               limitations: "Por las limitaciones actuales de cómo está implementado el voto secreto:"
               late_joiners: "Los participantes que entren en el censo después de que empiece la votación (por ejemplo, porque se verifican más tarde) no podrán votar en esta votación."
               verify_before_start: "Los participantes necesitan una cuenta y las verificaciones que pide este censo (como el censo de la organización) antes de que empiece la votación."
+            attestations:
+              title: "Atestaciones"
+              issued: "Emitidas: %{total} atestaciones a %{voters} votantes."
+              published: "Publicados por Vocdoni: %{records} votantes firmados, de un máximo declarado de %{max}."
+              unknown: "Votantes firmados que Decidim nunca atestó: %{voters}."
+              per_question: "%{question}: %{signed} votantes firmados."
+              unavailable:
+                pending: "Vocdoni publica los votantes firmados cuando han terminado todas las preguntas."
+                error: "Ahora mismo no se pueden leer los votantes firmados de Vocdoni."
           security:
             show:
               title: "Seguridad"

@@ -24,6 +24,15 @@ en:
               limitations: "Due to current limitations on how the secret vote is implemented:"
               late_joiners: "Participants who join the census after voting starts (for example, by getting verified later) will not be able to vote in this election."
               verify_before_start: "Participants need an account and the verifications this census requires (such as the organization's census) before voting starts."
+            attestations:
+              title: "Attestations"
+              issued: "Issued: %{total} attestations to %{voters} voters."
+              published: "Published by Vocdoni: %{records} signed voters, out of a declared maximum of %{max}."
+              unknown: "Signed voters Decidim never attested: %{voters}."
+              per_question: "%{question}: %{signed} signed voters."
+              unavailable:
+                pending: "Vocdoni publishes the signed voters once every question has ended."
+                error: "The signed voters cannot be read from Vocdoni right now."
           # The Security tab. Written for the person running the vote, not for
           # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
           # vote types are "Simple vote" (any standard Decidim census) and
