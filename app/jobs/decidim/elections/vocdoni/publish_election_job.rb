@@ -77,6 +77,7 @@ module Decidim
 
           process.update!(state: "publishing")
 
+          adopt_census_mode!
           prepare_census!
           ensure_process_created!
           ensure_process_published!
@@ -121,8 +122,19 @@ module Decidim
           true
         end
 
+        # The census mode is fixed when the SaaS process is created; a resumed publish keeps the
+        # mode its process was created with.
+        def adopt_census_mode!
+          return if process.vocdoni_process_id.present?
+
+          process.update!(census_mode: Decidim::Elections::Vocdoni.census_mode)
+        end
+
         def prepare_census!
           ensure_census_ready!
+
+          return prepare_attested_census! if process.attested?
+
           ensure_members_pushed!
           ensure_group_created!
           ensure_census_validated!
@@ -476,7 +488,28 @@ module Decidim
           end
         end
 
+        # An attested census pushes no roster: the election's signer vouches for each voter at
+        # booth time. The gem only holds an email per voter, so email is the only 2FA channel.
+        def prepare_attested_census!
+          raise Decidim::Elections::Vocdoni::ApiError.new("an attested census supports email 2FA only", transient: false) unless (two_fa_fields - ["email"]).empty?
+
+          process.ensure_attestation_secrets!
+        end
+
+        # ceil(eligible × 1.2), at least 1: room for voters the census gains after publish. Integer
+        # arithmetic, so 10 voters declare 12 and not 13.
+        def attested_census_size
+          [((election.census.count(election) * 6) + 4) / 5, 1].max
+        end
+
         def census_payload
+          if process.attested?
+            return {
+              "attested" => { "signer" => process.signer_address, "maxCensusSize" => attested_census_size },
+              "twoFaFields" => two_fa_fields
+            }
+          end
+
           payload = {
             "authFields" => auth_fields,
             "groupId" => process.census_group_id
