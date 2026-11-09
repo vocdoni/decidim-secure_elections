@@ -53,10 +53,12 @@ module Decidim
 
         # The booth of an attested election fetches its voter's attestation from
         #   POST <component>/elections/:election_id/vocdoni_attestation
+        # and, after the end, the voter reads what the SaaS signed for them at
+        #   GET <component>/elections/:election_id/vocdoni_attestation
         initializer "decidim_elections_vocdoni.attestation_route" do
           Decidim::Elections::Engine.routes.append do
             resources :elections, only: [] do
-              resource :vocdoni_attestation, only: :create, controller: "/decidim/elections/vocdoni/attestations"
+              resource :vocdoni_attestation, only: [:create, :show], controller: "/decidim/elections/vocdoni/attestations"
             end
           end
         end

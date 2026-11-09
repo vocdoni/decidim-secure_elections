@@ -5,3 +5,15 @@ en:
         booth:
           receipt:
             final: This vote cannot be changed.
+            check_attestation: After the election ends you can check on which questions a ballot was signed in your name.
+            check_attestation_link: Check my signatures
+        attestations:
+          show:
+            title: Signatures issued in your name
+            pending: The election has not ended yet. Come back after it ends to check on which questions a ballot was signed in your name.
+            none: No ballot was signed in your name.
+            signed: "A ballot was signed in your name on these questions:"
+            voted: a vote is recorded
+            not_voted: no vote is recorded
+            explain: If a ballot was signed in your name on a question you did not vote on, please tell the organizers.
+            unavailable: The signatures cannot be checked right now. Please try again later.

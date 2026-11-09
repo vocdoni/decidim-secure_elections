@@ -10,6 +10,15 @@ es:
           dashboard:
             security:
               title: "Tu configuración de seguridad"
+            attestations:
+              title: "Atestaciones"
+              issued: "Emitidas: %{total} atestaciones a %{voters} votantes."
+              published: "Publicados por Vocdoni: %{records} votantes firmados, de un máximo declarado de %{max}."
+              unknown: "Votantes firmados que Decidim nunca atestó: %{voters}."
+              per_question: "%{question}: %{signed} votantes firmados."
+              unavailable:
+                pending: "Vocdoni publica los votantes firmados cuando han terminado todas las preguntas."
+                error: "Ahora mismo no se pueden leer los votantes firmados de Vocdoni."
           security:
             show:
               title: "Seguridad"

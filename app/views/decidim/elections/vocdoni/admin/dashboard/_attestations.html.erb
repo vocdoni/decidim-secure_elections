@@ -1,0 +1,23 @@
+<%# Issued attestations against what the SaaS publishes after the end, for an attested census. %>
+<% scope = "decidim.elections.vocdoni.admin.dashboard.attestations" %>
+<% process = election.vocdoni_process %>
+<% audit = Decidim::Elections::Vocdoni::AttestationAudit.new(process).call %>
+<div class="vocdoni-attestation-audit mt-4" data-attestation-audit>
+  <h3 class="font-bold"><%= t("title", scope:) %></h3>
+  <p data-audit-issued><%= t("issued", scope:, voters: audit[:issued_voters], total: audit[:issued_total]) %></p>
+  <% if audit[:unavailable] %>
+    <p data-audit-unavailable><%= t("unavailable.#{audit[:unavailable]}", scope:) %></p>
+  <% elsif audit.has_key?(:published) %>
+    <p data-audit-published><%= t("published", scope:, records: audit[:published], max: audit[:max_census_size]) %></p>
+    <p data-audit-unknown class="<%= "text-alert" if audit[:unknown].positive? %>"><%= t("unknown", scope:, voters: audit[:unknown]) %></p>
+    <ul class="list-disc ml-6">
+      <% process.questions_metadata.each do |row| %>
+        <% question = election.questions.find_by(id: row["decidim_question_id"]) %>
+        <li data-audit-question="<%= row["vocdoni_question_id"] %>">
+          <%= t("per_question", scope:, question: question ? translated_attribute(question.body) : row["vocdoni_question_id"],
+                                signed: audit[:per_question].fetch(row["vocdoni_question_id"].to_s, 0)) %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

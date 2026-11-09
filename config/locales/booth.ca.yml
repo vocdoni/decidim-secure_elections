@@ -5,3 +5,15 @@ ca:
         booth:
           receipt:
             final: Aquest vot no es pot modificar.
+            check_attestation: Quan acabi la votació podràs comprovar en quines preguntes s'ha signat una papereta al teu nom.
+            check_attestation_link: Comprova les meves signatures
+        attestations:
+          show:
+            title: Signatures emeses al teu nom
+            pending: La votació encara no ha acabat. Torna quan acabi per comprovar en quines preguntes s'ha signat una papereta al teu nom.
+            none: No s'ha signat cap papereta al teu nom.
+            signed: "S'ha signat una papereta al teu nom en aquestes preguntes:"
+            voted: hi consta un vot
+            not_voted: no hi consta cap vot
+            explain: Si s'ha signat una papereta al teu nom en una pregunta on no has votat, avisa l'organització.
+            unavailable: Ara mateix no es poden comprovar les signatures. Torna-ho a provar més tard.

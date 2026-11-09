@@ -10,6 +10,15 @@ ca:
           dashboard:
             security:
               title: "La teva configuració de seguretat"
+            attestations:
+              title: "Atestacions"
+              issued: "Emeses: %{total} atestacions a %{voters} votants."
+              published: "Publicats per Vocdoni: %{records} votants signats, d'un màxim declarat de %{max}."
+              unknown: "Votants signats que Decidim no ha atestat mai: %{voters}."
+              per_question: "%{question}: %{signed} votants signats."
+              unavailable:
+                pending: "Vocdoni publica els votants signats quan han acabat totes les preguntes."
+                error: "Ara mateix no es poden llegir els votants signats de Vocdoni."
           security:
             show:
               title: "Seguretat"

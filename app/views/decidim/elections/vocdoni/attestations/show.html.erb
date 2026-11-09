@@ -1,0 +1,20 @@
+<%# What the SaaS reports having signed for the voter of an attested election, once it has ended. %>
+<% scope = "decidim.elections.vocdoni.attestations.show" %>
+<div class="layout-main__section" data-attestation-check="<%= check_state %>">
+  <h1 class="h2 mb-4"><%= t("title", scope:) %></h1>
+  <% case check_state %>
+  <% when :signed %>
+    <p><%= t("signed", scope:) %></p>
+    <ul class="list-disc ml-6 my-4">
+      <% signed_questions.each do |entry| %>
+        <li data-question-id="<%= entry[:id] %>">
+          <%= entry[:question] ? translated_attribute(entry[:question].body) : entry[:id] %>
+          — <%= t(entry[:voted] ? "voted" : "not_voted", scope:) %>
+        </li>
+      <% end %>
+    </ul>
+    <p><%= t("explain", scope:) %></p>
+  <% else %>
+    <p><%= t(check_state, scope:) %></p>
+  <% end %>
+</div>

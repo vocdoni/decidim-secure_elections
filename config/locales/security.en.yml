@@ -15,6 +15,15 @@ en:
           dashboard:
             security:
               title: "Your security configuration"
+            attestations:
+              title: "Attestations"
+              issued: "Issued: %{total} attestations to %{voters} voters."
+              published: "Published by Vocdoni: %{records} signed voters, out of a declared maximum of %{max}."
+              unknown: "Signed voters Decidim never attested: %{voters}."
+              per_question: "%{question}: %{signed} signed voters."
+              unavailable:
+                pending: "Vocdoni publishes the signed voters once every question has ended."
+                error: "The signed voters cannot be read from Vocdoni right now."
           # The Security tab. Written for the person running the vote, not for
           # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
           # vote types are "Simple vote" (any standard Decidim census) and

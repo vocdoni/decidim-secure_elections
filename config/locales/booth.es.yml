@@ -5,3 +5,15 @@ es:
         booth:
           receipt:
             final: Este voto no se puede modificar.
+            check_attestation: Cuando termine la votación podrás comprobar en qué preguntas se firmó una papeleta a tu nombre.
+            check_attestation_link: Comprobar mis firmas
+        attestations:
+          show:
+            title: Firmas emitidas a tu nombre
+            pending: La votación aún no ha terminado. Vuelve cuando termine para comprobar en qué preguntas se firmó una papeleta a tu nombre.
+            none: No se firmó ninguna papeleta a tu nombre.
+            signed: "Se firmó una papeleta a tu nombre en estas preguntas:"
+            voted: consta un voto
+            not_voted: no consta ningún voto
+            explain: Si se firmó una papeleta a tu nombre en una pregunta en la que no votaste, avisa a la organización.
+            unavailable: Ahora mismo no se pueden comprobar las firmas. Vuelve a intentarlo más tarde.
