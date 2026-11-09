@@ -10,6 +10,16 @@ es:
           dashboard:
             security:
               title: "Tu configuración de seguridad"
+              csp_state: "Estado de verificación"
+              csp_state_pending: "pendiente"
+              census_root: "Raíz del censo"
+              census_size: "Tamaño del censo"
+              signatures_issued: "Firmas emitidas"
+              confirmed_votes: "Votos confirmados"
+              sync_census_size:
+                label: "Sincronizar tamaño del censo"
+              verify_roots:
+                label: "Verificar raíces"
           security:
             show:
               title: "Seguridad"
@@ -48,6 +58,7 @@ es:
                   label: "Código por SMS"
                   help: "El código se envía por mensaje de texto, por lo que cada votante necesita un número de teléfono registrado en el servicio de votación."
                 both_note: "Si ambas opciones están activadas, cada votante elige cómo recibir el código."
+                unavailable: "Los códigos de un solo uso para votantes no están disponibles todavía; se añadirán en una versión posterior."
               summary:
                 sentences:
                   basic: "Las papeletas se guardan en esta plataforma. Adecuado para consultas informales."
@@ -56,6 +67,11 @@ es:
             update:
               success: "Configuración de seguridad actualizada."
               invalid: "No se ha podido guardar la configuración de seguridad. Revisa los errores que aparecen a continuación."
+            sync_census_size:
+              success: "Sincronización del tamaño del censo encolada."
+              not_available: "No hay proceso para sincronizar."
+            verify_roots:
+              success: "Verificación de raíces encolada."
         booth:
           launcher:
             help_html: "Tu voto se emite mediante la tecnología segura de Vocdoni, que garantiza el anonimato y la verificabilidad."

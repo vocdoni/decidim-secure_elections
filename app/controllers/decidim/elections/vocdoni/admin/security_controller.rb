@@ -50,6 +50,37 @@ module Decidim
             end
           end
 
+          # Enqueues a census resize for the process. Only enqueues; never calls
+          # the API directly (gem ARCHITECTURE §0.5).
+          def sync_census_size
+            enforce_permission_to(:update, :census, election:)
+            dashboard_path = Decidim::EngineRouter.admin_proxy(election.component)
+                                                  .dashboard_election_path(election)
+
+            process = election.vocdoni_process
+            if process&.id
+              ResizeCensusJob.perform_later(process.id)
+              flash[:notice] = I18n.t("security.sync_census_size.success", scope: "decidim.elections.vocdoni.admin")
+            else
+              flash[:alert] = I18n.t("security.sync_census_size.not_available", scope: "decidim.elections.vocdoni.admin")
+            end
+
+            redirect_to dashboard_path
+          end
+
+          # Enqueues a SyncProcessJob, which runs verify_roots! when the process
+          # is published and csp_state is nil. Only enqueues; never calls the API
+          # directly (gem ARCHITECTURE §0.5).
+          def verify_roots
+            enforce_permission_to(:update, :census, election:)
+            dashboard_path = Decidim::EngineRouter.admin_proxy(election.component)
+                                                  .dashboard_election_path(election)
+
+            SyncProcessJob.perform_later(election.id)
+            flash[:notice] = I18n.t("security.verify_roots.success", scope: "decidim.elections.vocdoni.admin")
+            redirect_to dashboard_path
+          end
+
           private
 
           def election

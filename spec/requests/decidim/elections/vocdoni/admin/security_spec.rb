@@ -69,14 +69,18 @@ module Decidim
             expect(html.at_css("#js-security-choice [data-security-good-to-know]").text).to include("Good to know:")
           end
 
-          it "renders the one-time code block hidden and disabled for a simple vote" do
+          it "renders the two-factor fieldset hidden, disabled and locked with an unavailable note" do
             block = html.at_css(".vocdoni-security__card fieldset#js-security-two-factor")
 
             expect(block).to be_present
             expect(block.has_attribute?("hidden")).to be(true)
             expect(block.has_attribute?("disabled")).to be(true)
+            # The fieldset carries data-security-locked so security.js keeps
+            # it disabled even when the secret vote is selected.
+            expect(block.has_attribute?("data-security-locked")).to be(true)
             expect(block.at_css("#security_email")).to be_present
             expect(block.at_css("#security_sms")).to be_present
+            expect(block.text).to include("not available yet")
           end
 
           it "no longer renders the removed sections" do
@@ -92,13 +96,36 @@ module Decidim
               end
             end
 
-            it "renders the one-time code block visible and enabled" do
+            it "renders the two-factor block visible but still locked and disabled" do
               block = html.at_css("fieldset#js-security-two-factor")
 
+              # Visible (not hidden) because secure vote is selected.
               expect(block.has_attribute?("hidden")).to be(false)
-              expect(block.has_attribute?("disabled")).to be(false)
+              # Still disabled because the feature is not available yet.
+              expect(block.has_attribute?("disabled")).to be(true)
+              expect(block.has_attribute?("data-security-locked")).to be(true)
               expect(html.at_css("[data-security-choice-card='secure']")["class"]).to include("is-selected")
             end
+          end
+        end
+
+        context "when an admin updates security settings" do
+          let(:admin) { create(:user, :admin, :confirmed, organization:) }
+          let(:security_update_path) { Decidim::EngineRouter.admin_proxy(component).election_security_path(election) }
+
+          before { login_as admin, scope: :user }
+
+          it "stores twofa_fields as an empty array regardless of submitted email/sms values" do
+            put(security_update_path,
+                params: { security: { enable_vocdoni: "true", email: "1", sms: "1" } },
+                headers:)
+
+            # 302 means the command succeeded and redirected to the dashboard
+            expect(response).to have_http_status(:found)
+            process = sidecar
+            expect(process).to be_present
+            settings = process.metadata["settings"] || {}
+            expect(settings["twofa_fields"]).to eq([])
           end
         end
 

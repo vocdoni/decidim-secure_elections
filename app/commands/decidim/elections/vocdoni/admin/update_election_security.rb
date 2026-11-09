@@ -48,7 +48,7 @@ module Decidim
           def enable!
             sidecar = election.vocdoni_process || Process.new(decidim_election_id: election.id, state: "pending")
             sidecar.metadata = sidecar.metadata.to_h.merge(
-              "settings" => { "twofa_fields" => form.two_fa_fields }
+              "settings" => { "twofa_fields" => [] }
             )
             sidecar.save!
           end

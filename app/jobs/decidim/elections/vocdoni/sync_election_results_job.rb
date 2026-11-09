@@ -112,6 +112,7 @@ module Decidim
           apply_results!(remote_questions) if remote_questions.any?
           log_summary(remote_questions, mode:, attempt:)
           reschedule_if_not_final!(remote_questions, attempt:) if mode == :poll_until_final
+          schedule_purge! if mode == :poll_until_final && all_final?(remote_questions) && process.csp_elections.exists?
         end
 
         def apply_results!(remote_questions)
@@ -166,6 +167,13 @@ module Decidim
           self.class
               .set(wait: POLL_CADENCE_S.seconds)
               .perform_later(election.id, attempt: attempt + 1)
+        end
+
+        # Schedules address and nullifier purge 30 days after all questions
+        # have published their final results. The delay is a grace period that
+        # lets voters confirm their receipts before the data is gone.
+        def schedule_purge!
+          PurgeCspPinsJob.set(wait: 30.days).perform_later(process.id)
         end
 
         def log_summary(remote_questions, mode:, attempt:)

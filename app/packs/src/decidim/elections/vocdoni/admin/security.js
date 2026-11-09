@@ -8,7 +8,9 @@
  *    highlighted (browsers without `:has()`). Without JavaScript the radio
  *    and the card title still do.
  * 2. The one-time code block is shown, and its fieldset usable, only while
- *    the secret vote is selected.
+ *    the secret vote is selected — unless the fieldset carries
+ *    `data-security-locked`, in which case it stays disabled regardless
+ *    of the vote type (feature not yet available).
  *
  * The section header is a native `<details>`, so it needs nothing here. The
  * resulting configuration is summarised on the Dashboard, from saved data.
@@ -29,6 +31,7 @@ const setupSecurity = () => {
 
   const radios = Array.from(choice.querySelectorAll("[data-security-choice]"));
   const cards = Array.from(choice.querySelectorAll("[data-security-choice-card]"));
+  const locked = "securityLocked" in twoFactor.dataset;
 
   const selected = () => {
     const radio = radios.find((input) => input.checked);
@@ -43,11 +46,14 @@ const setupSecurity = () => {
       card.classList.toggle("is-selected", card.dataset.securityChoiceCard === value);
     });
 
-    // Hidden and disabled together: a disabled fieldset submits nothing, so
-    // a simple vote never carries a stale code choice.
-    const usable = value === "secure";
-    twoFactor.hidden = !usable;
-    twoFactor.disabled = !usable;
+    // Show the fieldset when the secret vote is selected so the admin
+    // sees the "not available yet" note; hide it again for the simple vote.
+    // If the fieldset is locked, it stays disabled regardless of the choice
+    // (locked means the feature is not available; a disabled fieldset submits
+    // nothing so no stale code choice is ever sent).
+    const secure = value === "secure";
+    twoFactor.hidden = !secure;
+    twoFactor.disabled = !secure || locked;
   };
 
   cards.forEach((card) => {

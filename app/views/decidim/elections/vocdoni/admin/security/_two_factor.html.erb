@@ -1,19 +1,21 @@
 <%#
   The one-time code (`twoFaFields`), inside the same card as the vote type.
 
-  Only meaningful for a secret vote, so the whole block is rendered `hidden`
-  and its fieldset `disabled` (nothing in it is submitted) while the simple
-  vote is selected; `security.js` flips both as the admin changes the vote
-  type, without saving. Email and SMS are independent; with both on, the
-  voter picks the channel when the code is requested.
+  Rendered `hidden` and `disabled` for a simple vote; `security.js` shows
+  it when the secret vote is selected. The fieldset carries
+  `data-security-locked` because one-time codes are not yet available:
+  `security.js` leaves a locked fieldset disabled regardless of the vote
+  type, so the admin can read the "not available yet" note but nothing in
+  the fieldset is submitted.
 %>
 <% enabled = @form.enable_vocdoni %>
 <fieldset id="js-security-two-factor"
           class="vocdoni-security__fieldset vocdoni-two-factor"
           aria-labelledby="security-two-factor-title"
           aria-describedby="security-two-factor-lead"
+          data-security-locked
           <%= "hidden" unless enabled %>
-          <%= "disabled" unless enabled %>>
+          disabled>
   <div class="vocdoni-two-factor__header">
     <h3 class="vocdoni-two-factor__title" id="security-two-factor-title"><%= t("legend", scope: "decidim.elections.vocdoni.admin.security.show.two_factor") %></h3>
     <p class="vocdoni-two-factor__lead" id="security-two-factor-lead"><%= t("lead", scope: "decidim.elections.vocdoni.admin.security.show.two_factor") %></p>
@@ -45,6 +47,6 @@
 
   <p class="vocdoni-security__note">
     <%= icon "information-line" %>
-    <span><%= t("both_note", scope: "decidim.elections.vocdoni.admin.security.show.two_factor") %></span>
+    <span><%= t("unavailable", scope: "decidim.elections.vocdoni.admin.security.show.two_factor") %></span>
   </p>
 </fieldset>

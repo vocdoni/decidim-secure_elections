@@ -101,6 +101,91 @@ module Decidim
             expect(manifest.transport).to eq(:client)
             expect(manifest.client?).to be(true)
           end
+
+          it "sets supports_per_question to true" do
+            manifest = Decidim::Elections.voting_backends.find(:vocdoni)
+            expect(manifest.supports_per_question).to be(true)
+          end
+        end
+
+        describe "manifest voted block" do
+          include_context "with concurrency and csp pins"
+
+          let(:organization) { create(:organization) }
+          let(:component) { create(:elections_component, organization:) }
+          let(:election) do
+            create(:election, :ongoing, component:).tap do |el|
+              create(:vocdoni_process, :published, election: el)
+            end
+          end
+          let!(:question) { create(:election_question, election:) }
+          let(:voter) { create(:user, :confirmed, organization:) }
+          let(:voter_uid) { voter.to_global_id.to_s }
+          let(:pin_secret_hex) { SecureRandom.hex(32) }
+
+          def vote_for(election, voter_uid, que)
+            secret = Vocdoni.csp_pin_secret
+            digest = secret.digest(Csp::PinSecret.voter_key(election, voter_uid))
+            CspPin.insert!({ # rubocop:disable Rails/SkipsModelValidations
+                             process_id: election.vocdoni_process.id,
+                             decidim_question_id: que.id,
+                             election_id: election.id,
+                             csp_root_id: "test",
+                             seed: SecureRandom.hex(12),
+                             voter_digest: digest,
+                             vote_confirmed_at: Time.current
+                           })
+          end
+
+          around do |example|
+            with_env("VOCDONI_CSP_PIN_SECRET" => pin_secret_hex) { example.run }
+          end
+
+          subject(:voted) do
+            Decidim::Elections.voting_backends.find(:vocdoni).voted?(election, voter_uid)
+          end
+
+          it "returns false when the voter has no confirmed pins" do
+            expect(voted).to be(false)
+          end
+
+          it "returns true when all questions have a confirmed pin for the voter" do
+            vote_for(election, voter_uid, question)
+            expect(voted).to be(true)
+          end
+
+          it "returns false when there are no available questions" do
+            allow(election).to receive(:available_questions).and_return([])
+            expect(voted).to be(false)
+          end
+
+          it "returns false (not an error) when csp_pin_secret is not configured" do
+            with_env("VOCDONI_CSP_PIN_SECRET" => nil) do
+              expect { voted }.not_to raise_error
+              expect(voted).to be(false)
+            end
+          end
+
+          it "returns false when voter_uid is blank" do
+            blank_voted = Decidim::Elections.voting_backends.find(:vocdoni)
+                                            .voted?(election, "")
+            expect(blank_voted).to be(false)
+          end
+
+          context "with two questions" do
+            let!(:question2) { create(:election_question, election:) }
+
+            it "returns false when only one of two questions has a confirmed pin" do
+              vote_for(election, voter_uid, question)
+              expect(voted).to be(false)
+            end
+
+            it "returns true when both questions have confirmed pins" do
+              vote_for(election, voter_uid, question)
+              vote_for(election, voter_uid, question2)
+              expect(voted).to be(true)
+            end
+          end
         end
 
         describe ".booth_config" do
@@ -112,9 +197,8 @@ module Decidim
             end
           end
           let!(:question) { create(:election_question, :with_response_options, election:) }
-          let(:user) { create(:user, :confirmed, organization:) }
 
-          subject(:config) { described_class.booth_config(election, user) }
+          subject(:config) { described_class.booth_config(election) }
 
           it "includes apiUrl from Vocdoni.api_url" do
             expect(config[:apiUrl]).to eq(Decidim::Elections::Vocdoni.api_url)
@@ -129,17 +213,23 @@ module Decidim
             expect(config[:chainId]).to eq(election.vocdoni_process.chain_id)
           end
 
-          it "sets credentials.memberNumber to user.id.to_s" do
-            expect(config[:credentials]).to eq(memberNumber: user.id.to_s)
+          it "does not include credentials or contact" do
+            expect(config).not_to have_key(:credentials)
+            expect(config).not_to have_key(:contact)
           end
 
-          it "sets contact.email to the user's email" do
-            expect(config[:contact][:email]).to eq(user.email)
+          it "includes signUrl, statusUrl and confirmUrl" do
+            expect(config[:signUrl]).to be_a(String)
+            expect(config[:statusUrl]).to be_a(String)
+            expect(config[:confirmUrl]).to be_a(String)
           end
 
-          it "includes a masked contact email" do
-            expect(config[:contact][:masked]).to be_a(String)
-            expect(config[:contact][:masked]).to include("•••@")
+          it "sets proofType to ECDSA" do
+            expect(config[:proofType]).to eq("ECDSA")
+          end
+
+          it "reflects perQuestion from the election" do
+            expect(config[:perQuestion]).to eq(election.per_question?)
           end
 
           it "maps questions in the election's question order" do
@@ -157,6 +247,12 @@ module Decidim
               expect(q[:choices]).to eq(expected)
             end
           end
+
+          it "includes i18n keys without :otp" do
+            expect(config[:i18n]).to have_key(:status)
+            expect(config[:i18n]).to have_key(:errors)
+            expect(config[:i18n]).not_to have_key(:otp)
+          end
         end
       end
     end
@@ -165,7 +261,7 @@ end
 
 # Helper to set environment variables for the duration of a block.
 def with_env(vars)
-  old = vars.to_h { |k, _| [k, ENV[k]] }
+  old = vars.to_h { |k, _| [k, ENV.fetch(k, nil)] }
   vars.each { |k, v| v.nil? ? ENV.delete(k) : (ENV[k] = v) }
   yield
 ensure

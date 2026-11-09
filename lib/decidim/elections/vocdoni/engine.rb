@@ -211,7 +211,10 @@ module Decidim
           Decidim::Elections::AdminEngine.routes.append do
             resources :elections, only: [] do
               resource :security, only: [:show, :update],
-                                  controller: "/decidim/elections/vocdoni/admin/security"
+                                  controller: "/decidim/elections/vocdoni/admin/security" do
+                post :sync_census_size
+                post :verify_roots
+              end
             end
           end
 
@@ -393,6 +396,25 @@ module Decidim
 
             Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id)
             Rails.logger.info "[vocdoni] enqueued SyncElectionResultsJob for election ##{election.id}"
+          end
+        end
+
+        # "Publish results" on a single question of a per_question election.
+        # Ends that question on chain so the sequencer begins decrypting its
+        # tally, then syncs the results. `enable_voting` needs no hook.
+        initializer "decidim_elections_vocdoni.subscribe_to_question_publish_results" do
+          ActiveSupport::Notifications.subscribe("decidim.elections.admin.update_question_status:after") do |_event_name, data|
+            question = data[:question]
+            action = data[:action]
+            next if question.blank?
+            next unless action.to_sym == :publish_results
+
+            election = question.election
+            next if election.vocdoni_process.blank?
+            next if election.vocdoni_process.vocdoni_process_id.blank?
+
+            Decidim::Elections::Vocdoni::EndQuestionOnChainJob.perform_later(question.id)
+            Rails.logger.info "[vocdoni] enqueued EndQuestionOnChainJob for question ##{question.id} of election ##{election.id}"
           end
         end
 

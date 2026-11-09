@@ -12,7 +12,7 @@ const SAVED = {
   secure: { simple: "", secure: "checked", block: "" }
 };
 
-const render = (saved) => {
+const render = (saved, { locked = false } = {}) => {
   const state = SAVED[saved];
   document.body.innerHTML = `
     <fieldset id="js-security-choice">
@@ -27,7 +27,7 @@ const render = (saved) => {
         <ul><li data-testid="secure-point">Nobody can link a ballot to a voter.</li></ul>
       </div>
     </fieldset>
-    <fieldset id="js-security-two-factor" ${state.block}>
+    <fieldset id="js-security-two-factor" ${state.block} ${locked ? "data-security-locked" : ""}>
       <input type="checkbox" name="security[email]" data-security-code>
     </fieldset>
   `;
@@ -77,5 +77,18 @@ describe("Security tab", () => {
     document.body.innerHTML = "<p>Dashboard</p>";
 
     expect(() => setupSecurity()).not.toThrow();
+  });
+
+  it("keeps a locked fieldset disabled even when the secret vote is selected", () => {
+    render("simple", { locked: true });
+
+    document.querySelector("[data-testid='secure-point']").click();
+
+    expect(card("secure").classList.contains("is-selected")).toBe(true);
+    // The fieldset becomes visible but stays disabled: the OTP feature is not
+    // available yet and the locked attribute prevents its checkboxes from being
+    // submitted.
+    expect(twoFactor().hidden).toBe(false);
+    expect(twoFactor().disabled).toBe(true);
   });
 });

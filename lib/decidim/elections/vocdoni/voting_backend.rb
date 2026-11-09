@@ -31,32 +31,51 @@ module Decidim
             manifest.transport = :client
             manifest.client_adapter = "vocdoni"
             manifest.client_script = ADAPTER_SCRIPT
-            manifest.pre_ballot_partial = "decidim/elections/vocdoni/booth/otp_panel"
             manifest.receipt_partial = "decidim/elections/vocdoni/booth/receipt_note"
             manifest.vote_overwrite = false
-            manifest.supports_per_question = false
+            manifest.supports_per_question = true
 
             manifest.applies_to { |election| enabled? && election.vocdoni_process.present? }
-            manifest.booth_config { |election, voter_uid:, current_user:| booth_config(election, current_user) }
+            manifest.booth_config { |election, _voter_uid:, _current_user:| booth_config(election) }
             # The CSP's `check` is authoritative, in the browser.
-            manifest.voted { |_election, _voter_uid| false }
-            manifest.csp_directives { |_election| { "connect-src" => [Vocdoni.api_url.to_s.sub(%r{/+\z}, "")] } }
+            manifest.voted do |election, voter_uid|
+              questions = election.available_questions.to_a
+              next false if voter_uid.blank? || questions.empty?
+
+              secret = begin
+                Vocdoni.csp_pin_secret
+              rescue Csp::RootMissing
+                next false
+              end
+
+              process = election.vocdoni_process
+              next false if process.nil?
+
+              digest = secret.digest(Csp::PinSecret.voter_key(election, voter_uid))
+              questions.all? do |question|
+                CspPin.confirmed.exists?(decidim_question_id: question.id, voter_digest: digest)
+              end
+            end
+            manifest.csp_directives { |_election| {} }
           end
         end
 
-        def self.booth_config(election, user)
+        def self.booth_config(election)
           process = election.vocdoni_process
           meta = process.questions_metadata.index_by { |row| row["decidim_question_id"].to_i }
           ready = process.published? && process.vocdoni_process_id.present?
+          proxy = Decidim::EngineRouter.main_proxy(election.component)
 
           {
             apiUrl: Vocdoni.api_url,
             processId: ready ? process.vocdoni_process_id : nil,
             chainId: process.chain_id,
             explorerUrl: Vocdoni.explorer_url,
-            # Demo: memberNumber is the Decidim user id, as PublishElectionJob pushes it.
-            credentials: { memberNumber: user&.id.to_s },
-            contact: { email: user&.email, masked: mask(user&.email) },
+            signUrl: proxy.election_csp_sign_path(election),
+            statusUrl: proxy.election_csp_status_path(election),
+            confirmUrl: proxy.election_csp_confirm_path(election),
+            proofType: "ECDSA",
+            perQuestion: election.per_question?,
             questions: election.questions.map do |question|
               row = meta[question.id] || {}
               {
@@ -67,18 +86,11 @@ module Decidim
                 choices: question.response_options.order(:id).each_with_index.to_h { |option, idx| [option.id.to_s, idx] }
               }
             end,
-            i18n: I18n.t("decidim.elections.vocdoni.votes.page").slice(:status, :errors, :otp, :blocked, :receipt).merge(
+            i18n: I18n.t("decidim.elections.vocdoni.votes.page").slice(:status, :errors, :blocked, :receipt).merge(
               not_ready: I18n.t("decidim.elections.vocdoni.booth.launcher.not_ready",
                                 default: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments.")
             )
           }
-        end
-
-        def self.mask(email)
-          return nil if email.blank?
-
-          local, domain = email.split("@", 2)
-          "#{local[0]}•••@#{domain}"
         end
       end
     end

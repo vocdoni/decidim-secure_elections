@@ -15,6 +15,16 @@ en:
           dashboard:
             security:
               title: "Your security configuration"
+              csp_state: "Verification state"
+              csp_state_pending: "pending"
+              census_root: "Census root"
+              census_size: "Census size"
+              signatures_issued: "Signatures issued"
+              confirmed_votes: "Confirmed votes"
+              sync_census_size:
+                label: "Sync census size"
+              verify_roots:
+                label: "Verify roots"
           # The Security tab. Written for the person running the vote, not for
           # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
           # vote types are "Simple vote" (any standard Decidim census) and
@@ -59,6 +69,7 @@ en:
                   label: "SMS code"
                   help: "The code goes by text message, so every voter needs a phone number registered with the voting service."
                 both_note: "If both are on, each voter chooses how to receive the code."
+                unavailable: "One-time codes for voters are not available yet; they will be added in a later release."
               # One sentence per level (`SecurityForm::LEVELS`), shown on the
               # Dashboard card ("Your security configuration").
               summary:
@@ -69,8 +80,13 @@ en:
             update:
               success: "Security settings updated."
               invalid: "Security settings could not be saved. Please review the errors below."
+            sync_census_size:
+              success: "Census size sync enqueued."
+              not_available: "No process to sync."
+            verify_roots:
+              success: "Root verification enqueued."
         booth:
           launcher:
-            help_html: "Your vote is cast using Vocdoni’s secure technology, guaranteeing anonymity and verifiability."
+            help_html: "Your vote is cast using Vocdoni's secure technology, guaranteeing anonymity and verifiability."
             enter: "Open the voting booth"
             not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."

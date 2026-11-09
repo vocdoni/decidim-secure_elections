@@ -10,6 +10,16 @@ ca:
           dashboard:
             security:
               title: "La teva configuració de seguretat"
+              csp_state: "Estat de verificació"
+              csp_state_pending: "pendent"
+              census_root: "Arrel del cens"
+              census_size: "Mida del cens"
+              signatures_issued: "Signatures emeses"
+              confirmed_votes: "Vots confirmats"
+              sync_census_size:
+                label: "Sincronitzar mida del cens"
+              verify_roots:
+                label: "Verificar arrels"
           security:
             show:
               title: "Seguretat"
@@ -48,6 +58,7 @@ ca:
                   label: "Codi per SMS"
                   help: "El codi s'envia per missatge de text, de manera que cada votant necessita un número de telèfon registrat al servei de votació."
                 both_note: "Si totes dues opcions estan activades, cada votant tria com rebre el codi."
+                unavailable: "Els codis d'un sol ús per als votants encara no estan disponibles; s'afegiran en una versió posterior."
               summary:
                 sentences:
                   basic: "Les paperetes es guarden en aquesta plataforma. Adequat per a consultes informals."
@@ -56,6 +67,11 @@ ca:
             update:
               success: "Configuració de seguretat actualitzada."
               invalid: "No s'ha pogut desar la configuració de seguretat. Revisa els errors que apareixen a continuació."
+            sync_census_size:
+              success: "Sincronització de la mida del cens encuada."
+              not_available: "No hi ha cap procés per sincronitzar."
+            verify_roots:
+              success: "Verificació d'arrels encuada."
         booth:
           launcher:
             help_html: "El teu vot s'emet mitjançant la tecnologia segura de Vocdoni, que garanteix l'anonimat i la verificabilitat."

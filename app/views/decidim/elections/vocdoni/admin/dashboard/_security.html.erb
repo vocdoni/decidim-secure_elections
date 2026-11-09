@@ -5,12 +5,13 @@
   after the Results card for a published election, before the Main card for
   an unpublished one.
 
-  The level is the saved one (`SecurityForm.level_for`), so it reads the
-  same as the Security tab after saving. The chrome is upstream's
-  `card`/`card-divider`/`card-title`, as on the sibling cards.
+  For external-CSP elections, also shows per-question census root, census
+  size, signature count, confirmed vote count, csp_state, and two action
+  buttons. For non-CSP elections, shows only the security level.
 %>
 <% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 <% level = Decidim::Elections::Vocdoni::AdminForms::SecurityForm.level_for(election) %>
+<% vocdoni_process = election.vocdoni_process %>
 <div class="card vocdoni-security-summary">
   <div class="card-divider">
     <h2 class="card-title">
@@ -26,4 +27,45 @@
       </p>
     </div>
   </div>
+
+  <% if vocdoni_process&.csp_elections&.any? %>
+    <div class="card-section">
+      <dl class="vocdoni-security-summary__csp-stats">
+        <dt><%= t("csp_state", scope: "decidim.elections.vocdoni.admin.dashboard.security") %></dt>
+        <dd><%= vocdoni_process.csp_state || t("csp_state_pending", scope: "decidim.elections.vocdoni.admin.dashboard.security") %></dd>
+      </dl>
+
+      <% vocdoni_process.csp_elections.each do |ce| %>
+        <% question = election.questions.find_by(id: ce.decidim_question_id) %>
+        <% next unless question %>
+        <div class="vocdoni-security-summary__csp-question">
+          <strong><%= question.body.to_h[I18n.locale.to_s].presence || question.body.to_h.values.grep(String).first.to_s %></strong>
+          <dl>
+            <dt><%= t("census_root", scope: "decidim.elections.vocdoni.admin.dashboard.security") %></dt>
+            <dd><code><%= ce.census_root %></code></dd>
+            <dt><%= t("census_size", scope: "decidim.elections.vocdoni.admin.dashboard.security") %></dt>
+            <dd><%= vocdoni_process.census_size %></dd>
+            <dt><%= t("signatures_issued", scope: "decidim.elections.vocdoni.admin.dashboard.security") %></dt>
+            <dd><%= Decidim::Elections::Vocdoni::CspPin.where(decidim_question_id: ce.decidim_question_id).count %></dd>
+            <dt><%= t("confirmed_votes", scope: "decidim.elections.vocdoni.admin.dashboard.security") %></dt>
+            <dd><%= Decidim::Elections::Vocdoni::CspPin.confirmed.where(decidim_question_id: ce.decidim_question_id).count %></dd>
+          </dl>
+        </div>
+      <% end %>
+
+      <% proxy = Decidim::EngineRouter.admin_proxy(election.component) %>
+      <div class="vocdoni-security-summary__csp-actions">
+        <%= button_to t("sync_census_size.label", scope: "decidim.elections.vocdoni.admin.dashboard.security"),
+                      proxy.sync_census_size_election_security_path(election),
+                      method: :post,
+                      class: "button button__sm button__secondary" %>
+        <% if vocdoni_process.csp_state.nil? && vocdoni_process.published? %>
+          <%= button_to t("verify_roots.label", scope: "decidim.elections.vocdoni.admin.dashboard.security"),
+                        proxy.verify_roots_election_security_path(election),
+                        method: :post,
+                        class: "button button__sm button__secondary" %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
 </div>

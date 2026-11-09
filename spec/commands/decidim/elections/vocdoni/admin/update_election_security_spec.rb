@@ -22,11 +22,11 @@ module Decidim
           context "when the secret vote is chosen for the first time" do
             let(:email) { true }
 
-            it "opts the election in with the email code" do
+            it "opts the election in and stores twofa_fields empty until OTP is available" do
               expect { command.call }.to broadcast(:ok)
 
               expect(sidecar).to be_pending
-              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => %w(email))
+              expect(sidecar.metadata["settings"]).to eq("twofa_fields" => [])
             end
 
             it "leaves the census alone" do

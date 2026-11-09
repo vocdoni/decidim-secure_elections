@@ -43,6 +43,11 @@ module Decidim
             expect(sentence["data-security-level"]).to eq("basic")
             expect(sentence.text.strip).to eq(I18n.t("#{sentences}.basic"))
           end
+
+          it "does not show the CSP stats section or action buttons" do
+            expect(card.at_css(".vocdoni-security-summary__csp-stats")).to be_nil
+            expect(card.at_css(".vocdoni-security-summary__csp-actions")).to be_nil
+          end
         end
 
         context "when the election is published and opted in without a code" do
@@ -79,6 +84,92 @@ module Decidim
 
             expect(sentence["data-security-level"]).to eq("strongest")
             expect(sentence.text.strip).to eq(I18n.t("#{sentences}.strongest"))
+          end
+        end
+
+        context "when the election has an external-CSP process (csp_elections present)" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, :published, :ongoing, component:).tap do |record|
+              q = create(:election_question, :with_response_options, election: record)
+              proc = create(:vocdoni_process, :published, election: record)
+              create(:vocdoni_csp_election, process: proc, decidim_question_id: q.id)
+            end
+          end
+
+          it "shows the CSP stats section" do
+            expect(card.at_css(".vocdoni-security-summary__csp-stats")).to be_present
+          end
+
+          it "shows the Sync census size button" do
+            expect(card.text).to include(I18n.t("decidim.elections.vocdoni.admin.dashboard.security.sync_census_size.label"))
+          end
+
+          it "shows the Verify roots button when csp_state is nil" do
+            process = election.vocdoni_process
+            expect(process.csp_state).to be_nil
+
+            expect(card.text).to include(I18n.t("decidim.elections.vocdoni.admin.dashboard.security.verify_roots.label"))
+          end
+
+          context "when csp_state is set" do
+            before do
+              election.vocdoni_process.update_column(:csp_state, "verified") # rubocop:disable Rails/SkipsModelValidations
+              get dashboard_path, headers:
+            end
+
+            it "hides the Verify roots button once csp_state is set" do
+              expect(card.text).not_to include(I18n.t("decidim.elections.vocdoni.admin.dashboard.security.verify_roots.label"))
+            end
+
+            it "still shows the Sync census size button" do
+              expect(card.text).to include(I18n.t("decidim.elections.vocdoni.admin.dashboard.security.sync_census_size.label"))
+            end
+          end
+        end
+
+        context "when the Sync census size button is clicked" do
+          let!(:election) do
+            # published + not yet started: editable? returns true so the
+            # :update :census permission passes
+            create(:election, :with_token_csv_census, :published, :scheduled, component:).tap do |record|
+              q = create(:election_question, :with_response_options, election: record)
+              proc = create(:vocdoni_process, :published, election: record)
+              create(:vocdoni_csp_election, process: proc, decidim_question_id: q.id)
+            end
+          end
+          let(:sync_path) do
+            Decidim::EngineRouter.admin_proxy(component).sync_census_size_election_security_path(election)
+          end
+
+          it "enqueues ResizeCensusJob and redirects to the dashboard" do
+            expect(ResizeCensusJob).to receive(:perform_later).with(election.vocdoni_process.id)
+
+            post(sync_path, headers:)
+
+            expect(response).to redirect_to(dashboard_path)
+          end
+        end
+
+        context "when the Verify roots button is clicked" do
+          let!(:election) do
+            # published + not yet started: editable? returns true so the
+            # :update :census permission passes
+            create(:election, :with_token_csv_census, :published, :scheduled, component:).tap do |record|
+              q = create(:election_question, :with_response_options, election: record)
+              proc = create(:vocdoni_process, :published, election: record)
+              create(:vocdoni_csp_election, process: proc, decidim_question_id: q.id)
+            end
+          end
+          let(:verify_path) do
+            Decidim::EngineRouter.admin_proxy(component).verify_roots_election_security_path(election)
+          end
+
+          it "enqueues SyncProcessJob and redirects to the dashboard" do
+            expect(SyncProcessJob).to receive(:perform_later).with(election.id)
+
+            post(verify_path, headers:)
+
+            expect(response).to redirect_to(dashboard_path)
           end
         end
       end
