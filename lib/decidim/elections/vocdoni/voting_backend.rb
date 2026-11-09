@@ -37,15 +37,29 @@ module Decidim
             manifest.supports_per_question = false
 
             manifest.applies_to { |election| enabled? && election.vocdoni_process.present? }
-            manifest.booth_config { |election, voter_uid:, current_user:| booth_config(election, current_user) }
+            manifest.booth_config { |election, voter_uid:, current_user:| booth_config(election, current_user, voter_uid:) }
             # The CSP's `check` is authoritative, in the browser.
             manifest.voted { |_election, _voter_uid| false }
             manifest.csp_directives { |_election| { "connect-src" => [Vocdoni.api_url.to_s.sub(%r{/+\z}, "")] } }
           end
         end
 
-        def self.booth_config(election, user)
+        def self.booth_config(election, user, voter_uid: nil)
           process = election.vocdoni_process
+          config = base_booth_config(election, process, user)
+          return config unless process.attested?
+
+          # An attested voter authenticates with an attestation fetched from attestationUrl, and the
+          # code goes to the email of their census entry.
+          email = VoterAttestation.contact_email(voter_uid)
+          config.merge(
+            credentials: nil,
+            attestationUrl: Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_attestation_path(election),
+            contact: { email:, masked: mask(email) }
+          )
+        end
+
+        def self.base_booth_config(election, process, user)
           meta = process.questions_metadata.index_by { |row| row["decidim_question_id"].to_i }
           ready = process.published? && process.vocdoni_process_id.present?
 

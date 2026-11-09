@@ -51,6 +51,16 @@ module Decidim
           Decidim::Elections::Vocdoni::VotingBackend.register!
         end
 
+        # The booth of an attested election fetches its voter's attestation from
+        #   POST <component>/elections/:election_id/vocdoni_attestation
+        initializer "decidim_elections_vocdoni.attestation_route" do
+          Decidim::Elections::Engine.routes.append do
+            resources :elections, only: [] do
+              resource :vocdoni_attestation, only: :create, controller: "/decidim/elections/vocdoni/attestations"
+            end
+          end
+        end
+
         initializer "decidim_elections_vocdoni.webpacker.assets_path" do
           Decidim.register_assets_path File.expand_path("app/packs", root)
         end
