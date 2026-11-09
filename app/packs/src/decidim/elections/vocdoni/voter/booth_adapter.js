@@ -1,5 +1,6 @@
 import { createVoterFlow } from "src/decidim/elections/vocdoni/voter/flow";
 import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
+import { fetchAttestation } from "src/decidim/elections/vocdoni/voter/attestation";
 
 /**
  * The `vocdoni` voting backend for Decidim's client-side booth. Authenticates
@@ -8,7 +9,9 @@ import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
  * question from the browser with `cast.js`.
  *
  * Config (from the gem's `booth_config`): apiUrl, processId, chainId,
- * explorerUrl, credentials, contact, questions, i18n.
+ * explorerUrl, credentials, contact, questions, i18n, and attestationUrl for
+ * an attested census, whose voters authenticate with an attestation Decidim
+ * signs instead of credentials.
  *
  * Adapter contract (all async):
  *   prepare(ctx)  -> { canVote, alreadyVoted, receipts?, priorReceipts?,
@@ -138,7 +141,10 @@ const createAdapter = () => {
 
         ctx.progress(i18n.status.authenticating);
         const channel = flow.twoFaChannels()[0] || null;
-        const { needsOtp } = await flow.authenticate(config.credentials, channel
+        const credentials = config.attestationUrl
+          ? await fetchAttestation(config.attestationUrl)
+          : config.credentials;
+        const { needsOtp } = await flow.authenticate(credentials, channel
           ? { channel, contact: (config.contact || {})[channel] }
           : {});
 

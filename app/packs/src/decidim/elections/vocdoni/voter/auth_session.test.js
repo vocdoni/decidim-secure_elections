@@ -217,3 +217,49 @@ describe("authStep0 rate limiting", () => {
       rejects.toMatchObject({ code: ErrorCode.AUTH_REJECTED });
   });
 });
+
+describe("an attested census", () => {
+  const body = {
+    attestation: { processId: PROCESS_ID, voterId: "ab".repeat(32), contactHash: "cd".repeat(32), expiresAt: 1762700000 },
+    signature: "ef".repeat(65),
+    contact: "dave@example.org",
+    salt: "01".repeat(32)
+  };
+
+  it("sends the attestation Decidim signed as it is, contact and salt included", async () => {
+    const flow = await startFlow(["email"], []);
+
+    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
+
+    await expect(flow.authenticate(body, { channel: "email", contact: "ignored@example.org" })).
+      resolves.toEqual({ needsOtp: true, channel: "email" });
+    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, body);
+    expect(flow.verified).toBe(false);
+  });
+
+  it("replays the contact and salt of the attestation on resend", async () => {
+    const flow = await startFlow(["email"], []);
+
+    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
+    await flow.authenticate(body, { channel: "email", contact: "ignored@example.org" });
+    mockProcesses.resend.mockResolvedValue({});
+
+    await expect(flow.resendOtp()).resolves.toEqual({ channel: "email" });
+    expect(mockProcesses.resend).toHaveBeenCalledWith(PROCESS_ID, {
+      authToken: "tok",
+      contact: "dave@example.org",
+      salt: "01".repeat(32)
+    });
+  });
+
+  it("is verified on arrival without 2FA", async () => {
+    const flow = await startFlow([], []);
+    const bare = { attestation: body.attestation, signature: body.signature };
+
+    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
+
+    await expect(flow.authenticate(bare)).resolves.toEqual({ needsOtp: false, channel: null });
+    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, bare);
+    expect(flow.verified).toBe(true);
+  });
+});

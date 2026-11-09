@@ -39,6 +39,9 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
   // memory for the life of the page, like every other credential here.
   let channel = null;
   let contact = null;
+  // An attested voter's resend replays the contact and salt of the attestation
+  // instead: the CSP checks them against the contactHash it signed.
+  let attestedContact = null;
 
   /**
    * A token exists at all — enough to confirm a one-time code, nothing more.
@@ -78,6 +81,7 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     verified = false;
     channel = null;
     contact = null;
+    attestedContact = null;
   };
 
   /**
@@ -89,7 +93,12 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
    * therefore passes the channel it collected, and it is remembered for
    * {@link resendOtp}.
    *
-   * @param {Object} fields - the census `authFields`, e.g. `{ memberNumber }`.
+   * An attested census takes the body Decidim signed instead — `attestation`,
+   * `signature` and, with 2FA, the `contact` and `salt` that open its
+   * contactHash — and sends it as it is.
+   *
+   * @param {Object} fields - the census `authFields`, e.g. `{ memberNumber }`,
+   *   or the attestation body of an attested census.
    * @param {Object} [twoFa] - `{ channel, contact }` for a 2FA census.
    * @returns {Promise<{needsOtp: boolean, channel: string|null}>} where the
    *   voter goes next.
@@ -100,10 +109,11 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
 
     const fields2Fa = twoFaFields();
     const needsOtp = requiresOtp(fields2Fa);
+    const attested = Boolean(fields && fields.attestation);
     const chosen = needsOtp
       ? twoFa.channel || defaultChannel(fields2Fa)
       : null;
-    const body = needsOtp
+    const body = needsOtp && !attested
       ? { ...fields, ...contactBody(chosen, twoFa.contact) }
       : { ...fields };
 
@@ -127,6 +137,9 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     channel = chosen;
     contact = needsOtp
       ? twoFa.contact
+      : null;
+    attestedContact = needsOtp && attested
+      ? { contact: fields.contact, salt: fields.salt }
       : null;
 
     return { needsOtp, channel: chosen };
@@ -186,7 +199,7 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
       throw new VoteError(ErrorCode.OTP_RESEND_FAILED);
     }
 
-    const body = contactBody(channel, contact);
+    const body = attestedContact || contactBody(channel, contact);
 
     if (Object.keys(body).length === 0) {
       throw new VoteError(ErrorCode.OTP_RESEND_FAILED);
