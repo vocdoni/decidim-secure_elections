@@ -355,6 +355,15 @@ module Decidim
           end
         end
 
+        # CSP boot check (keyring, pin secret, OpenSSL, chain URL). It runs only
+        # in a serving process (see `Vocdoni.csp_boot_check?`): migrate,
+        # asset precompile, `rails runner` and the console also run
+        # `after_initialize`, and they must work without CSP secrets. A process
+        # that skips it still checks lazily on the first sign or publish.
+        initializer "decidim_elections_vocdoni.csp_boot" do |app|
+          app.config.after_initialize { Decidim::Elections::Vocdoni.csp_boot! }
+        end
+
         # Every remixicon name this gem renders from app/views, app/cells,
         # app/helpers and the admin menu, plus the ones core modules that may
         # not be installed would otherwise register. Decidim 0.33 raises on an

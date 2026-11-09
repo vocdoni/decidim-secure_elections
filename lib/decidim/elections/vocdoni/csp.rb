@@ -46,3 +46,5 @@ module Decidim
 end
 
 require "decidim/elections/vocdoni/csp/crypto"
+require "decidim/elections/vocdoni/csp/keyring"
+require "decidim/elections/vocdoni/csp/pin_secret"

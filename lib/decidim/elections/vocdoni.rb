@@ -55,7 +55,8 @@ module Decidim
       # `Decidim::Elections::Vocdoni.configure { |c| c.api_url = … }` block in an initializer.
       class << self
         attr_writer :api_url, :api_key, :org_address, :explorer_url,
-                    :open_timeout, :timeout, :job_timeout
+                    :open_timeout, :timeout, :job_timeout,
+                    :chain_api_url, :csp_origin
 
         def configure
           yield self
@@ -125,7 +126,117 @@ module Decidim
           @job_timeout ||= ENV.fetch("VOCDONI_JOB_TIMEOUT", "120").to_i
         end
 
+        DEV_CHAIN_API_URL = "https://api-dev.vocdoni.net/v2"
+        KECCAK_EMPTY = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+
+        # Vochain API the CSP reads directly (chain id, process census root),
+        # never through the SaaS. Production has no default, so a deploy that
+        # forgets it cannot fall back to the dev chain.
+        def chain_api_url
+          url = (@chain_api_url || ENV.fetch("VOCDONI_CHAIN_API_URL", nil)).to_s.strip.sub(%r{/+\z}, "")
+          return url if url.present?
+          raise Csp::ConfigurationError, "VOCDONI_CHAIN_API_URL is required in production" if Rails.env.production?
+
+          DEV_CHAIN_API_URL
+        end
+
+        # Census origin of externally signed processes.
+        def csp_origin
+          @csp_origin ||= ENV.fetch("VOCDONI_EXTERNAL_CSP_ORIGIN", nil).presence || "OFF_CHAIN_CA_V2"
+        end
+
+        # Spare census size declared on top of the roster, as a Rational in
+        # [0, 1] so that size arithmetic never goes through Float.
+        def census_headroom
+          raw = ENV.fetch("VOCDONI_CENSUS_HEADROOM", "0.20")
+          headroom = begin
+            Rational(raw)
+          rescue ArgumentError, TypeError, ZeroDivisionError
+            nil
+          end
+          return headroom if headroom && headroom >= 0 && headroom <= 1
+
+          raise Csp::ConfigurationError, "VOCDONI_CENSUS_HEADROOM must be a number between 0 and 1"
+        end
+
+        # LTS chain ids are `vocdoni/LTS/<version>`; that chain is production.
+        def lts_chain_id?(chain_id) = chain_id.to_s.start_with?("vocdoni/LTS/")
+
+        def csp_keyring
+          @csp_keyring ||= Csp::Keyring.load(ENV.fetch("VOCDONI_CSP_ROOTS", ""))
+        end
+
+        def csp_pin_secret
+          @csp_pin_secret ||= Csp::PinSecret.load(ENV.fetch("VOCDONI_CSP_PIN_SECRET", nil))
+        end
+
+        # Refuses to sign or publish with a half-configured CSP. Runs the checks
+        # once per process and remembers success. Raises Csp::RootMissing when
+        # the roots or the pin secret are absent, Csp::ConfigurationError for
+        # anything else.
+        def csp_ready!
+          return true if @csp_ready
+
+          csp_checks!
+          @csp_ready = true
+        end
+
+        # True in a process that serves voters or runs jobs: `rails server`,
+        # Sidekiq, or a web start command that sets VOCDONI_CSP_BOOT_CHECK=1
+        # (Puma started directly does not define Rails::Server). The variable
+        # belongs in the web start command only, never service-wide, because
+        # migrate and build steps would then need CSP secrets too.
+        def csp_boot_check?
+          Rails.const_defined?(:Server, false) ||
+            ENV["VOCDONI_CSP_BOOT_CHECK"] == "1" ||
+            (defined?(::Sidekiq) && ::Sidekiq.respond_to?(:server?) && ::Sidekiq.server?) || false
+        end
+
+        # Body of the `csp_boot` after_initialize hook. Production refuses to
+        # boot a misconfigured CSP; elsewhere it logs a warning and signing
+        # refuses later with `csp_root_missing`.
+        def csp_boot!
+          return false unless csp_boot_check?
+
+          csp_ready!
+          Rails.logger.info "[vocdoni] CSP ready csp_root_id=#{csp_keyring.newest_id} pin_secret_id=#{csp_pin_secret.id}"
+          true
+        rescue Csp::Error, ConfigurationError => e
+          raise if Rails.env.production?
+
+          Rails.logger.warn "[vocdoni] CSP not ready (#{e.class.name}): #{e.message}"
+          false
+        end
+
+        # Forgets the memoized CSP state, so specs can load a different configuration.
+        def reset_csp!
+          @csp_keyring = @csp_pin_secret = @csp_ready = nil
+        end
+
         private
+
+        def csp_checks!
+          check_keccak!
+          keyring = csp_keyring
+          raise Csp::RootMissing, "VOCDONI_CSP_ROOTS is not set" if keyring.empty?
+
+          csp_pin_secret.assert_separate!(keyring)
+          census_headroom
+          chain_api_url if Rails.env.production?
+        end
+
+        # Comparing keccak256("") with its known value rejects an OpenSSL
+        # without KECCAK-256 and one that answers SHA3-256 under that name.
+        def check_keccak!
+          digest = begin
+            OpenSSL::Digest.new("KECCAK-256").hexdigest("")
+          rescue StandardError
+            nil
+          end
+          return if digest == KECCAK_EMPTY
+
+          raise Csp::ConfigurationError, "OpenSSL >= 3.2 required (KECCAK-256)"
+        end
 
         # Credentials are unavailable until the application is initialized, and
         # an app may legitimately have none.
