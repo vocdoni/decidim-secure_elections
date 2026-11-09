@@ -14,12 +14,33 @@ module Decidim
 
         STATES = %w(pending publishing published failed).freeze
 
+        # Outcome of comparing the chain with the roots Decidim derived; no
+        # signature is issued unless it is "verified". Separate from `state`,
+        # which the sync job rewrites on every tick.
+        CSP_STATES = [nil, "verified", "compromised"].freeze
+
         belongs_to :election,
                    class_name: "Decidim::Elections::Election",
                    foreign_key: "decidim_election_id",
                    inverse_of: :vocdoni_process
 
+        # Declared before `before_destroy :delete_upstream_draft`, so a process
+        # with pins refuses to be destroyed before the SaaS draft is touched.
+        # Pins are evidence; the FK (`on_delete: :restrict`) and the pins
+        # trigger refuse the delete too.
+        has_many :csp_pins,
+                 class_name: "Decidim::Elections::Vocdoni::CspPin",
+                 inverse_of: :process,
+                 dependent: :restrict_with_exception
+        # Public data only (seed, census root, upstream id), present from the
+        # draft on, so it goes with the process.
+        has_many :csp_elections,
+                 class_name: "Decidim::Elections::Vocdoni::CspElection",
+                 inverse_of: :process,
+                 dependent: :delete_all
+
         validates :state, inclusion: { in: STATES }
+        validates :csp_state, inclusion: { in: CSP_STATES }
         validates :vocdoni_process_id, uniqueness: true, allow_nil: true
 
         # Once the election on chain is anchored the draft is gone from SaaS
@@ -50,6 +71,8 @@ module Decidim
         def published? = state == "published"
 
         def failed? = state == "failed"
+
+        def csp_verified? = csp_state == "verified"
 
         # Per-question upstream ids and chain-side statuses. Written by
         # PublishElectionJob after the process is on chain; read by the voter

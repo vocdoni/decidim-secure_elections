@@ -127,6 +127,7 @@ module Decidim
         end
 
         DEV_CHAIN_API_URL = "https://api-dev.vocdoni.net/v2"
+        CSP_PINS_TRIGGERS = %w(decidim_vocdoni_csp_pins_guard decidim_vocdoni_csp_pins_no_truncate).freeze
         KECCAK_EMPTY = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
 
         # Vochain API the CSP reads directly (chain id, process census root),
@@ -172,8 +173,8 @@ module Decidim
 
         # Refuses to sign or publish with a half-configured CSP. Runs the checks
         # once per process and remembers success. Raises Csp::RootMissing when
-        # the roots or the pin secret are absent, Csp::ConfigurationError for
-        # anything else.
+        # the roots or the pin secret are absent, Csp::TriggerMissing when the
+        # pins guard is not installed, Csp::ConfigurationError for anything else.
         def csp_ready!
           return true if @csp_ready
 
@@ -223,6 +224,21 @@ module Decidim
           csp_pin_secret.assert_separate!(keyring)
           census_headroom
           chain_api_url if Rails.env.production?
+          check_pins_triggers!
+        end
+
+        # A database loaded from `schema.rb` has the pins table but not its
+        # triggers, and a disabled trigger guards nothing; either way pins
+        # could be deleted or rebound, so signing must not start.
+        def check_pins_triggers!
+          installed = ActiveRecord::Base.connection.select_values(<<~SQL.squish)
+            SELECT tgname FROM pg_trigger
+            WHERE tgrelid = to_regclass('decidim_vocdoni_csp_pins') AND tgenabled <> 'D' AND NOT tgisinternal
+          SQL
+          missing = CSP_PINS_TRIGGERS - installed
+          return if missing.empty?
+
+          raise Csp::TriggerMissing, "csp pins triggers missing or disabled: #{missing.join(", ")}"
         end
 
         # Comparing keccak256("") with its known value rejects an OpenSSL

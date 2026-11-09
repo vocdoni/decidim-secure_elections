@@ -147,6 +147,40 @@ module Decidim
           end
         end
 
+        context "when a pins trigger is missing or disabled" do
+          # DDL is transactional in Postgres; the savepoint is rolled back so
+          # the triggers are back for every later example.
+          def with_trigger_ddl(sql)
+            ActiveRecord::Base.transaction(requires_new: true) do
+              ActiveRecord::Base.connection.execute(sql)
+              yield
+              raise ActiveRecord::Rollback
+            end
+          end
+
+          let(:env) { { "VOCDONI_CSP_ROOTS" => roots_env, "VOCDONI_CSP_PIN_SECRET" => secret_hex } }
+
+          {
+            "the guard is dropped" => "DROP TRIGGER decidim_vocdoni_csp_pins_guard ON decidim_vocdoni_csp_pins",
+            "the no-truncate trigger is dropped" =>
+              "DROP TRIGGER decidim_vocdoni_csp_pins_no_truncate ON decidim_vocdoni_csp_pins",
+            "the triggers are disabled" => "ALTER TABLE decidim_vocdoni_csp_pins DISABLE TRIGGER USER"
+          }.each do |case_name, sql|
+            it "raises TriggerMissing when #{case_name}" do
+              with_csp_env(env) do
+                with_trigger_ddl(sql) do
+                  expect { described_class.csp_ready! }
+                    .to raise_error(Vocdoni::Csp::TriggerMissing) { |e| expect(e.code).to eq("csp_trigger_missing") }
+                end
+              end
+            end
+          end
+
+          it "passes with both triggers installed" do
+            with_csp_env(env) { expect(described_class.csp_ready!).to be(true) }
+          end
+        end
+
         it "requires the chain API URL in production" do
           allow(Rails).to receive(:env).and_return(production)
           with_csp_env("VOCDONI_CSP_ROOTS" => roots_env, "VOCDONI_CSP_PIN_SECRET" => secret_hex) do
