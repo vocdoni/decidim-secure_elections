@@ -129,9 +129,9 @@ module Decidim
 
         context "when the Sync census size button is clicked" do
           let!(:election) do
-            # published + not yet started: editable? returns true so the
-            # :update :census permission passes
-            create(:election, :with_token_csv_census, :published, :scheduled, component:).tap do |record|
+            # ongoing: census_ready? is true so the :dashboard :election
+            # permission passes for both published and running elections
+            create(:election, :with_token_csv_census, :published, :ongoing, component:).tap do |record|
               q = create(:election_question, :with_response_options, election: record)
               proc = create(:vocdoni_process, :published, election: record)
               create(:vocdoni_csp_election, process: proc, decidim_question_id: q.id)
@@ -141,7 +141,7 @@ module Decidim
             Decidim::EngineRouter.admin_proxy(component).sync_census_size_election_security_path(election)
           end
 
-          it "enqueues ResizeCensusJob and redirects to the dashboard" do
+          it "is reachable from an ongoing election and enqueues ResizeCensusJob" do
             expect(ResizeCensusJob).to receive(:perform_later).with(election.vocdoni_process.id)
 
             post(sync_path, headers:)
@@ -152,9 +152,9 @@ module Decidim
 
         context "when the Verify roots button is clicked" do
           let!(:election) do
-            # published + not yet started: editable? returns true so the
-            # :update :census permission passes
-            create(:election, :with_token_csv_census, :published, :scheduled, component:).tap do |record|
+            # ongoing: census_ready? is true so the :dashboard :election
+            # permission passes for both published and running elections
+            create(:election, :with_token_csv_census, :published, :ongoing, component:).tap do |record|
               q = create(:election_question, :with_response_options, election: record)
               proc = create(:vocdoni_process, :published, election: record)
               create(:vocdoni_csp_election, process: proc, decidim_question_id: q.id)
@@ -164,7 +164,7 @@ module Decidim
             Decidim::EngineRouter.admin_proxy(component).verify_roots_election_security_path(election)
           end
 
-          it "enqueues SyncProcessJob and redirects to the dashboard" do
+          it "is reachable from an ongoing election and enqueues SyncProcessJob" do
             expect(SyncProcessJob).to receive(:perform_later).with(election.id)
 
             post(verify_path, headers:)

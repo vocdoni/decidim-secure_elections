@@ -4,18 +4,24 @@ module Decidim
   module Elections
     module Vocdoni
       module Admin
-        # Security tab. Owns the Vocdoni opt-in for the election (via the
-        # {AdminForms::SecurityForm#enable_vocdoni} checkbox) and the
-        # second-factor challenge — email OTP, SMS OTP, both, or none — that
-        # the publish job forwards verbatim as `twoFaFields` when it creates
-        # the process on Vocdoni's SaaS. Storage is the sidecar
-        # {Vocdoni::Process}; its presence is the opt-in signal.
+        # Security tab. Owns two concerns:
+        #
+        #   1. The Vocdoni opt-in ({AdminForms::SecurityForm#enable_vocdoni}).
+        #      Opting in creates the {Vocdoni::Process} sidecar whose presence
+        #      is the signal the publish subscriber uses to enqueue
+        #      {PublishElectionJob}.
+        #
+        #   2. Two operator-triggered maintenance actions for external-CSP
+        #      elections: `sync_census_size` and `verify_roots`. Both only
+        #      enqueue background jobs (gem ARCHITECTURE §0.5). The external
+        #      CSP pilot authenticates voters via Decidim itself; the
+        #      second-factor field is locked and stored as `[]` until OTP is
+        #      wired up in a later release.
         #
         # Inherits from upstream's `Decidim::Elections::Admin::ApplicationController`
-        # rather than the Vocdoni admin base, because
-        # the elections component uses upstream's admin engine and its
-        # controllers work off `Decidim::Elections::Election`, not the
-        # Vocdoni-only Election model.
+        # rather than the Vocdoni admin base, because the elections component
+        # uses upstream's admin engine and its controllers work off
+        # `Decidim::Elections::Election`, not the Vocdoni-only Election model.
         class SecurityController < ::Decidim::Elections::Admin::ApplicationController
           helper_method :election
 
@@ -53,7 +59,7 @@ module Decidim
           # Enqueues a census resize for the process. Only enqueues; never calls
           # the API directly (gem ARCHITECTURE §0.5).
           def sync_census_size
-            enforce_permission_to(:update, :census, election:)
+            enforce_permission_to(:dashboard, :election, election:)
             dashboard_path = Decidim::EngineRouter.admin_proxy(election.component)
                                                   .dashboard_election_path(election)
 
@@ -72,7 +78,7 @@ module Decidim
           # is published and csp_state is nil. Only enqueues; never calls the API
           # directly (gem ARCHITECTURE §0.5).
           def verify_roots
-            enforce_permission_to(:update, :census, election:)
+            enforce_permission_to(:dashboard, :election, election:)
             dashboard_path = Decidim::EngineRouter.admin_proxy(election.component)
                                                   .dashboard_election_path(election)
 
