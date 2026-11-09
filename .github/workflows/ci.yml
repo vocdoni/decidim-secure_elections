@@ -20,6 +20,11 @@ jobs:
     name: Lint
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      # This module needs vocdoni/decidim's voting backend registry (VotingBackendManifest
+      # and Decidim::Elections.voting_backends); upstream decidim/decidim does not have them.
+      DECIDIM_REPO: https://github.com/vocdoni/decidim
+      DECIDIM_REF: develop
     steps:
       - uses: actions/checkout@v7
 
@@ -120,6 +125,10 @@ jobs:
       # decidim-ai keeps its own Redis handles and ignores REDIS_URL.
       DECIDIM_SPAM_DETECTION_BACKEND_RESOURCE_URL: redis://localhost:6379/2
       DECIDIM_SPAM_DETECTION_BACKEND_USER_REDIS_URL: redis://localhost:6379/3
+      # This module needs vocdoni/decidim's voting backend registry (VotingBackendManifest
+      # and Decidim::Elections.voting_backends); upstream decidim/decidim does not have them.
+      DECIDIM_REPO: https://github.com/vocdoni/decidim
+      DECIDIM_REF: develop
     steps:
       - uses: actions/checkout@v7
 

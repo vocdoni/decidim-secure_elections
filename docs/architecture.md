@@ -199,15 +199,54 @@ back.
 ## 4c. Census creation — Decidim owns it
 
 The admin never sees or types a Vocdoni id. `PublishElectionJob` collects voters from
-the Decidim side and builds the whole upstream chain itself. Endpoints, in order:
+the Decidim side and builds the whole upstream chain itself.
+
+The roster is the election's upstream census (`election.census`), read through the
+census manifest's own query, so it follows Decidim's census rules:
+
+- `internal_users`: the participants the manifest's query returns, kept only when
+  `census.valid_user?` admits them (the authorization handlers' options, such as
+  allowed postal codes, are checked there, not in the query).
+- `token_csv`: the imported `Decidim::Elections::Voter` rows. Their access `token`
+  never leaves Decidim.
+
+Publishing waits for `election.census_ready?`, the same gate upstream puts on the
+publish button.
+
+Each member carries `memberNumber` = `VoterCredential.for(election, subject)`: the hex
+HMAC-SHA256 of `"<election id>:<user id>"` (CSV rows: `"<election id>:voter:<row id>"`),
+keyed by a key derived from `secret_key_base` (or `VOCDONI_CREDENTIAL_SECRET`). It is
+the census's only `authField`, so it must not be guessable: the booth receives it in
+`booth_config` once Decidim has let the voter into its census, and nobody types it.
+Being per election, the same person is a different member in every election; members
+are therefore matched by `memberNumber` only, never by email or phone. Members also
+carry `name`, `email`, and `phone` when SMS is a second factor (from a CSV row, or from
+the metadata of a participant's granted authorization).
+
+Consequences of the credential:
+
+- Only the integrated booth can authenticate voters. `VOCDONI_INTEGRATED_BOOTH=false`
+  falls back to the static voting page (`public/vocdoni/vote.html`), where voters type
+  their `memberNumber`; nobody knows their credential, so nobody can log in there.
+- An election published under an earlier credential scheme has members whose
+  `memberNumber` the booth no longer hands out. Republish it to push the current
+  credentials.
+- Credentials never reach admin-visible errors or logs: error messages and the stored
+  SaaS error `data` replace every 64-hex-character token with `[CREDENTIAL]`, so any
+  other value of that shape (an on-chain id or hash) is masked there too.
+
+Endpoints, in order:
 
 ```
 1. POST /organizations/{orgAddress}/members
-     { members: [{ memberNumber, name, email, ... }] }
+     { members: [{ memberNumber, name, email, phone? }] }
      → { added, errors[], jobId? }   ← poll jobId when present
-2. GET  /organizations/{orgAddress}/members?page=N
-     paginated read-back to map each Decidim user to the upstream `memberId` — the
-     import does not return them when members already exist. Capped at 200 pages.
+     sent in batches of VOCDONI_MEMBER_BATCH_SIZE (200): phones are Argon2-hashed
+     one by one, and each batch has to finish within VOCDONI_JOB_TIMEOUT.
+2. GET  /organizations/{orgAddress}/members?page=N&limit=100
+     paginated read-back to map each credential to the upstream `memberId` — the
+     import does not return them. Capped at 600 pages (the SaaS's 50,000-member
+     memberbase cap). A voter missing after the push fails the publish.
 3. POST /organizations/{orgAddress}/groups
      { title, description?, memberIds: [...] }        → { id }
 4. POST /processes/census/validation

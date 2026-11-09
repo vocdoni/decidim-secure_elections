@@ -1,0 +1,63 @@
+es:
+  decidim:
+    admin:
+      menu:
+        elections_menu:
+          security: "Seguridad"
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            security:
+              title: "Tu configuración de seguridad"
+          security:
+            show:
+              title: "Seguridad"
+              choice:
+                legend: "¿Cómo quieres llevar a cabo esta votación?"
+                lead: "Esta elección determina quién puede leer las papeletas y si el recuento puede ser verificado por alguien ajeno a la organización."
+                recommended: "Recomendado para decisiones vinculantes"
+                best_for: "Ideal para:"
+                simple:
+                  title: "Voto simple"
+                  points:
+                    stored: "Las papeletas se guardan en la base de datos de esta plataforma."
+                    readable: "Los administradores de la plataforma pueden leerlas técnicamente."
+                    unverifiable: "Los resultados se calculan en este servidor; nadie externo puede comprobarlos."
+                    editable: "Se puede modificar hasta que comience la votación."
+                  best_for: "Encuestas informales, consultas rápidas, decisiones que es poco probable que se contesten."
+                secure:
+                  title: "Voto secreto y verificable"
+                  points:
+                    anonymous: "Nadie — ni siquiera los administradores — puede vincular una papeleta a un votante."
+                    tamper: "Cualquier manipulación es detectable: cada votante recibe un justificante para comprobarlo en un explorador público, y la exportación de resultados hace referencia a él."
+                    minimal: "Solo se utilizan los datos necesarios para verificar quién puede votar; las papeletas no contienen ningún dato personal."
+                    locked: "Bloqueada una vez publicada — eso es lo que la hace fiable."
+                  best_for: "Elecciones de cargos, votaciones estatutarias, presupuestos — cualquier cosa que deba resistir una impugnación."
+                  powered_by: "Impulsado por el protocolo de votación Vocdoni."
+                  guide_url: ""
+                  guide_link: "Lee la guía completa"
+                good_to_know_html: "<strong>Bueno saber:</strong> puedes cambiar esta elección hasta que la votación esté publicada. Las personas votantes no notarán ninguna diferencia, excepto el código de un solo uso si lo activas."
+              two_factor:
+                legend: "Confirma la identidad de los votantes con un código de un solo uso"
+                lead: "Cada votante recibe un código de un solo uso cuando abre la papeleta y debe introducirlo antes de votar. Evita que alguien vote en nombre de otra persona y hace el resultado más difícil de impugnar."
+                email:
+                  label: "Código por correo electrónico"
+                  help: "El código se envía a la dirección de correo electrónico con la que cada participante se ha registrado."
+                sms:
+                  label: "Código por SMS"
+                  help: "El código se envía por mensaje de texto, por lo que cada votante necesita un número de teléfono registrado en el servicio de votación."
+                both_note: "Si ambas opciones están activadas, cada votante elige cómo recibir el código."
+              summary:
+                sentences:
+                  basic: "Las papeletas se guardan en esta plataforma. Adecuado para consultas informales."
+                  strong: "Papeletas anónimas, resultado verificable por cualquier persona."
+                  strongest: "Papeletas anónimas, resultado verificable por cualquier persona. Los votantes confirman su identidad con un código de un solo uso."
+            update:
+              success: "Configuración de seguridad actualizada."
+              invalid: "No se ha podido guardar la configuración de seguridad. Revisa los errores que aparecen a continuación."
+        booth:
+          launcher:
+            help_html: "Tu voto se emite mediante la tecnología segura de Vocdoni, que garantiza el anonimato y la verificabilidad."
+            enter: "Abrir la cabina de votación"
+            not_ready: "Esta elección todavía no está lista para aceptar votos en la red. Inténtalo de nuevo en unos momentos."

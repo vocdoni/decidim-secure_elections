@@ -30,6 +30,8 @@ module Decidim
         def render_vocdoni_booth_if_backed
           return if election.vocdoni_process.blank?
           return if action_name == "receipt"
+          # Decidim's own booth runs the `vocdoni` voting backend instead.
+          return if Decidim::Elections::Vocdoni::VotingBackend.active_for?(election)
 
           render template: "decidim/elections/vocdoni/booth/show",
                  layout: "decidim/election_booth",

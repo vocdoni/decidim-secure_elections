@@ -15,12 +15,13 @@ gemspec
 #                                   branch named by DECIDIM_REF (defaults to
 #                                   `develop`)
 #
-# DECIDIM_REPO lets us consume vocdoni/decidim staging branches without
-# editing this file — the Phase-4 spike sets:
-#   DECIDIM_REPO=https://github.com/vocdoni/decidim
-#   DECIDIM_REF=phase-4/integration
+# The gem requires vocdoni/decidim (the fork) for its voting backend registry
+# (VotingBackendManifest, Decidim::Elections.voting_backends). The upstream
+# decidim/decidim develop branch does not expose these APIs, so both CI and
+# local development default to the fork. Override with DECIDIM_REPO/DECIDIM_REF
+# to consume a different branch of the fork (e.g. a feature branch).
 decidim_path = ENV.fetch("DECIDIM_PATH", nil)
-decidim_repo = ENV.fetch("DECIDIM_REPO", "https://github.com/decidim/decidim")
+decidim_repo = ENV.fetch("DECIDIM_REPO", "https://github.com/vocdoni/decidim")
 decidim_ref = ENV.fetch("DECIDIM_REF", "develop")
 
 # rubocop:disable Bundler/DuplicatedGem -- the two branches are exclusive

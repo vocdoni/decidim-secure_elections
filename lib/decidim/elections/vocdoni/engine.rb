@@ -5,6 +5,7 @@ require "active_support/all"
 require "decidim/core"
 require "decidim/elections"
 require_relative "dev_login_prefill_middleware"
+require_relative "voting_backend"
 
 module Decidim
   module Elections
@@ -44,6 +45,10 @@ module Decidim
           Cell::ViewModel.view_paths << File.expand_path(
             "#{Decidim::Elections::Vocdoni::Engine.root}/app/views"
           )
+        end
+
+        initializer "decidim_elections_vocdoni.voting_backend", after: "decidim.elections.default_voting_backends" do
+          Decidim::Elections::Vocdoni::VotingBackend.register!
         end
 
         initializer "decidim_elections_vocdoni.webpacker.assets_path" do
