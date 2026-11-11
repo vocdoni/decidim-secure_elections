@@ -80,6 +80,12 @@ All notable changes to this module are documented here. The format follows
   (`--color-color-*` and `--measure-*` custom properties from
   decidim/decidim#17722) with the Figma values as fallbacks, so the tab looks
   the same before and after that pull request reaches Decidim.
+- **Booth one-time-code step uses Decidim's census-check markup**: centred
+  `title-decorator` heading, `form__wrapper` field with help text and a
+  `form-error` that only shows on error, and the `form__wrapper-block` button
+  row. Progress messages go to the booth status line instead of the error slot.
+- **Booth receipt note** is one centred paragraph in the place of the stock
+  receipt description.
 
 ### Security
 

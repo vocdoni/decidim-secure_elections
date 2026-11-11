@@ -58,7 +58,9 @@ const createAdapter = () => {
       filter(Boolean);
   };
 
-  // Shows the OTP panel and resolves once the CSP accepts a code.
+  // Shows the OTP panel and resolves once the CSP accepts a code. Progress
+  // goes to the booth's status line; errors go under the field, the way
+  // Decidim's form builder shows them.
   const runOtp = (ctx) => new Promise((resolve) => {
     const { i18n } = ctx.config;
     const panel = ctx.showPanel();
@@ -66,7 +68,17 @@ const createAdapter = () => {
     const input = panel.querySelector("[data-vocdoni-otp-code]");
     const feedback = panel.querySelector("[data-vocdoni-otp-feedback]");
     const resend = panel.querySelector("[data-vocdoni-otp-resend]");
+    const label = input.closest("label");
     let cooldownTimer = null;
+
+    const showError = (text) => {
+      feedback.textContent = text || "";
+      feedback.classList.toggle("is-visible", Boolean(text));
+      input.classList.toggle("is-invalid-input", Boolean(text));
+      if (label) {
+        label.classList.toggle("is-invalid-label", Boolean(text));
+      }
+    };
 
     const cooldown = (seconds) => {
       resend.disabled = true;
@@ -88,13 +100,15 @@ const createAdapter = () => {
     input.focus();
 
     resend.addEventListener("click", async () => {
-      feedback.textContent = i18n.status.sending_code;
+      showError("");
+      ctx.progress(i18n.status.sending_code);
       try {
         await flow.resendOtp();
-        feedback.textContent = i18n.otp.resent;
+        ctx.progress(i18n.otp.resent);
         cooldown(30);
       } catch (error) {
-        feedback.textContent = message(i18n, error);
+        ctx.progress("");
+        showError(message(i18n, error));
       }
     });
 
@@ -102,17 +116,19 @@ const createAdapter = () => {
       event.preventDefault();
       const code = input.value.trim();
       if (!code) {
-        feedback.textContent = i18n.otp.required;
+        showError(i18n.otp.required);
         return;
       }
-      feedback.textContent = i18n.status.authenticating;
+      showError("");
+      ctx.progress(i18n.status.authenticating);
       try {
         await flow.confirmOtp(code);
         clearInterval(cooldownTimer);
-        feedback.textContent = "";
+        ctx.progress("");
         resolve();
       } catch (error) {
-        feedback.textContent = message(i18n, error);
+        ctx.progress("");
+        showError(message(i18n, error));
         if (error.code === ErrorCode.OTP_EXPIRED) {
           resend.disabled = false;
         }
