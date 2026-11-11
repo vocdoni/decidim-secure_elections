@@ -186,6 +186,20 @@ module Decidim
           end
         end
 
+        # The booth adapter reports each successful cast here so a
+        # `real_time` election's tally is synced right away (see
+        # {CastNotificationsController}). Lives in the elections component's
+        # routes so it gets the component, the voter's census session and
+        # Decidim's CSRF check like the booth itself.
+        initializer "decidim_elections_vocdoni.cast_notification_route" do
+          Decidim::Elections::Engine.routes.append do
+            resources :elections, only: [] do
+              resource :vocdoni_cast_notification, only: :create,
+                                                   controller: "/decidim/elections/vocdoni/cast_notifications"
+            end
+          end
+        end
+
         # Injects the Security tab into upstream `Decidim::Elections::AdminEngine`.
         # Two hooks, both idempotent:
         #

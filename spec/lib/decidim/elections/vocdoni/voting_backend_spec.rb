@@ -129,6 +129,10 @@ module Decidim
             expect(config[:chainId]).to eq(election.vocdoni_process.chain_id)
           end
 
+          it "includes the URL the booth reports a cast to" do
+            expect(config[:castNotificationUrl]).to end_with("/elections/#{election.id}/vocdoni_cast_notification")
+          end
+
           it "sets credentials.memberNumber to the voter credential, never the user id" do
             expect(config[:credentials]).to eq(memberNumber: VoterCredential.for(election, user))
             expect(config[:credentials][:memberNumber]).not_to eq(user.id.to_s)

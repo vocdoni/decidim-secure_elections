@@ -65,6 +65,12 @@ All notable changes to this module are documented here. The format follows
   ships a copy of its `dashboard.html.erb` with the card added, on the view
   path of `Decidim::Elections::Admin::ElectionsController` only; a spec pins
   the SHA-256 of upstream's file and fails when upstream changes it.
+- **Vote-driven live results** for `real_time` elections: after a cast the
+  booth posts to `POST …/elections/:id/vocdoni_cast_notification`, which starts
+  (or extends) one results-sync chain per election on a 5–60 s backoff. The
+  fixed live poll runs every 60 s as a fallback. Adds columns to
+  `decidim_vocdoni_processes`: run `decidim_elections_vocdoni:install:migrations`
+  and `db:migrate` when upgrading.
 
 ### Changed
 

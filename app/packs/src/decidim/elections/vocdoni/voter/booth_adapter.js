@@ -1,3 +1,4 @@
+import { notifyVoteCast } from "src/decidim/elections/vocdoni/voter/cast_notification";
 import { createVoterFlow } from "src/decidim/elections/vocdoni/voter/flow";
 import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
 
@@ -240,6 +241,10 @@ const createAdapter = () => {
             failed.push({ questionId: question.questionId, label: question.title, error: message(i18n, error) });
           }
         }
+      }
+
+      if (receipts.length > 0 || unconfirmed.length > 0) {
+        notifyVoteCast(config.castNotificationUrl);
       }
 
       return { receipts, unconfirmed, failed };
