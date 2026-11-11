@@ -34,8 +34,8 @@ module Decidim
       #
       # `mode: :poll_until_final` (default) — for a `secretUntilTheEnd`
       # question, `results` is absent (or non-final) until the chain has
-      # finished decrypting the tally — an operation that only starts when
-      # every question of the process has reached `ENDED`, and that takes on
+      # finished decrypting the tally — an operation that starts when that
+      # question (its own Vochain election) reaches `ENDED`, and that takes on
       # the order of minutes. There is no SaaS webhook or event to signal
       # "results ready", so the job reschedules itself on a bounded cadence
       # until every question reports `finalResults: true` (or the retry
@@ -48,6 +48,14 @@ module Decidim
       # (`results_availability == "real_time"`) polling path: the outer job is
       # already looping on its own cadence, so results-sync just needs to keep
       # up with each tick.
+      #
+      # ## Per question
+      #
+      # `question_ids:` (Decidim ids) limits both the write and the finality
+      # check to those questions — a `per_question` election publishes one
+      # question's results while the others are still paused or voting.
+      # Remote questions are matched to local ones by the sidecar's
+      # `vocdoni_question_id`, falling back to position.
       #
       # ## Idempotency
       #
@@ -78,10 +86,11 @@ module Decidim
           POLL_BACKOFF_S.fetch(attempt - 1, POLL_CADENCE_S)
         end
 
-        def perform(election_id, mode: :poll_until_final, attempt: 1)
+        def perform(election_id, mode: :poll_until_final, attempt: 1, question_ids: nil)
           validate_mode!(mode)
           return unless bootstrap!(election_id)
 
+          @question_ids = question_ids&.map(&:to_i)
           sync_and_maybe_reschedule!(mode:, attempt:)
         rescue Decidim::Elections::Vocdoni::ApiError => e
           process&.record_failure!(redact(e.message), step: "sync_results", code: e.try(:code))
@@ -90,7 +99,7 @@ module Decidim
 
         private
 
-        attr_reader :process
+        attr_reader :process, :question_ids
 
         def validate_mode!(mode)
           return if MODES.include?(mode)
@@ -115,12 +124,14 @@ module Decidim
 
         def sync_and_maybe_reschedule!(mode:, attempt:)
           remote = client.elections.results(process.vocdoni_process_id, authenticated: false).to_h
-          remote_questions = Array(remote["questions"]).grep(Hash)
+          all_remote_questions = Array(remote["questions"]).grep(Hash)
+          pairs = paired(all_remote_questions)
+          remote_questions = pairs.map(&:first)
 
-          apply_results!(remote_questions) if remote_questions.any?
+          apply_results!(pairs)
           log_summary(remote_questions, mode:, attempt:)
           reschedule_if_not_final!(remote_questions, attempt:) if mode == :poll_until_final
-          record_vote_count!(remote_questions)
+          record_vote_count!(all_remote_questions)
         end
 
         # {SyncResultsAfterVoteJob} compares this total across checks to tell
@@ -131,13 +142,8 @@ module Decidim
           process.update_columns(synced_vote_count: remote_questions.sum { |q| q["voteCount"].to_i }) # rubocop:disable Rails/SkipsModelValidations
         end
 
-        def apply_results!(remote_questions)
-          local_questions = election.questions.order(:id).to_a
-
-          remote_questions.each_with_index do |remote_question, index|
-            local = local_questions[index]
-            next if local.blank?
-
+        def apply_results!(pairs)
+          pairs.each do |remote_question, local|
             row = extract_row(remote_question["results"])
             next if row.blank?
 
@@ -148,6 +154,24 @@ module Decidim
 
               option.update_columns(votes_count: raw_count.to_i) # rubocop:disable Rails/SkipsModelValidations
             end
+          end
+        end
+
+        # `[remote, local]` for every remote question with a local match,
+        # keeping only those in `question_ids` when given.
+        def paired(remote_questions)
+          local_questions = election.questions.order(:id).to_a
+          by_vocdoni_id = process.questions_metadata.to_h do |row|
+            [row["vocdoni_question_id"].to_s, row["decidim_question_id"].to_i]
+          end
+
+          remote_questions.each_with_index.filter_map do |remote_question, index|
+            local_id = by_vocdoni_id[(remote_question["questionId"] || remote_question["id"]).to_s]
+            local = local_id ? local_questions.find { |question| question.id == local_id } : local_questions[index]
+            next if local.blank?
+            next if question_ids&.exclude?(local.id)
+
+            [remote_question, local]
           end
         end
 
@@ -180,9 +204,11 @@ module Decidim
           return if all_final?(remote_questions)
           return if attempt >= MAX_POLL_ATTEMPTS
 
+          options = { attempt: attempt + 1 }
+          options[:question_ids] = question_ids if question_ids
           self.class
               .set(wait: self.class.poll_delay(attempt).seconds)
-              .perform_later(election.id, attempt: attempt + 1)
+              .perform_later(election.id, **options)
         end
 
         def log_summary(remote_questions, mode:, attempt:)

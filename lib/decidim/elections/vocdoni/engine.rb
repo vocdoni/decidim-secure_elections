@@ -369,6 +369,26 @@ module Decidim
           end
         end
 
+        # `per_question` elections: enabling a question or publishing its
+        # results (upstream's `UpdateQuestionStatus`, wrapped in `with_events`)
+        # only writes Decidim's own columns. The job moves that question's
+        # chain election to READY or ENDED and, on ENDED, syncs its tally.
+        initializer "decidim_elections_vocdoni.subscribe_to_question_status" do
+          ActiveSupport::Notifications.subscribe("decidim.elections.admin.update_question_status:after") do |_event_name, data|
+            question = data[:question]
+            action = data[:action]
+            next if question.blank?
+            next unless Decidim::Elections::Vocdoni::UpdateQuestionOnChainJob::TARGET_STATUS.has_key?(action.to_s)
+
+            election = question.election
+            next unless election.per_question?
+            next if election.vocdoni_process.blank?
+
+            Decidim::Elections::Vocdoni::UpdateQuestionOnChainJob.perform_later(question.id, action.to_s)
+            Rails.logger.info "[vocdoni] enqueued UpdateQuestionOnChainJob(#{action}) for question ##{question.id}"
+          end
+        end
+
         # Every remixicon name this gem renders from app/views, app/cells,
         # app/helpers and the admin menu, plus the ones core modules that may
         # not be installed would otherwise register. Decidim 0.33 raises on an
