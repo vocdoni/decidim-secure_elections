@@ -1,3 +1,9 @@
-<%# Receipt note for the `vocdoni` voting backend. %>
-<p class="mt-6 text-center"><%= t("decidim.elections.vocdoni.votes.page.receipt.body") %></p>
-<p class="mt-2 text-center"><%= t("decidim.elections.vocdoni.booth.receipt.final") %></p>
+<%#
+  Receipt note for the `vocdoni` voting backend. Takes the place of the stock
+  receipt's description, which talks about overwriting the vote: a Vocdoni
+  vote is final.
+%>
+<p class="text-center">
+  <%= t("decidim.elections.vocdoni.booth.receipt.final") %>
+  <%= t("decidim.elections.vocdoni.votes.page.receipt.body") %>
+</p>
