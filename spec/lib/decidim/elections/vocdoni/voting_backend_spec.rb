@@ -96,6 +96,10 @@ module Decidim
             expect(count_after).to eq(count_before)
           end
 
+          it "supports per-question elections" do
+            expect(Decidim::Elections.voting_backends.find(:vocdoni).supports_per_question).to be(true)
+          end
+
           it "registers the backend as :client transport" do
             manifest = Decidim::Elections.voting_backends.find(:vocdoni)
             expect(manifest.transport).to eq(:client)

@@ -34,7 +34,7 @@ module Decidim
             manifest.pre_ballot_partial = "decidim/elections/vocdoni/booth/otp_panel"
             manifest.receipt_partial = "decidim/elections/vocdoni/booth/receipt_note"
             manifest.vote_overwrite = false
-            manifest.supports_per_question = false
+            manifest.supports_per_question = true
 
             manifest.applies_to { |election| enabled? && election.vocdoni_process.present? }
             manifest.booth_config { |election, voter_uid:, **| booth_config(election, voter_uid:) }
