@@ -1,6 +1,7 @@
 import { notifyVoteCast } from "src/decidim/elections/vocdoni/voter/cast_notification";
 import { createVoterFlow } from "src/decidim/elections/vocdoni/voter/flow";
 import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
+import { createNextQuestionWatcher, holdUntilOpen } from "src/decidim/elections/vocdoni/voter/per_question";
 
 /**
  * The `vocdoni` voting backend for Decidim's client-side booth. Authenticates
@@ -9,7 +10,8 @@ import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
  * question from the browser with `cast.js`.
  *
  * Config (from the gem's `booth_config`): apiUrl, processId, chainId,
- * explorerUrl, credentials, contact, questions, i18n.
+ * explorerUrl, credentials, contact, questions, i18n; and for a per-question
+ * election perQuestion, waitingUrl, perQuestionI18n (see `per_question.js`).
  *
  * Adapter contract (all async):
  *   prepare(ctx)  -> { canVote, alreadyVoted, receipts?, priorReceipts?,
@@ -43,6 +45,8 @@ const verifyUrl = (config, nullifier) => (config.explorerUrl
 const createAdapter = () => {
   let flow = null;
   let questionsByDecidimId = new Map();
+  // Per-question: once the open questions are cast, wait for the next one.
+  const watchNext = createNextQuestionWatcher();
 
   const receiptsFrom = (config, consumed) => {
     const byVocdoniId = new Map(config.questions.map((question) => [question.vocdoniQuestionId, question]));
@@ -135,7 +139,7 @@ const createAdapter = () => {
 
       try {
         ctx.progress(i18n.status.loading);
-        await flow.loadProcess();
+        const loaded = await flow.loadProcess();
 
         ctx.progress(i18n.status.authenticating);
         const channel = flow.twoFaChannels()[0] || null;
@@ -164,12 +168,20 @@ const createAdapter = () => {
           }
         });
 
+        const blocked = await holdUntilOpen(ctx, flow, loaded);
+        if (blocked) {
+          return { canVote: false, alreadyVoted: false, message: blocked };
+        }
+
         const voted = config.questions.filter((question) => question.hasVoted);
         const stillVotable = config.questions.filter((question) => question.canVote && !question.hasVoted);
 
         if (voted.length > 0 && stillVotable.length === 0) {
           // Every question has a recorded vote — show the receipt.
-          return { canVote: false, alreadyVoted: true, receipts: receiptsFrom(config, await flow.receipts()) };
+          const receipts = receiptsFrom(config, await flow.receipts());
+          watchNext(ctx);
+
+          return { canVote: false, alreadyVoted: true, receipts };
         }
 
         if (voted.length > 0 && stillVotable.length > 0) {
@@ -245,6 +257,9 @@ const createAdapter = () => {
 
       if (receipts.length > 0 || unconfirmed.length > 0) {
         notifyVoteCast(config.castNotificationUrl);
+      }
+      if (unconfirmed.length === 0 && failed.length === 0) {
+        watchNext(ctx);
       }
 
       return { receipts, unconfirmed, failed };

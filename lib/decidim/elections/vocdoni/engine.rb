@@ -51,6 +51,19 @@ module Decidim
           Decidim::Elections::Vocdoni::VotingBackend.register!
         end
 
+        # Upstream routes the client-side booth only for the all-at-once flow
+        # (`votes/booth`); a `per_question` election needs it under its own
+        # controller too (see {PerQuestionClientBooth}).
+        initializer "decidim_elections_vocdoni.per_question_booth_route" do
+          Decidim::Elections::Engine.routes.append do
+            resources :elections, only: [] do
+              resources :per_question_votes, only: [] do
+                collection { get :booth }
+              end
+            end
+          end
+        end
+
         initializer "decidim_elections_vocdoni.webpacker.assets_path" do
           Decidim.register_assets_path File.expand_path("app/packs", root)
         end
@@ -160,6 +173,15 @@ module Decidim
             Decidim::Elections::VotesController.include(
               Decidim::Elections::Vocdoni::RedirectsVoterToBooth
             )
+
+            # Same for a `per_question` election, whose voters upstream sends
+            # to its own controller. The integrated booth gets the open
+            # questions and a waiting room instead of the server-side wizard.
+            per_question_votes = Decidim::Elections::PerQuestionVotesController
+            per_question_votes.include(Decidim::Elections::Vocdoni::RedirectsVoterToBooth)
+            unless per_question_votes <= Decidim::Elections::Vocdoni::PerQuestionClientBooth
+              per_question_votes.prepend(Decidim::Elections::Vocdoni::PerQuestionClientBooth)
+            end
 
             # The "Your security configuration" card on upstream's Dashboard
             # tab. Upstream's dashboard has no view hook, so this gem ships a
