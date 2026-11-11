@@ -6,9 +6,11 @@ const RESEND_COOLDOWN_S = 30;
 /**
  * Shows the OTP panel (the backend's pre-ballot partial) and resolves once the
  * CSP accepts a code. The panel's listeners are removed on success, so a later
- * sign-in on the same page does not confirm the code twice.
+ * sign-in on the same page does not confirm the code twice. Progress goes to
+ * the booth's status line; errors go under the field, the way Decidim's form
+ * builder shows them.
  *
- * @param {Object} ctx - booth context (config, showPanel).
+ * @param {Object} ctx - booth context (config, showPanel, progress).
  * @param {Object} flow - the voter flow (`confirmOtp`, `resendOtp`).
  * @returns {Promise<void>} resolves once the code is accepted.
  */
@@ -19,8 +21,18 @@ export const runOtp = (ctx, flow) => new Promise((resolve) => {
   const input = panel.querySelector("[data-vocdoni-otp-code]");
   const feedback = panel.querySelector("[data-vocdoni-otp-feedback]");
   const resend = panel.querySelector("[data-vocdoni-otp-resend]");
+  const label = input.closest("label");
   const listeners = new AbortController();
   let cooldownTimer = null;
+
+  const showError = (text) => {
+    feedback.textContent = text || "";
+    feedback.classList.toggle("is-visible", Boolean(text));
+    input.classList.toggle("is-invalid-input", Boolean(text));
+    if (label) {
+      label.classList.toggle("is-invalid-label", Boolean(text));
+    }
+  };
 
   const cooldown = (seconds) => {
     resend.disabled = true;
@@ -43,13 +55,15 @@ export const runOtp = (ctx, flow) => new Promise((resolve) => {
   input.focus();
 
   resend.addEventListener("click", async () => {
-    feedback.textContent = i18n.status.sending_code;
+    showError("");
+    ctx.progress(i18n.status.sending_code);
     try {
       await flow.resendOtp();
-      feedback.textContent = i18n.otp.resent;
+      ctx.progress(i18n.otp.resent);
       cooldown(RESEND_COOLDOWN_S);
     } catch (error) {
-      feedback.textContent = message(i18n, error);
+      ctx.progress("");
+      showError(message(i18n, error));
     }
   }, { signal: listeners.signal });
 
@@ -57,18 +71,20 @@ export const runOtp = (ctx, flow) => new Promise((resolve) => {
     event.preventDefault();
     const code = input.value.trim();
     if (!code) {
-      feedback.textContent = i18n.otp.required;
+      showError(i18n.otp.required);
       return;
     }
-    feedback.textContent = i18n.status.authenticating;
+    showError("");
+    ctx.progress(i18n.status.authenticating);
     try {
       await flow.confirmOtp(code);
       clearInterval(cooldownTimer);
       listeners.abort();
-      feedback.textContent = "";
+      ctx.progress("");
       resolve();
     } catch (error) {
-      feedback.textContent = message(i18n, error);
+      ctx.progress("");
+      showError(message(i18n, error));
       if (error.code === ErrorCode.OTP_EXPIRED) {
         resend.disabled = false;
       }
