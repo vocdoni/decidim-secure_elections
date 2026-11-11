@@ -42,6 +42,12 @@ module Decidim
           expect(response).to redirect_to(router.booth_election_per_question_votes_path(election_id: election.id))
         end
 
+        it "sends a question that is not open back to the booth" do
+          get(router.election_per_question_vote_path(election_id: election.id, id: idle.id), headers:)
+
+          expect(response).to redirect_to(router.booth_election_per_question_votes_path(election_id: election.id))
+        end
+
         it "never casts through Decidim" do
           expect(Decidim::Elections::CastVotes).not_to receive(:call)
 

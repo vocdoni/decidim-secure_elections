@@ -30,14 +30,7 @@ module Decidim
           raise ArgumentError, "Unknown question action #{action.inspect}" if status.nil?
 
           question = Decidim::Elections::Question.find_by(id: question_id)
-          return if question.blank?
-
-          @election = question.election
-          @process = election.vocdoni_process
-          # Not on chain yet: PublishElectionJob replays the action once it is.
-          return if process.blank? || !process.published? || process.vocdoni_process_id.blank?
-
-          vocdoni_question_id = vocdoni_question_id_for(question)
+          vocdoni_question_id = question && on_chain_id(question)
           return if vocdoni_question_id.blank?
 
           Decidim::Elections::Vocdoni.validate_configuration!
@@ -64,7 +57,13 @@ module Decidim
 
         attr_reader :process
 
-        def vocdoni_question_id_for(question)
+        # The question's SaaS id, or nil while the process is not on chain:
+        # PublishElectionJob replays the action once it is.
+        def on_chain_id(question)
+          @election = question.election
+          @process = election.vocdoni_process
+          return nil if process.blank? || !process.published? || process.vocdoni_process_id.blank?
+
           row = process.questions_metadata.find { |meta| meta["decidim_question_id"].to_i == question.id }
           row.to_h["vocdoni_question_id"].presence
         end

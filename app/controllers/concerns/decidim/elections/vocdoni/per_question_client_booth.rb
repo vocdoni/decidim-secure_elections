@@ -43,8 +43,10 @@ module Decidim
           election.questions.enabled.unpublished_results
         end
 
+        # Only the booth narrows the list: upstream's `question` lookup for
+        # the other actions must still find closed questions.
         def questions
-          return super unless vocdoni_client_booth?
+          return super unless action_name == "booth" && vocdoni_client_booth?
 
           @questions ||= open_questions
         end
