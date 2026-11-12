@@ -1,12 +1,15 @@
 /**
  * Per-question elections in Decidim's client-side booth. The booth page lists
  * only the questions the admin has open; each one is its own Vochain election,
- * published PAUSED and moved to READY when the admin opens it. Two helpers:
+ * published PAUSED and moved to READY when the admin opens it.
  *
  * - `waitUntilOpenOnChain` holds the ballot until the questions about to be
  *   voted are READY, so the CSP never signs a ballot the chain would reject.
  * - `watchForNextQuestion` polls upstream's `waiting.json` once the voter is
- *   done and reloads the booth when the admin opens another question.
+ *   done and reports a question the voter has yet to see open.
+ * - `openInPlace` adds that question to the running booth and runs `prepare`
+ *   again. The page is not reloaded, so the CSP session in memory survives and
+ *   a 2FA census asks for one code per voter, not one per question.
  */
 
 // Chain statuses that accept ballots.
@@ -60,21 +63,20 @@ export const waitUntilOpenOnChain = async ({ flow, pending, loaded, onWait, timi
 };
 
 /**
- * Polls `waitingUrl` and navigates to the booth when a question opens that
- * this page did not render. Stops once no question is left to open.
+ * Polls `waitingUrl` and calls `onOpen(boothUrl)` once when a question opens
+ * that is not in `renderedIds`. Stops once no question is left to open.
  *
  * @param {Object} options - what to watch.
  * @param {string} options.waitingUrl - upstream's `waiting.json`.
- * @param {string[]} options.renderedIds - Decidim ids of the booth's questions.
+ * @param {string[]} options.renderedIds - Decidim ids the booth has handled.
  * @param {Function} options.onWaiting - shows (string) or clears ("") the notice.
  * @param {string} options.message - the waiting notice.
- * @param {Function} [options.navigate] - defaults to `window.location.assign`.
+ * @param {Function} options.onOpen - takes the booth URL.
  * @param {Object} [options.timings] - poll interval.
  * @returns {Function} stops the watcher.
  */
-export const watchForNextQuestion = ({ waitingUrl, renderedIds, onWaiting, message, navigate, timings = {} }) => {
+export const watchForNextQuestion = ({ waitingUrl, renderedIds, onWaiting, message, onOpen, timings = {} }) => {
   const { waitingPollMs } = { ...DEFAULTS, ...timings };
-  const go = navigate || ((url) => window.location.assign(url));
   const rendered = new Set(renderedIds.map(String));
   let timer = null;
   let stopped = false;
@@ -95,7 +97,7 @@ export const watchForNextQuestion = ({ waitingUrl, renderedIds, onWaiting, messa
 
       if (data.url && openIds.some((id) => !rendered.has(id))) {
         stop();
-        go(data.url);
+        onOpen(data.url);
         return;
       }
       if (data.url && openIds.length === 0) {
@@ -142,6 +144,10 @@ export const holdUntilOpen = async (ctx, flow, loaded) => {
     loaded,
     onWait: () => ctx.progress(texts(config).opening)
   });
+  // `awaitingChain` keeps the question in the next-question watcher's sights.
+  config.questions.forEach((question) => {
+    question.awaitingChain = closed.includes(question);
+  });
   closed.forEach((question) => {
     question.canVote = false;
   });
@@ -152,7 +158,59 @@ export const holdUntilOpen = async (ctx, flow, loaded) => {
 };
 
 /**
- * One watcher per adapter: starting it again replaces the previous one.
+ * Folds a freshly rendered booth config into the running one. Questions it
+ * no longer lists have their results out: they stay for their receipts but are
+ * marked `closed`. New ones are appended.
+ *
+ * @param {Object} config - the running booth config (mutated).
+ * @param {Object} fresh - the config of the booth page just fetched.
+ * @returns {void}
+ */
+export const mergeQuestions = (config, fresh) => {
+  const open = (fresh && fresh.questions) || [];
+  const openIds = new Set(open.map((question) => String(question.questionId)));
+  const known = new Set(config.questions.map((question) => String(question.questionId)));
+
+  config.questions.forEach((question) => {
+    question.closed = !openIds.has(String(question.questionId));
+  });
+  config.questions.push(...open.filter((question) => !known.has(String(question.questionId))));
+};
+
+/**
+ * Brings the questions open at `url` into the running booth and runs the
+ * adapter's `prepare` again through `ctx.restart`. Loads `url` as a page when
+ * the booth cannot do that (no `ctx.loadQuestions`, no booth at `url`, a
+ * failed fetch).
+ *
+ * @param {Object} ctx - booth context.
+ * @param {string} url - the booth URL from `waiting.json`.
+ * @param {Function} [navigate] - defaults to `window.location.assign`.
+ * @returns {Promise<void>} resolves once the booth has restarted.
+ */
+export const openInPlace = async (ctx, url, navigate = (target) => window.location.assign(target)) => {
+  let loaded = null;
+  try {
+    loaded = ctx.loadQuestions && ctx.restart
+      ? await ctx.loadQuestions(url)
+      : null;
+  } catch {
+    loaded = null;
+  }
+  if (!loaded) {
+    navigate(url);
+    return;
+  }
+
+  mergeQuestions(ctx.config, loaded.config);
+  await ctx.restart();
+};
+
+/**
+ * One watcher per adapter: starting it again replaces the previous one. When
+ * the booth can add questions in place, a question still waiting to open on
+ * chain counts as not seen, so the booth tries it again while it stays open in
+ * Decidim (a page load each time would ask for a new one-time code).
  *
  * @returns {Function} `(ctx) => void`, a no-op for other elections.
  */
@@ -164,12 +222,16 @@ export const createNextQuestionWatcher = () => {
     if (!config.perQuestion || !config.waitingUrl) {
       return;
     }
+    const live = Boolean(ctx.loadQuestions && ctx.restart);
     stop();
     stop = watchForNextQuestion({
       waitingUrl: config.waitingUrl,
-      renderedIds: config.questions.map((question) => question.questionId),
+      renderedIds: config.questions.
+        filter((question) => !(live && question.awaitingChain)).
+        map((question) => question.questionId),
       onWaiting: ctx.progress,
-      message: texts(config).waiting
+      message: texts(config).waiting,
+      onOpen: (url) => openInPlace(ctx, url)
     });
   };
 };

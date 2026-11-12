@@ -89,7 +89,7 @@ module Decidim
         end
 
         # The adapter polls `waitingUrl` after the voter is done with the open
-        # questions and reloads the booth when the admin opens another one.
+        # questions and adds the next one to the booth when the admin opens it.
         def self.per_question_config(election)
           router = Decidim::EngineRouter.main_proxy(election.component)
           {

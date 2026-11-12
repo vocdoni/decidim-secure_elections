@@ -64,6 +64,24 @@ module Decidim
           expect(response.parsed_body["open_question_ids"]).to eq([open.id.to_s])
         end
 
+        # The booth adds questions in place by fetching its own page again
+        # (the fork's `booth_live.js`): that page must carry the new
+        # question's section and its entry in the booth config.
+        it "serves a question opened after the voter's first visit to the booth fetching itself again" do
+          booth_path = router.booth_election_per_question_votes_path(election_id: election.id)
+          get(booth_path, headers:)
+          expect(response.body).not_to include(%(data-question-id="#{idle.id}"))
+
+          idle.update!(voting_enabled_at: Time.current)
+          open.update!(published_results_at: Time.current)
+          get(booth_path, headers: headers.merge("Accept" => "text/html"))
+
+          config = JSON.parse(Nokogiri::HTML(response.body).at_css("[data-voting-booth]")["data-config"])
+          expect(response.body).to include(%(data-question-id="#{idle.id}"))
+          expect(response.body).not_to include(%(data-question-id="#{open.id}"))
+          expect(config["questions"].pluck("questionId")).to eq([idle.id.to_s])
+        end
+
         context "when no question is open" do
           let!(:open) { create(:election_question, :with_response_options, :voting_enabled, :published_results, election:) }
 

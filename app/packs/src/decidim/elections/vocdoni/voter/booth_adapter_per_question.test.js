@@ -15,7 +15,8 @@ const mockFlow = {
   resendOtp: jest.fn(),
   check: jest.fn(),
   castQuestion: jest.fn(),
-  receipts: jest.fn()
+  receipts: jest.fn(),
+  verified: false
 };
 
 jest.mock("src/decidim/elections/vocdoni/voter/flow", () => ({
@@ -29,6 +30,7 @@ let adapter = null;
 beforeEach(() => {
   jest.resetModules();
   Object.values(mockFlow).forEach((fn) => fn.mockReset && fn.mockReset());
+  mockFlow.verified = false;
   mockFlow.twoFaChannels.mockReturnValue([]);
   mockFlow.authenticate.mockResolvedValue({ needsOtp: false });
   mockFlow.loadProcess.mockResolvedValue({});
@@ -150,5 +152,57 @@ describe("prepare() — per-question election", () => {
 
     expect(state.alreadyVoted).toBe(true);
     expect(window.fetch).toHaveBeenCalledWith("/waiting.json", expect.any(Object));
+  });
+});
+
+describe("prepare() — again on the same page, for a question opened in place", () => {
+  const ready = { questions: [{ id: "q1", status: "READY" }, { id: "q2", status: "READY" }] };
+
+  beforeEach(() => {
+    mockFlow.loadProcess.mockResolvedValue(ready);
+    mockFlow.receipts.mockResolvedValue([{ questionId: "q1", nullifier: "0xaa" }]);
+    mockFlow.authenticate.mockImplementation(async () => {
+      mockFlow.verified = true;
+
+      return { needsOtp: false };
+    });
+  });
+
+  it("reuses the verified CSP session instead of signing in again", async () => {
+    const ctx = makeCtx();
+    mockFlow.check.mockResolvedValueOnce(checkResponse({ q2: { canVote: false } }));
+    await adapter.prepare(ctx);
+
+    mockFlow.check.mockResolvedValueOnce(checkResponse({ q1: { hasVoted: true } }));
+    const state = await adapter.prepare(ctx);
+
+    expect(mockFlow.authenticate).toHaveBeenCalledTimes(1);
+    expect(mockFlow.check).toHaveBeenCalledTimes(2);
+    expect(state.pendingQuestionIds).toEqual(["2"]);
+    expect(state.priorReceipts.map((receipt) => receipt.code)).toEqual(["0xaa"]);
+  });
+
+  it("signs in again when the CSP no longer takes the reused token", async () => {
+    const ctx = makeCtx();
+    mockFlow.check.mockResolvedValueOnce(checkResponse());
+    await adapter.prepare(ctx);
+
+    mockFlow.check.
+      mockRejectedValueOnce(Object.assign(new Error("invalid token"), { code: "auth_rejected" })).
+      mockResolvedValueOnce(checkResponse({ q1: { hasVoted: true } }));
+    const state = await adapter.prepare(ctx);
+
+    expect(mockFlow.authenticate).toHaveBeenCalledTimes(2);
+    expect(state.pendingQuestionIds).toEqual(["2"]);
+  });
+
+  it("does not offer a question whose results are out", async () => {
+    const ctx = makeCtx();
+    ctx.config.questions[0].closed = true;
+    mockFlow.check.mockResolvedValueOnce(checkResponse());
+
+    await adapter.prepare(ctx);
+
+    expect(ctx.config.questions.map((question) => question.canVote)).toEqual([false, true]);
   });
 });

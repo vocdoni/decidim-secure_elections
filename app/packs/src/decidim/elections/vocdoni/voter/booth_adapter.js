@@ -1,6 +1,8 @@
 import { notifyVoteCast } from "src/decidim/elections/vocdoni/voter/cast_notification";
 import { createVoterFlow } from "src/decidim/elections/vocdoni/voter/flow";
 import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
+import { message } from "src/decidim/elections/vocdoni/voter/booth_text";
+import { runOtp } from "src/decidim/elections/vocdoni/voter/booth_otp";
 import { createNextQuestionWatcher, holdUntilOpen } from "src/decidim/elections/vocdoni/voter/per_question";
 
 /**
@@ -22,21 +24,6 @@ import { createNextQuestionWatcher, holdUntilOpen } from "src/decidim/elections/
  */
 const NAME = "vocdoni";
 const REGISTERED_EVENT = "decidim:voting-backend:registered";
-
-const interpolate = (text, values = {}) => String(text || "").replace(/%\{(\w+)\}/g, (match, key) => (key in values
-  ? values[key]
-  : ""));
-
-const message = (i18n, error) => {
-  const errors = (i18n && i18n.errors) || {};
-  const code = error && error.code;
-
-  if (code && errors[code]) {
-    return interpolate(errors[code], error.details || {});
-  }
-
-  return errors.unknown || String(error && error.message);
-};
 
 const verifyUrl = (config, nullifier) => (config.explorerUrl
   ? `${config.explorerUrl.replace(/\/+$/, "")}/verify/#/${nullifier}`
@@ -63,67 +50,34 @@ const createAdapter = () => {
       filter(Boolean);
   };
 
-  // Shows the OTP panel and resolves once the CSP accepts a code.
-  const runOtp = (ctx) => new Promise((resolve) => {
-    const { i18n } = ctx.config;
-    const panel = ctx.showPanel();
-    const form = panel.querySelector("[data-vocdoni-otp-form]");
-    const input = panel.querySelector("[data-vocdoni-otp-code]");
-    const feedback = panel.querySelector("[data-vocdoni-otp-feedback]");
-    const resend = panel.querySelector("[data-vocdoni-otp-resend]");
-    let cooldownTimer = null;
+  // One CSP session per page. The token covers every question of the
+  // process, so when `prepare` runs again for a question opened in place
+  // (`fresh` false) a verified session is reused: no new one-time code.
+  const openSession = async (ctx, { fresh }) => {
+    const { config } = ctx;
+    const { i18n } = config;
 
-    const cooldown = (seconds) => {
-      resend.disabled = true;
-      let left = seconds;
-      clearInterval(cooldownTimer);
-      cooldownTimer = setInterval(() => {
-        left -= 1;
-        resend.textContent = left > 0
-          ? interpolate(i18n.otp.resend_wait, { seconds: left })
-          : i18n.otp.resend;
-        if (left <= 0) {
-          clearInterval(cooldownTimer);
-          resend.disabled = false;
-        }
-      }, 1000);
-    };
+    ctx.progress(i18n.status.loading);
+    if (!fresh && flow && flow.verified) {
+      return flow.loadProcess();
+    }
 
-    cooldown(30);
-    input.focus();
+    flow = createVoterFlow({ apiUrl: config.apiUrl, processId: config.processId, chainId: config.chainId });
+    const loaded = await flow.loadProcess();
 
-    resend.addEventListener("click", async () => {
-      feedback.textContent = i18n.status.sending_code;
-      try {
-        await flow.resendOtp();
-        feedback.textContent = i18n.otp.resent;
-        cooldown(30);
-      } catch (error) {
-        feedback.textContent = message(i18n, error);
-      }
-    });
+    ctx.progress(i18n.status.authenticating);
+    const channel = flow.twoFaChannels()[0] || null;
+    const { needsOtp } = await flow.authenticate(config.credentials, channel
+      ? { channel, contact: (config.contact || {})[channel] }
+      : {});
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const code = input.value.trim();
-      if (!code) {
-        feedback.textContent = i18n.otp.required;
-        return;
-      }
-      feedback.textContent = i18n.status.authenticating;
-      try {
-        await flow.confirmOtp(code);
-        clearInterval(cooldownTimer);
-        feedback.textContent = "";
-        resolve();
-      } catch (error) {
-        feedback.textContent = message(i18n, error);
-        if (error.code === ErrorCode.OTP_EXPIRED) {
-          resend.disabled = false;
-        }
-      }
-    });
-  });
+    if (needsOtp) {
+      ctx.progress("");
+      await runOtp(ctx, flow);
+    }
+
+    return loaded;
+  };
 
   return {
     async prepare(ctx) {
@@ -135,25 +89,24 @@ const createAdapter = () => {
       }
 
       questionsByDecidimId = new Map(config.questions.map((question) => [String(question.questionId), question]));
-      flow = createVoterFlow({ apiUrl: config.apiUrl, processId: config.processId, chainId: config.chainId });
+      const reused = Boolean(flow && flow.verified);
 
       try {
-        ctx.progress(i18n.status.loading);
-        const loaded = await flow.loadProcess();
-
-        ctx.progress(i18n.status.authenticating);
-        const channel = flow.twoFaChannels()[0] || null;
-        const { needsOtp } = await flow.authenticate(config.credentials, channel
-          ? { channel, contact: (config.contact || {})[channel] }
-          : {});
-
-        if (needsOtp) {
-          ctx.progress("");
-          await runOtp(ctx);
-        }
+        let loaded = await openSession(ctx, { fresh: false });
 
         ctx.progress(i18n.status.checking);
-        const check = await flow.check();
+        let check = null;
+        try {
+          check = await flow.check();
+        } catch (error) {
+          if (!reused) {
+            throw error;
+          }
+          // The CSP no longer takes the reused token (a census change drops
+          // it, for instance): sign in again on this page.
+          loaded = await openSession(ctx, { fresh: true });
+          check = await flow.check();
+        }
 
         if (!check.belongsToProcess) {
           return { canVote: false, alreadyVoted: false, message: i18n.blocked.not_in_census.body };
@@ -163,13 +116,17 @@ const createAdapter = () => {
           const local = config.questions.find((question) => question.vocdoniQuestionId === remote.questionId);
           if (local) {
             local.upstreamId = remote.upstreamId || local.upstreamId;
-            local.canVote = Boolean(remote.canVote);
+            // A question whose results are out is no longer on the booth page.
+            local.canVote = Boolean(remote.canVote) && !local.closed;
             local.hasVoted = Boolean(remote.hasVoted);
           }
         });
 
         const blocked = await holdUntilOpen(ctx, flow, loaded);
         if (blocked) {
+          // Keep watching: the question is retried once it opens on chain.
+          watchNext(ctx);
+
           return { canVote: false, alreadyVoted: false, message: blocked };
         }
 

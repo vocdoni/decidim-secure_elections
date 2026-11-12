@@ -16,7 +16,7 @@ module Decidim
       #   published); the adapter skips those the CSP says were already cast;
       # * with nothing open, the voter waits on upstream's waiting page;
       # * `waiting.json` also lists the open question ids, so a booth showing
-      #   its receipt can reload as soon as the admin opens another question.
+      #   its receipt can fetch itself again and add the question in place.
       module PerQuestionClientBooth
         extend ActiveSupport::Concern
 
