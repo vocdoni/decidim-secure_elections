@@ -33,6 +33,15 @@ module Decidim
           vocdoni_question_id = question && on_chain_id(question)
           return if vocdoni_question_id.blank?
 
+          # Skip the SaaS call when the question is already at the target status.
+          # Still enqueue results sync for ENDED so a missed sync can recover.
+          current_meta = process.questions_metadata.find { |m| m["decidim_question_id"].to_i == question.id }.to_h
+          if current_meta["vocdoni_status"].to_s.upcase == status
+            Rails.logger.info "[vocdoni] question ##{question.id} already at #{status}; skipping SaaS call"
+            Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id, question_ids: [question.id]) if status == "ENDED"
+            return
+          end
+
           Decidim::Elections::Vocdoni.validate_configuration!
 
           response = client.elections.bulk_set_question_status(

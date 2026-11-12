@@ -66,6 +66,44 @@ module Decidim
           end
         end
 
+        context "when the question is already at the target status" do
+          let!(:vocdoni_process) do
+            create(:vocdoni_process, :published,
+                   election:, vocdoni_process_id: process_id,
+                   metadata: { "questions" => [{ "decidim_question_id" => question.id,
+                                                 "vocdoni_question_id" => vocdoni_question_id,
+                                                 "vocdoni_status" => "READY" }] })
+          end
+
+          it "skips the SaaS call for enable_voting" do
+            described_class.perform_now(question.id, "enable_voting")
+
+            expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
+          end
+
+          it "does not enqueue a sync for enable_voting" do
+            expect { described_class.perform_now(question.id, "enable_voting") }
+              .not_to have_enqueued_job(SyncElectionResultsJob)
+          end
+        end
+
+        context "when the question is already ENDED" do
+          let!(:vocdoni_process) do
+            create(:vocdoni_process, :published,
+                   election:, vocdoni_process_id: process_id,
+                   metadata: { "questions" => [{ "decidim_question_id" => question.id,
+                                                 "vocdoni_question_id" => vocdoni_question_id,
+                                                 "vocdoni_status" => "ENDED" }] })
+          end
+
+          it "skips the SaaS call but still enqueues a results sync for recovery" do
+            expect { described_class.perform_now(question.id, "publish_results") }
+              .to have_enqueued_job(SyncElectionResultsJob).with(election.id, question_ids: [question.id])
+
+            expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
+          end
+        end
+
         context "when the SaaS rejects the change" do
           it "records the error without failing the whole process" do
             stub_request(:put, "#{api_url}/processes/#{process_id}/questions/status")
