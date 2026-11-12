@@ -30,13 +30,37 @@ module Decidim
           stub_request(:get, "#{api_url}/processes/#{process_id}/results")
             .to_return(status: 200, body: vocdoni_fixture("process_results"), headers: json_headers)
 
-          expect(described_class).to receive(:set).with(wait: described_class::POLL_CADENCE_S.seconds).and_call_original
+          expect(described_class).to receive(:set).with(wait: 5.seconds).and_call_original
           expect_any_instance_of(ActiveJob::ConfiguredJob).to receive(:perform_later).with(election.id, attempt: 2) # rubocop:disable RSpec/AnyInstance
 
           described_class.perform_now(election.id)
 
           counts = question.response_options.order(:id).pluck(:votes_count)
           expect(counts).to eq([1, 1])
+        end
+
+        it "backs off on later attempts" do
+          stub_request(:get, "#{api_url}/processes/#{process_id}/results")
+            .to_return(status: 200, body: vocdoni_fixture("process_results"), headers: json_headers)
+
+          expect(described_class).to receive(:set).with(wait: 30.seconds).and_call_original
+          expect_any_instance_of(ActiveJob::ConfiguredJob).to receive(:perform_later).with(election.id, attempt: 5) # rubocop:disable RSpec/AnyInstance
+
+          described_class.perform_now(election.id, attempt: 4)
+        end
+
+        describe ".poll_delay" do
+          it "waits 5, 10, 15, 30, 60 s and then every 120 s" do
+            delays = (1..8).map { |attempt| described_class.poll_delay(attempt) }
+
+            expect(delays).to eq([5, 10, 15, 30, 60, 120, 120, 120])
+          end
+
+          it "gives up after about an hour" do
+            window = (1...described_class::MAX_POLL_ATTEMPTS).sum { |attempt| described_class.poll_delay(attempt) }
+
+            expect(window).to eq(60.minutes.to_i)
+          end
         end
 
         it "stops rescheduling once every question is final" do

@@ -61,14 +61,22 @@ module Decidim
 
         retry_on Decidim::Elections::Vocdoni::ApiError, wait: :polynomially_longer, attempts: 3
 
-        # Bounded polling for `secretUntilTheEnd` tallies. 30 × 120s = 60 min,
-        # comfortably longer than the chain's decryption window in practice.
-        # Past this we give up polling and keep whatever partial tally the
-        # last run wrote — the admin can re-click Publish results to try again.
-        MAX_POLL_ATTEMPTS = 30
+        # Bounded polling for `secretUntilTheEnd` tallies. The chain usually
+        # decrypts within ~20 s of ENDED, so the first waits are short and
+        # back off to `POLL_CADENCE_S` for slow tallies. 35 attempts make a
+        # 60 min window (see `poll_delay`). Past this we give up polling and
+        # keep whatever partial tally the last run wrote — the admin can
+        # re-click Publish results to try again.
+        MAX_POLL_ATTEMPTS = 35
+        POLL_BACKOFF_S = [5, 10, 15, 30, 60].freeze
         POLL_CADENCE_S = 120
 
         MODES = [:poll_until_final, :one_shot].freeze
+
+        # Seconds to wait before the attempt after `attempt` (1-based).
+        def self.poll_delay(attempt)
+          POLL_BACKOFF_S.fetch(attempt - 1, POLL_CADENCE_S)
+        end
 
         def perform(election_id, mode: :poll_until_final, attempt: 1)
           validate_mode!(mode)
@@ -164,7 +172,7 @@ module Decidim
           return if attempt >= MAX_POLL_ATTEMPTS
 
           self.class
-              .set(wait: POLL_CADENCE_S.seconds)
+              .set(wait: self.class.poll_delay(attempt).seconds)
               .perform_later(election.id, attempt: attempt + 1)
         end
 
