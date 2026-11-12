@@ -100,6 +100,12 @@ module Decidim
             expect(Decidim::Elections.voting_backends.find(:vocdoni).supports_per_question).to be(true)
           end
 
+          it "opts out of live tally when the manifest supports the setting" do
+            manifest = Decidim::Elections.voting_backends.find(:vocdoni)
+            # Pass when the fork has not added live_tally yet; must be false when it has.
+            expect(manifest.live_tally).to be(false) if manifest.respond_to?(:live_tally)
+          end
+
           it "registers the backend as :client transport" do
             manifest = Decidim::Elections.voting_backends.find(:vocdoni)
             expect(manifest.transport).to eq(:client)

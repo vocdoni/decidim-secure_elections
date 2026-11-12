@@ -35,6 +35,8 @@ module Decidim
             manifest.receipt_partial = "decidim/elections/vocdoni/booth/receipt_note"
             manifest.vote_overwrite = false
             manifest.supports_per_question = true
+            # Opt out of live tally; the fork adds this attribute conditionally.
+            manifest.live_tally = false if manifest.respond_to?(:live_tally=)
 
             manifest.applies_to { |election| enabled? && election.vocdoni_process.present? }
             manifest.booth_config { |election, voter_uid:, **| booth_config(election, voter_uid:) }
