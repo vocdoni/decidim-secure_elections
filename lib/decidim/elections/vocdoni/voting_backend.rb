@@ -34,7 +34,7 @@ module Decidim
             manifest.pre_ballot_partial = "decidim/elections/vocdoni/booth/otp_panel"
             manifest.receipt_partial = "decidim/elections/vocdoni/booth/receipt_note"
             manifest.vote_overwrite = false
-            manifest.supports_per_question = false
+            manifest.supports_per_question = true
 
             manifest.applies_to { |election| enabled? && election.vocdoni_process.present? }
             manifest.booth_config { |election, voter_uid:, **| booth_config(election, voter_uid:) }
@@ -55,7 +55,7 @@ module Decidim
           meta = process.questions_metadata.index_by { |row| row["decidim_question_id"].to_i }
           ready = process.published? && process.vocdoni_process_id.present?
 
-          {
+          config = {
             apiUrl: Vocdoni.api_url,
             processId: ready ? process.vocdoni_process_id : nil,
             chainId: process.chain_id,
@@ -63,7 +63,7 @@ module Decidim
             castNotificationUrl: Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_cast_notification_path(election),
             credentials: { memberNumber: VoterCredential.for(election, subject) },
             contact: { email:, phone:, masked: mask(email) }.compact,
-            questions: election.questions.map do |question|
+            questions: booth_questions(election).map do |question|
               row = meta[question.id] || {}
               {
                 questionId: question.id.to_s,
@@ -77,6 +77,25 @@ module Decidim
               not_ready: I18n.t("decidim.elections.vocdoni.booth.launcher.not_ready",
                                 default: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments.")
             )
+          }
+          config.merge!(per_question_config(election)) if election.per_question?
+          config
+        end
+
+        # A per-question booth only offers the questions the admin has opened
+        # and not yet closed; the others are still paused (or ended) on chain.
+        def self.booth_questions(election)
+          election.per_question? ? election.questions.enabled.unpublished_results : election.questions
+        end
+
+        # The adapter polls `waitingUrl` after the voter is done with the open
+        # questions and adds the next one to the booth when the admin opens it.
+        def self.per_question_config(election)
+          router = Decidim::EngineRouter.main_proxy(election.component)
+          {
+            perQuestion: true,
+            waitingUrl: router.waiting_election_per_question_votes_path(election_id: election.id, format: :json),
+            perQuestionI18n: I18n.t("decidim.elections.vocdoni.booth.per_question")
           }
         end
 

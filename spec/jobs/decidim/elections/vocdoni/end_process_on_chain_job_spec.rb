@@ -39,6 +39,34 @@ module Decidim
           expect(status_change).to have_been_requested
         end
 
+        context "with a per_question election whose questions end one by one" do
+          let!(:vocdoni_process) do
+            create(:vocdoni_process, :published, vocdoni_process_id: process_id,
+                                                 election: create(:election, :per_question))
+          end
+
+          before do
+            remote = JSON.parse(vocdoni_fixture("process"))
+            first = remote["questions"].first
+            remote["questions"] = [
+              first.merge("id" => "q-ended", "status" => "ENDED"),
+              first.merge("id" => "q-paused", "status" => "PAUSED")
+            ]
+            stub_request(:get, "#{api_url}/processes/#{process_id}")
+              .to_return(status: 200, body: remote.to_json, headers: json_headers)
+          end
+
+          it "ends only the questions that are still open or paused" do
+            status_change = stub_request(:put, "#{api_url}/processes/#{process_id}/questions/status")
+                            .with(body: { "status" => "ENDED", "questions" => [{ "id" => "q-paused" }] })
+                            .to_return(status: 200, body: vocdoni_fixture("status_change_enqueued"), headers: json_headers)
+
+            described_class.perform_now(election.id)
+
+            expect(status_change).to have_been_requested
+          end
+        end
+
         context "when the sidecar is missing" do
           let!(:vocdoni_process) { nil }
           let(:election) { create(:election) }

@@ -85,6 +85,7 @@ module Decidim
           # Kick off the on-chain state monitor so the sidecar keeps mirroring
           # the SaaS while voting is open.
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id)
+          catch_up_questions!
         rescue Decidim::Elections::Vocdoni::ApiError => e
           record_step_failure!(e)
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?
@@ -451,8 +452,23 @@ module Decidim
           }
 
           payload["startDate"] = election.start_at if election.start_at.present?
+          # Each question opens when the admin enables it (see UpdateQuestionOnChainJob).
+          payload["initialStatus"] = "PAUSED" if election.per_question?
 
           payload
+        end
+
+        # Questions the admin opened or closed while the process was still
+        # being pushed: their subscriber found no chain election to move.
+        def catch_up_questions!
+          return unless election.per_question?
+
+          election.questions.each do |question|
+            action = if question.published_results? then "publish_results"
+                     elsif question.voting_enabled_at.present? then "enable_voting"
+                     end
+            Decidim::Elections::Vocdoni::UpdateQuestionOnChainJob.perform_later(question.id, action) if action
+          end
         end
 
         def census_payload

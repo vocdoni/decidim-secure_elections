@@ -99,6 +99,48 @@ module Decidim
           expect(counts).to eq([1, 1])
         end
 
+        context "when limited to some questions" do
+          let!(:other) { create(:election_question, :with_response_options, election:) }
+          let!(:vocdoni_process) do
+            create(:vocdoni_process, :published,
+                   vocdoni_process_id: process_id, election:,
+                   metadata: { "questions" => [
+                     { "decidim_question_id" => question.id, "vocdoni_question_id" => "remote-a" },
+                     { "decidim_question_id" => other.id, "vocdoni_question_id" => "remote-b" }
+                   ] })
+          end
+
+          before do
+            # Listed in the opposite order to the local questions, to prove
+            # the match is by id and not by position.
+            stub_request(:get, "#{api_url}/processes/#{process_id}/results")
+              .to_return(status: 200, headers: json_headers, body: {
+                "questions" => [
+                  { "questionId" => "remote-b", "finalResults" => false, "results" => [%w(7 8)] },
+                  { "questionId" => "remote-a", "finalResults" => true, "results" => [%w(3 4)] }
+                ]
+              }.to_json)
+          end
+
+          it "writes and polls only those questions" do
+            expect(described_class).not_to receive(:set)
+
+            described_class.perform_now(election.id, question_ids: [question.id])
+
+            expect(question.response_options.order(:id).pluck(:votes_count)).to eq([3, 4])
+            expect(other.response_options.order(:id).pluck(:votes_count)).to eq([0, 0])
+          end
+
+          it "keeps the scope when it reschedules" do
+            expect(described_class).to receive(:set).with(wait: described_class.poll_delay(1).seconds).and_call_original
+            expect_any_instance_of(ActiveJob::ConfiguredJob).to receive(:perform_later).with(election.id, attempt: 2, question_ids: [other.id]) # rubocop:disable RSpec/AnyInstance
+
+            described_class.perform_now(election.id, question_ids: [other.id])
+
+            expect(other.response_options.order(:id).pluck(:votes_count)).to eq([7, 8])
+          end
+        end
+
         it "rejects an unknown mode" do
           expect { described_class.perform_now(election.id, mode: :bogus) }
             .to raise_error(ArgumentError, /Unknown mode/)

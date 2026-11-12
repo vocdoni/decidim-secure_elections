@@ -96,6 +96,10 @@ module Decidim
             expect(count_after).to eq(count_before)
           end
 
+          it "supports per-question elections" do
+            expect(Decidim::Elections.voting_backends.find(:vocdoni).supports_per_question).to be(true)
+          end
+
           it "registers the backend as :client transport" do
             manifest = Decidim::Elections.voting_backends.find(:vocdoni)
             expect(manifest.transport).to eq(:client)
@@ -147,6 +151,10 @@ module Decidim
             expect(config[:contact][:masked]).to include("•••@")
           end
 
+          it "has no per-question settings" do
+            expect(config).not_to have_key(:perQuestion)
+          end
+
           it "maps questions in the election's question order" do
             expect(config[:questions].length).to eq(1)
             q = config[:questions].first
@@ -161,6 +169,30 @@ module Decidim
               q = config[:questions].first
               expect(q[:choices]).to eq(expected)
             end
+          end
+        end
+
+        describe ".booth_config for a per_question election" do
+          let(:election) do
+            create(:election, :per_question, :ongoing).tap do |el|
+              create(:vocdoni_process, :published, election: el)
+            end
+          end
+          let!(:open) { create(:election_question, :with_response_options, :voting_enabled, election:) }
+          let!(:closed) { create(:election_question, :with_response_options, :voting_enabled, :published_results, election:) }
+          let!(:idle) { create(:election_question, :with_response_options, election:) }
+          let(:user) { create(:user, :confirmed, organization: election.organization) }
+
+          subject(:config) { described_class.booth_config(election, voter_uid: user.to_global_id.to_s) }
+
+          it "offers only the questions the admin has open" do
+            expect(config[:questions].pluck(:questionId)).to eq([open.id.to_s])
+          end
+
+          it "tells the adapter where to wait for the next question" do
+            expect(config[:perQuestion]).to be(true)
+            expect(config[:waitingUrl]).to end_with("/elections/#{election.id}/per_question_votes/waiting.json")
+            expect(config[:perQuestionI18n]).to include(:waiting, :opening, :not_open)
           end
         end
 

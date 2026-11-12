@@ -28,6 +28,8 @@ module Decidim
 
         retry_on Decidim::Elections::Vocdoni::ApiError, wait: :polynomially_longer, attempts: 3
 
+        TERMINAL_STATUSES = %w(ENDED CANCELED RESULTS).freeze
+
         def perform(election_id)
           @election = Decidim::Elections::Election.find_by(id: election_id)
           return if election.blank?
@@ -41,11 +43,15 @@ module Decidim
 
           Decidim::Elections::Vocdoni.validate_configuration!
 
-          response = client.elections.bulk_set_question_status(
-            process.vocdoni_process_id,
-            status: "ENDED"
-          ).to_h
-          await_job!(response["jobId"])
+          question_ids = open_question_ids
+          unless question_ids == []
+            response = client.elections.bulk_set_question_status(
+              process.vocdoni_process_id,
+              status: "ENDED",
+              question_ids:
+            ).to_h
+            await_job!(response["jobId"])
+          end
 
           Rails.logger.info "[vocdoni] moved every question to ENDED for election ##{election.id} (process #{process.vocdoni_process_id})"
 
@@ -59,6 +65,19 @@ module Decidim
         private
 
         attr_reader :process
+
+        # nil (every question) unless the election is `per_question`, whose
+        # questions may already be ENDED one by one: the SaaS rejects the
+        # whole batch if it names an ended question, so only the rest are sent.
+        def open_question_ids
+          return nil unless election.per_question?
+
+          Array(client.elections.get(process.vocdoni_process_id).to_h["questions"]).filter_map do |question|
+            next if TERMINAL_STATUSES.include?(question["status"].to_s.upcase)
+
+            (question["id"] || question["questionId"]).to_s.presence
+          end
+        end
       end
     end
   end
