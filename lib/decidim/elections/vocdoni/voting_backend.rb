@@ -60,6 +60,7 @@ module Decidim
             processId: ready ? process.vocdoni_process_id : nil,
             chainId: process.chain_id,
             explorerUrl: Vocdoni.explorer_url,
+            castNotificationUrl: Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_cast_notification_path(election),
             credentials: { memberNumber: VoterCredential.for(election, subject) },
             contact: { email:, phone:, masked: mask(email) }.compact,
             questions: election.questions.map do |question|

@@ -22,10 +22,10 @@ module Decidim
       #
       # * `READY` / `ONGOING` / `PAUSED` — active voting window. Poll every
       #   `LIVE_CADENCE_S` when the election is `real_time`, or every
-      #   `IDLE_CADENCE_S` otherwise. The faster tick for `real_time` is what
-      #   keeps `response_options.votes_count` fresh: on every tick, if the
-      #   election opted in, this job also fires a `SyncElectionResultsJob`
-      #   in `:one_shot` mode (no self-reschedule — the outer loop is here).
+      #   `IDLE_CADENCE_S` otherwise. For `real_time` each tick also fires a
+      #   `SyncElectionResultsJob` in `:one_shot` mode (no self-reschedule —
+      #   the outer loop is here) as a fallback to the vote-driven
+      #   {SyncResultsAfterVoteJob}.
       # * `ENDED` / `RESULTS` / `CANCELED` / `PROCESS_UNKNOWN` — voting is
       #   over. Nothing to poll for; the post-end tally sync is chained from
       #   `EndProcessOnChainJob` on its own polling loop.
@@ -45,23 +45,13 @@ module Decidim
         # admin dashboard has something recent to show. Public GET, no cost.
         IDLE_CADENCE_S = 300
 
-        # Faster cadence during active voting when the election is
-        # `results_availability: "real_time"`. Bounds the visible lag between
-        # a voter casting a ballot and Decidim's public results view
-        # reflecting the new count. Same tick rate the Vocdoni explorer at
-        # `explorer.vote` uses against the chain API — enough to feel live
-        # without hammering the SaaS. One anonymous GET on the cache-friendly
-        # public endpoint per tick.
-        #
-        # A lower-latency alternative that we deliberately did NOT take:
-        # poll the Vochain node directly at `api-{env}.vocdoni.net/v2/
-        # elections/{upstreamId}` — the chain returns fresh data within
-        # ~2-5 s of the vote block, bypassing whatever cache TTL sits on the
-        # SaaS. It costs one call per question per tick instead of one per
-        # process, and needs a second base URL in configuration. Worth
-        # revisiting if 10-15 s turns out too laggy in practice for real_time
-        # elections.
-        LIVE_CADENCE_S = 10
+        # Cadence during active voting when the election is
+        # `results_availability: "real_time"`. A fallback only: the tally is
+        # kept fresh by {SyncResultsAfterVoteJob}, which the booth triggers
+        # after each cast. This tick catches votes cast outside our booth or
+        # a lost notification. One anonymous GET on the public endpoint per
+        # tick.
+        LIVE_CADENCE_S = 60
 
         # SaaS statuses that mean the voting window is still open. Match on
         # upcase because the SaaS spells them upper. `GET /processes/{id}`

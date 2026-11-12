@@ -120,6 +120,15 @@ module Decidim
           apply_results!(remote_questions) if remote_questions.any?
           log_summary(remote_questions, mode:, attempt:)
           reschedule_if_not_final!(remote_questions, attempt:) if mode == :poll_until_final
+          record_vote_count!(remote_questions)
+        end
+
+        # {SyncResultsAfterVoteJob} compares this total across checks to tell
+        # when a reported vote reached the tally.
+        def record_vote_count!(remote_questions)
+          return if remote_questions.empty? || !process.has_attribute?(:synced_vote_count)
+
+          process.update_columns(synced_vote_count: remote_questions.sum { |q| q["voteCount"].to_i }) # rubocop:disable Rails/SkipsModelValidations
         end
 
         def apply_results!(remote_questions)
@@ -180,8 +189,8 @@ module Decidim
           total = remote_questions.sum { |q| q["voteCount"].to_i }
           not_final = remote_questions.count { |q| q["finalResults"] != true }
           suffix =
-            if mode == :one_shot
-              " (one-shot)"
+            if mode != :poll_until_final
+              " (#{mode.to_s.dasherize})"
             elsif not_final.positive?
               " — #{not_final} question(s) not yet final (attempt #{attempt}/#{MAX_POLL_ATTEMPTS})"
             else
