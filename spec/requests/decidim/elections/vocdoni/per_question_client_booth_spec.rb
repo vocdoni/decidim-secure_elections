@@ -76,7 +76,7 @@ module Decidim
           open.update!(published_results_at: Time.current)
           get(booth_path, headers: headers.merge("Accept" => "text/html"))
 
-          config = JSON.parse(Nokogiri::HTML(response.body).at_css("[data-voting-booth]")["data-config"])
+          config = JSON.parse(response.parsed_body.at_css("[data-voting-booth]")["data-config"])
           expect(response.body).to include(%(data-question-id="#{idle.id}"))
           expect(response.body).not_to include(%(data-question-id="#{open.id}"))
           expect(config["questions"].pluck("questionId")).to eq([idle.id.to_s])
