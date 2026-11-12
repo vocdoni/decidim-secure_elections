@@ -146,6 +146,27 @@ module Decidim
             .to raise_error(ArgumentError, /Unknown mode/)
         end
 
+        it "writes the remote voteCount into the question's votes_count" do
+          stub_request(:get, "#{api_url}/processes/#{process_id}/results")
+            .to_return(status: 200, body: vocdoni_fixture("process_results"), headers: json_headers)
+
+          described_class.perform_now(election.id, mode: :one_shot)
+
+          question.reload
+          expect(question.votes_count).to eq(2) # fixture voteCount: 2
+        end
+
+        it "keeps election.votes_count equal to the sum of its questions' votes_count" do
+          stub_request(:get, "#{api_url}/processes/#{process_id}/results")
+            .to_return(status: 200, body: vocdoni_fixture("process_results"), headers: json_headers)
+
+          described_class.perform_now(election.id, mode: :one_shot)
+
+          election.reload
+          expect(election.votes_count).to eq(election.questions.sum(:votes_count))
+          expect(election.votes_count).to eq(2)
+        end
+
         context "when the sidecar is not on chain yet" do
           let!(:vocdoni_process) do
             create(:vocdoni_process, :publishing,

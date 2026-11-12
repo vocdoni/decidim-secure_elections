@@ -129,6 +129,7 @@ module Decidim
           remote_questions = pairs.map(&:first)
 
           apply_results!(pairs)
+          sync_vote_counts!(pairs)
           log_summary(remote_questions, mode:, attempt:)
           reschedule_if_not_final!(remote_questions, attempt:) if mode == :poll_until_final
           record_vote_count!(all_remote_questions)
@@ -155,6 +156,18 @@ module Decidim
               option.update_columns(votes_count: raw_count.to_i) # rubocop:disable Rails/SkipsModelValidations
             end
           end
+        end
+
+        # Writes `voteCount` from each remote question into the local question
+        # counter, then recomputes the election total from all its questions.
+        def sync_vote_counts!(pairs)
+          return if pairs.empty?
+
+          pairs.each do |remote_question, local|
+            local.update_columns(votes_count: remote_question["voteCount"].to_i) # rubocop:disable Rails/SkipsModelValidations
+          end
+
+          election.update_columns(votes_count: election.questions.sum(:votes_count)) # rubocop:disable Rails/SkipsModelValidations
         end
 
         # `[remote, local]` for every remote question with a local match,
