@@ -204,6 +204,8 @@ describe("createNextQuestionWatcher()", () => {
     ...extra
   });
 
+  const ctxWithWaiting = (extra = {}) => ctxFor({ waiting: jest.fn(), ...extra });
+
   it("retries in place a question that is still waiting to open on chain", async () => {
     const ctx = ctxFor({
       loadQuestions: jest.fn().mockResolvedValue({ questionIds: [], config: { questions: [{ questionId: "1" }] } }),
@@ -230,5 +232,35 @@ describe("createNextQuestionWatcher()", () => {
 
     expect(window.fetch).toHaveBeenCalledTimes(1);
     expect(ctx.progress).toHaveBeenCalledWith("Wait");
+  });
+
+  it("calls ctx.waiting(true) while polling when ctx.waiting is provided", async () => {
+    window.fetch.mockResolvedValue({ json: () => Promise.resolve({ url: null, open_question_ids: ["1"] }) });
+    jest.useFakeTimers();
+    const ctx = ctxWithWaiting();
+
+    createNextQuestionWatcher()(ctx);
+    await jest.advanceTimersByTimeAsync(10);
+    jest.clearAllTimers();
+    jest.useRealTimers();
+
+    expect(ctx.waiting).toHaveBeenCalledWith(true);
+    expect(ctx.progress).not.toHaveBeenCalled();
+  });
+
+  it("calls ctx.waiting(false) and does not call ctx.progress when the next question opens", async () => {
+    const ctx = ctxWithWaiting({
+      loadQuestions: jest.fn().mockResolvedValue({ config: { questions: [{ questionId: "1" }] } }),
+      restart: jest.fn().mockResolvedValue()
+    });
+
+    createNextQuestionWatcher()(ctx);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 30);
+    });
+
+    expect(ctx.waiting).toHaveBeenCalledWith(false);
+    expect(ctx.progress).not.toHaveBeenCalled();
+    expect(ctx.restart).toHaveBeenCalled();
   });
 });

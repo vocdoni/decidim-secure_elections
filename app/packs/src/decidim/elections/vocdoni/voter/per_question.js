@@ -223,15 +223,23 @@ export const createNextQuestionWatcher = () => {
       return;
     }
     const live = Boolean(ctx.loadQuestions && ctx.restart);
+    // Use ctx.waiting(bool) when the fork provides it; fall back to ctx.progress.
+    const onWaiting = typeof ctx.waiting === "function"
+      ? (msg) => ctx.waiting(Boolean(msg))
+      : ctx.progress;
     stop();
     stop = watchForNextQuestion({
       waitingUrl: config.waitingUrl,
       renderedIds: config.questions.
         filter((question) => !(live && question.awaitingChain)).
         map((question) => question.questionId),
-      onWaiting: ctx.progress,
+      onWaiting,
       message: texts(config).waiting,
-      onOpen: (url) => openInPlace(ctx, url)
+      onOpen: (url) => {
+        // Clear the waiting panel before the booth restarts.
+        onWaiting("");
+        openInPlace(ctx, url);
+      }
     });
   };
 };
