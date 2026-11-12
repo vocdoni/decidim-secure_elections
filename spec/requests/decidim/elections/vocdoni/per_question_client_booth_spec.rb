@@ -62,6 +62,8 @@ module Decidim
 
           expect(response.parsed_body["url"]).to end_with(router.booth_election_per_question_votes_path(election_id: election.id))
           expect(response.parsed_body["open_question_ids"]).to eq([open.id.to_s])
+          # idle has no voting_enabled_at, so more questions may still open.
+          expect(response.parsed_body["more_may_open"]).to be(true)
         end
 
         # The booth adds questions in place by fetching its own page again
@@ -91,10 +93,23 @@ module Decidim
             expect(response).to redirect_to(router.waiting_election_per_question_votes_path(election_id: election.id))
           end
 
-          it "answers waiting.json with no url" do
+          it "answers waiting.json with no url and more_may_open true (idle still disabled)" do
             get(router.waiting_election_per_question_votes_path(election_id: election.id, format: :json), headers:)
 
-            expect(response.parsed_body).to eq("url" => nil, "open_question_ids" => [])
+            expect(response.parsed_body["url"]).to be_nil
+            expect(response.parsed_body["open_question_ids"]).to be_empty
+            # idle (from outer scope) has no voting_enabled_at, so more may open.
+            expect(response.parsed_body["more_may_open"]).to be(true)
+          end
+        end
+
+        context "when all questions have been enabled (none disabled)" do
+          let!(:idle) { create(:election_question, :with_response_options, :voting_enabled, election:) }
+
+          it "answers waiting.json with more_may_open false" do
+            get(router.waiting_election_per_question_votes_path(election_id: election.id, format: :json), headers:)
+
+            expect(response.parsed_body["more_may_open"]).to be(false)
           end
         end
       end

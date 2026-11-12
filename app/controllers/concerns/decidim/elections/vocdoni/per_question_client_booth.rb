@@ -30,7 +30,9 @@ module Decidim
 
           enforce_permission_to(:create, :vote, election:)
           action = waiting_for_next_question? ? nil : next_vote_step_action
-          render json: { url: action ? url_for(**action) : nil, open_question_ids: open_questions.pluck(:id).map(&:to_s) }
+          render json: { url: action ? url_for(**action) : nil,
+                         open_question_ids: open_questions.pluck(:id).map(&:to_s),
+                         more_may_open: election.questions.disabled.any? }
         end
 
         private

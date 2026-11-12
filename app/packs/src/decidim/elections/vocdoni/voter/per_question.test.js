@@ -111,6 +111,38 @@ describe("watchForNextQuestion()", () => {
     expect(window.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("stops and clears the notice when more_may_open is false and all open ids are already rendered", async () => {
+    // The voter has voted every currently-open question; the server confirms no disabled
+    // questions remain, so nothing more can open — the spinner must not get stuck.
+    respond({ url: "/booth", open_question_ids: ["1"], more_may_open: false });
+    const onOpen = jest.fn();
+    const onWaiting = jest.fn();
+
+    watchForNextQuestion({ waitingUrl: "/waiting.json", renderedIds: ["1"], onWaiting, message: "Wait", onOpen, timings: fast });
+    await flush();
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onWaiting).toHaveBeenLastCalledWith("");
+    expect(window.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps polling when more_may_open is true even though all current open ids are rendered", async () => {
+    // A disabled question still exists, so another round may open later.
+    respond(
+      { url: "/booth", open_question_ids: ["1"], more_may_open: true },
+      { url: null, open_question_ids: [] }
+    );
+    const onOpen = jest.fn();
+    const onWaiting = jest.fn();
+
+    const stop = watchForNextQuestion({ waitingUrl: "/waiting.json", renderedIds: ["1"], onWaiting, message: "Wait", onOpen, timings: fast });
+    await flush();
+    stop();
+
+    expect(onWaiting).toHaveBeenCalledWith("Wait");
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
   it("can be stopped", async () => {
     window.fetch.mockResolvedValue({ json: () => Promise.resolve({ url: null, open_question_ids: [] }) });
 

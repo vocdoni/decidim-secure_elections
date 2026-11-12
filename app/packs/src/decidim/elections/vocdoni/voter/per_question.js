@@ -106,6 +106,13 @@ export const watchForNextQuestion = ({ waitingUrl, renderedIds, onWaiting, messa
         onWaiting("");
         return;
       }
+      // All open questions are ones the voter already rendered and voted.
+      // If no disabled questions remain, nothing more can open — stop the spinner.
+      if (data.url && data.more_may_open === false && openIds.every((id) => rendered.has(id))) {
+        stop();
+        onWaiting("");
+        return;
+      }
       onWaiting(message);
     } catch {
       // A failed poll is retried on the next tick.
