@@ -33,23 +33,11 @@ module Decidim
           vocdoni_question_id = question && on_chain_id(question)
           return if vocdoni_question_id.blank?
 
-          # Skip the SaaS call when the question is already at the target status.
-          # Still enqueue results sync for ENDED so a missed sync can recover.
-          current_meta = process.questions_metadata.find { |m| m["decidim_question_id"].to_i == question.id }.to_h
-          if current_meta["vocdoni_status"].to_s.upcase == status
+          if already_at?(question, status)
             Rails.logger.info "[vocdoni] question ##{question.id} already at #{status}; skipping SaaS call"
-            Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id, question_ids: [question.id]) if status == "ENDED"
-            return
+          else
+            move!(question, vocdoni_question_id, status)
           end
-
-          Decidim::Elections::Vocdoni.validate_configuration!
-
-          response = client.elections.bulk_set_question_status(
-            process.vocdoni_process_id, status:, question_ids: [vocdoni_question_id]
-          ).to_h
-          await_job!(response["jobId"])
-
-          Rails.logger.info "[vocdoni] moved question ##{question.id} of election ##{election.id} to #{status}"
 
           # No SyncProcessJob here: one is already looping while voting is
           # open, and each enqueue would start another loop.
@@ -65,6 +53,21 @@ module Decidim
         private
 
         attr_reader :process
+
+        # A double submit or a replay finds the chain already at the target status.
+        def already_at?(question, status)
+          meta = process.questions_metadata.find { |m| m["decidim_question_id"].to_i == question.id }.to_h
+          meta["vocdoni_status"].to_s.upcase == status
+        end
+
+        def move!(question, vocdoni_question_id, status)
+          Decidim::Elections::Vocdoni.validate_configuration!
+          response = client.elections.bulk_set_question_status(
+            process.vocdoni_process_id, status:, question_ids: [vocdoni_question_id]
+          ).to_h
+          await_job!(response["jobId"])
+          Rails.logger.info "[vocdoni] moved question ##{question.id} of election ##{election.id} to #{status}"
+        end
 
         # The question's SaaS id, or nil while the process is not on chain:
         # PublishElectionJob replays the action once it is.
