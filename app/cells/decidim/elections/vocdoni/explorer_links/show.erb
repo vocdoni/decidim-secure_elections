@@ -1,0 +1,17 @@
+<p class="mb-4"><%= t("decidim.elections.vocdoni.explorer.intro") %></p>
+<div class="documents__container vocdoni-explorer-links">
+  <% links.each do |link| %>
+    <div>
+      <div class="card__list-content">
+        <span class="card__list-title"><%= decidim_escape_translated(link.question.body) %></span>
+      </div>
+      <%= link_to link.url,
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                  class: "button button__sm button__transparent-secondary flex-none",
+                  data: { "external-link": true } do %>
+        <%= t("decidim.elections.vocdoni.explorer.view") %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

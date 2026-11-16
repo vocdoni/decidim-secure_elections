@@ -11,6 +11,7 @@ data:
   read:
     - config/locales/security.%{locale}.yml
     - config/locales/%{locale}.vote.yml
+    - config/locales/explorer.%{locale}.yml
   write:
     - config/locales/security.%{locale}.yml
 

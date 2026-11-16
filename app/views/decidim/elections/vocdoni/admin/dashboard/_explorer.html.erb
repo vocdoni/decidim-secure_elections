@@ -1,0 +1,33 @@
+<%#
+  "On the Vocdoni explorer" card on upstream's Dashboard tab: one link per
+  on-chain election, i.e. per question. Rendered from the security card
+  partial, so the module's copy of upstream's dashboard keeps a single added
+  line per branch; nothing shows until the election is on chain.
+%>
+<% links = Decidim::Elections::Vocdoni::ExplorerLinks.for(election) %>
+<% if links.any? %>
+  <div class="card vocdoni-explorer-links">
+    <div class="card-divider">
+      <h2 class="card-title">
+        <span class="text-black font-bold"><%= t("title", scope: "decidim.elections.vocdoni.admin.dashboard.explorer") %></span>
+      </h2>
+    </div>
+
+    <div class="card-section">
+      <div class="row column">
+        <p class="mb-4"><%= t("decidim.elections.vocdoni.explorer.intro") %></p>
+        <ul>
+          <% links.each do |link| %>
+            <li class="flex flex-row items-center justify-between gap-4 py-2">
+              <span><%= translated_attribute(link.question.body) %></span>
+              <%= link_to link.url, class: "button button__xs button__transparent-secondary flex flex-row items-center gap-2", target: :blank, rel: "noopener noreferrer", data: { "external-link": false } do %>
+                <span class="whitespace-nowrap"><%= t("decidim.elections.vocdoni.explorer.view") %></span>
+                <%= icon "external-link-line", class: "inline-block" %>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  </div>
+<% end %>
