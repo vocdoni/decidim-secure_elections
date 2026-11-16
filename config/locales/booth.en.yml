@@ -3,5 +3,9 @@ en:
     elections:
       vocdoni:
         booth:
+          per_question:
+            not_open: This question is not open on the voting network yet. Please try again in a few moments.
+            opening: Opening the question on the voting network…
+            waiting: Waiting for the organisers to open the next question. This page will update by itself.
           receipt:
             final: This vote cannot be changed.

@@ -111,7 +111,10 @@ module Decidim
         # `missingData` and `notFound` lists from a census validation 400 —
         # so the admin sees *which* voters are the problem, not just "invalid
         # data provided".
-        def record_failure!(message, step: nil, code: nil, data: nil)
+        #
+        # `keep_state` records the error without marking the process failed,
+        # for a step whose failure leaves the rest of the election usable.
+        def record_failure!(message, step: nil, code: nil, data: nil, keep_state: false)
           self.metadata = metadata.merge(
             "last_error" => {
               "message" => message.to_s,
@@ -122,7 +125,7 @@ module Decidim
             }.compact
           )
           self.last_error = message.to_s.truncate(255)
-          self.state = "failed"
+          self.state = "failed" unless keep_state
           save!
         end
       end

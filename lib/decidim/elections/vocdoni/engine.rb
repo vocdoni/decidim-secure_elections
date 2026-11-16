@@ -51,6 +51,20 @@ module Decidim
           Decidim::Elections::Vocdoni::VotingBackend.register!
         end
 
+        # Upstream routes the client-side booth only for the all-at-once flow
+        # (`votes/booth`); a `per_question` election needs it under its own
+        # controller too (see {PerQuestionClientBooth}). Prepended so it is
+        # matched before upstream's `per_question_votes/:id`.
+        initializer "decidim_elections_vocdoni.per_question_booth_route" do
+          Decidim::Elections::Engine.routes.prepend do
+            resources :elections, only: [] do
+              resources :per_question_votes, only: [] do
+                collection { get :booth }
+              end
+            end
+          end
+        end
+
         initializer "decidim_elections_vocdoni.webpacker.assets_path" do
           Decidim.register_assets_path File.expand_path("app/packs", root)
         end
@@ -160,6 +174,14 @@ module Decidim
             Decidim::Elections::VotesController.include(
               Decidim::Elections::Vocdoni::RedirectsVoterToBooth
             )
+
+            # Same for a `per_question` election, whose voters upstream sends
+            # to its own controller. The integrated booth gets the open
+            # questions and a waiting room instead of the server-side wizard.
+            per_question_votes = Decidim::Elections::PerQuestionVotesController
+            per_question_votes.include(Decidim::Elections::Vocdoni::RedirectsVoterToBooth)
+            booth = Decidim::Elections::Vocdoni::PerQuestionClientBooth
+            per_question_votes.prepend(booth) unless per_question_votes <= booth
 
             # The "Your security configuration" card on upstream's Dashboard
             # tab. Upstream's dashboard has no view hook, so this gem ships a
@@ -366,6 +388,26 @@ module Decidim
 
             Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id)
             Rails.logger.info "[vocdoni] enqueued SyncElectionResultsJob for election ##{election.id}"
+          end
+        end
+
+        # `per_question` elections: enabling a question or publishing its
+        # results (upstream's `UpdateQuestionStatus`, wrapped in `with_events`)
+        # only writes Decidim's own columns. The job moves that question's
+        # chain election to READY or ENDED and, on ENDED, syncs its tally.
+        initializer "decidim_elections_vocdoni.subscribe_to_question_status" do
+          ActiveSupport::Notifications.subscribe("decidim.elections.admin.update_question_status:after") do |_event_name, data|
+            question = data[:question]
+            action = data[:action]
+            next if question.blank?
+            next unless Decidim::Elections::Vocdoni::UpdateQuestionOnChainJob::TARGET_STATUS.has_key?(action.to_s)
+
+            election = question.election
+            next unless election.per_question?
+            next if election.vocdoni_process.blank?
+
+            Decidim::Elections::Vocdoni::UpdateQuestionOnChainJob.perform_later(question.id, action.to_s)
+            Rails.logger.info "[vocdoni] enqueued UpdateQuestionOnChainJob(#{action}) for question ##{question.id}"
           end
         end
 

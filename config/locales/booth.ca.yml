@@ -3,5 +3,9 @@ ca:
     elections:
       vocdoni:
         booth:
+          per_question:
+            not_open: Aquesta pregunta encara no està oberta a la xarxa de votació. Torna-ho a provar d'aquí a uns moments.
+            opening: Obrint la pregunta a la xarxa de votació…
+            waiting: Esperant que l'organització obri la pregunta següent. Aquesta pàgina s'actualitzarà sola.
           receipt:
             final: Aquest vot no es pot modificar.
