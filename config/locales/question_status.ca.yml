@@ -10,5 +10,6 @@ ca:
               gave_up: "Els reintents automàtics s'han aturat. Contacta amb el suport de Vocdoni."
               question_enable_voting: "No s'ha pogut obrir aquesta pregunta a la blockchain. Encara no s'hi pot votar."
               question_publish_results: "No s'ha pogut tancar aquesta pregunta a la blockchain. Encara hi està oberta, de manera que s'hi poden emetre vots, i els seus resultats no es revelen."
+              question_sync_results: "Decidim no ha pogut llegir els resultats d'aquesta pregunta de la blockchain, de manera que no se'n mostren els recomptes. Contacta amb el suport de Vocdoni."
               retrying: "Es reintenta automàticament."
               title: "Algunes preguntes no estan sincronitzades amb la blockchain"

@@ -509,8 +509,11 @@ module Decidim
           # Only multichoice carries typeSetup: singlechoice ignores it, ranked
           # and cumulative reject it. `uniqueChoices` is rejected because each
           # choice is an independent 0/1 field, so a duplicate is impossible.
+          # A blank `max_choices` means no limit in Decidim, so the cap is
+          # every option; the SaaS turns `maxChoices` into the ballot's
+          # maxTotalCost.
           if type == "multichoice"
-            max = question.max_choices.to_i
+            max = question.max_choices.presence || question.response_options.size
             payload["typeSetup"] = {
               "maxChoices" => [max, 1].max,
               "minChoices" => question.mandatory? ? 1 : 0

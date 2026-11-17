@@ -24,11 +24,21 @@ module Decidim
       #       …
       #   ] }
       #
-      # `results` is a matrix; for single/multi-choice questions the SaaS
-      # returns a single row whose columns line up 1:1 with the choices in the
-      # order they were sent to `POST /processes` — which is
-      # `question.response_options.order(:id)`, so the mapping is by index.
-      # Counts come back as strings.
+      # `results` is the Vochain tally matrix: one row per ballot field, one
+      # column per value that field can take, each cell the number of ballots
+      # that put that value in that field (as a string). Choices line up with
+      # `question.response_options.order(:id)`, the order they were sent to
+      # `POST /processes`, so the mapping is by index:
+      #
+      # * `single_option` (`singlechoice`) is one field holding the chosen
+      #   choice's index: a single row with a bucket per choice.
+      # * `multiple_option` (`multichoice`) is one 0/1 field per choice: a row
+      #   per choice, `[not selected, selected]`, so a choice's count is
+      #   column 1 of its row.
+      #
+      # A matrix of any other shape is not written: the question gets an
+      # entry in `Process#question_failures`, shown on the admin dashboard,
+      # until a run reads a matrix it can map.
       #
       # ## Modes
       #
@@ -80,6 +90,9 @@ module Decidim
         POLL_CADENCE_S = 120
 
         MODES = [:poll_until_final, :one_shot].freeze
+
+        # `Process#question_failures` step of a matrix this job could not map.
+        RESULTS_STEP = "sync_results"
 
         # Seconds to wait before the attempt after `attempt` (1-based).
         def self.poll_delay(attempt)
@@ -145,17 +158,67 @@ module Decidim
 
         def apply_results!(pairs)
           pairs.each do |remote_question, local|
-            row = extract_row(remote_question["results"])
-            next if row.blank?
+            results = remote_question["results"]
+            # No tally yet: an encrypted question not decrypted, or no votes.
+            next if results.blank?
 
             options = local.response_options.order(:id).to_a
-            row.each_with_index do |raw_count, choice_index|
-              option = options[choice_index]
-              next if option.blank?
+            counts = option_counts(local, options.size, results)
+            next record_unexpected_results!(local, results) if counts.nil?
 
-              option.update_columns(votes_count: raw_count.to_i) # rubocop:disable Rails/SkipsModelValidations
+            options.zip(counts).each do |option, count|
+              option.update_columns(votes_count: count) # rubocop:disable Rails/SkipsModelValidations
             end
+            clear_results_failure!(local)
           end
+        end
+
+        # One count per response option, or nil when the matrix does not have
+        # the shape the question's type produces on chain.
+        def option_counts(question, size, results)
+          return nil if size.zero? || !results.is_a?(Array) || !results.all?(Array)
+
+          cells = case question.question_type.to_s
+                  when "single_option" then single_option_cells(results, size)
+                  when "multiple_option" then multiple_option_cells(results, size)
+                  end
+          parse_counts(cells) if cells
+        end
+
+        def parse_counts(cells)
+          counts = cells.map { |cell| Integer(cell.to_s, exception: false) }
+          counts if counts.all? { |count| count.is_a?(Integer) && !count.negative? }
+        end
+
+        def single_option_cells(results, size)
+          results.first if results.size == 1 && results.first.size == size
+        end
+
+        def multiple_option_cells(results, size)
+          return nil unless results.size == size && results.all? { |row| row.size == 2 }
+
+          results.map { |row| row[1] }
+        end
+
+        def record_unexpected_results!(question, results)
+          message = "Unexpected results from Vocdoni for a #{question.question_type} question with " \
+                    "#{question.response_options.size} options (#{matrix_shape(results)}); its counts were not written"
+          Rails.logger.error "[vocdoni] question ##{question.id} of election ##{election.id}: #{message}"
+          process.record_question_failure!(question.id, message, step: RESULTS_STEP)
+        end
+
+        def matrix_shape(results)
+          return "a #{results.class.name}, not a matrix" unless results.is_a?(Array)
+
+          "row sizes #{results.map { |row| row.is_a?(Array) ? row.size : row.class.name }.inspect}"
+        end
+
+        # Only a failure this job recorded: a chain status failure for the
+        # same question stays until UpdateQuestionOnChainJob clears it.
+        def clear_results_failure!(question)
+          return unless process.question_failures.dig(question.id.to_s, "step") == RESULTS_STEP
+
+          process.clear_question_failure!(question.id)
         end
 
         # Writes `voteCount` from each remote question into the local question
@@ -186,21 +249,6 @@ module Decidim
 
             [remote_question, local]
           end
-        end
-
-        # SaaS returns `results` as a matrix — for single-/multi-choice
-        # questions there is exactly one row that holds one count per choice.
-        # Anything shaped differently (a `secretUntilTheEnd` question whose
-        # tally has not been decrypted yet, a future ranked/quadratic
-        # variant) is left alone: we would not know how to project it onto a
-        # per-option counter.
-        def extract_row(results)
-          return nil if results.blank?
-          return nil unless results.is_a?(Array)
-          return nil unless results.length == 1
-
-          row = results.first
-          row.is_a?(Array) ? row : nil
         end
 
         # True when the SaaS says every question has been tallied to
