@@ -11,12 +11,16 @@ module Decidim
         let(:vocdoni_question_id) { "6885f0c2c1a4e2f0b1d33a02" }
         let(:json_headers) { { "Content-Type" => "application/json" } }
         let(:election) { create(:election, :per_question, :published, :ongoing) }
-        let!(:question) { create(:election_question, :with_response_options, :voting_enabled, election:) }
+        let(:question_traits) { [:voting_enabled] }
+        let!(:question) { create(:election_question, :with_response_options, *question_traits, election:) }
         let(:state) { "published" }
+        let(:cached_status) { nil }
         let!(:vocdoni_process) do
           create(:vocdoni_process, :published,
                  election:, state:, vocdoni_process_id: process_id,
-                 metadata: { "questions" => [{ "decidim_question_id" => question.id, "vocdoni_question_id" => vocdoni_question_id }] })
+                 metadata: { "questions" => [{ "decidim_question_id" => question.id,
+                                               "vocdoni_question_id" => vocdoni_question_id,
+                                               "vocdoni_status" => cached_status }.compact] })
         end
 
         def vocdoni_fixture(name)
@@ -29,31 +33,53 @@ module Decidim
             .to_return(status: 200, body: vocdoni_fixture("status_change_enqueued"), headers: json_headers)
         end
 
+        def stub_status_rejected(http_status = 400)
+          stub_request(:put, "#{api_url}/processes/#{process_id}/questions/status")
+            .to_return(status: http_status, body: vocdoni_fixture("error_invalid_body"), headers: json_headers)
+        end
+
+        def stub_live_status(status)
+          remote = JSON.parse(vocdoni_fixture("process"))
+          remote["questions"] = [remote["questions"].first.merge("id" => vocdoni_question_id, "status" => status)]
+          stub_request(:get, "#{api_url}/processes/#{process_id}")
+            .to_return(status: 200, body: remote.to_json, headers: json_headers)
+        end
+
         before do
           stub_request(:get, "#{api_url}/jobs/6885f1a3c1a4e2f0b1d33a20")
             .to_return(status: 200, body: vocdoni_fixture("job_completed"), headers: json_headers)
         end
 
-        it "opens only that question on chain when voting is enabled" do
-          status_change = stub_status_change("READY")
-
-          expect { described_class.perform_now(question.id, "enable_voting") }
-            .not_to have_enqueued_job(SyncElectionResultsJob)
-
-          expect(status_change).to have_been_requested
-        end
-
-        it "ends only that question and syncs its tally when its results are published" do
-          status_change = stub_status_change("ENDED")
-
-          expect { described_class.perform_now(question.id, "publish_results") }
-            .to have_enqueued_job(SyncElectionResultsJob).with(election.id, question_ids: [question.id])
-
-          expect(status_change).to have_been_requested
-        end
-
         it "rejects an unknown action" do
           expect { described_class.perform_now(question.id, "bogus") }.to raise_error(ArgumentError)
+        end
+
+        context "when voting is enabled" do
+          before { stub_live_status("PAUSED") }
+
+          it "opens only that question on chain" do
+            status_change = stub_status_change("READY")
+
+            expect { described_class.perform_now(question.id, "enable_voting") }
+              .not_to have_enqueued_job(SyncElectionResultsJob)
+
+            expect(status_change).to have_been_requested
+          end
+        end
+
+        context "when the results are published" do
+          let(:question_traits) { [:voting_enabled, :published_results] }
+
+          before { stub_live_status("READY") }
+
+          it "ends only that question and syncs its tally" do
+            status_change = stub_status_change("ENDED")
+
+            expect { described_class.perform_now(question.id, "publish_results") }
+              .to have_enqueued_job(SyncElectionResultsJob).with(election.id, question_ids: [question.id])
+
+            expect(status_change).to have_been_requested
+          end
         end
 
         context "when the process is not on chain yet" do
@@ -66,54 +92,174 @@ module Decidim
           end
         end
 
-        context "when the question is already at the target status" do
-          let!(:vocdoni_process) do
-            create(:vocdoni_process, :published,
-                   election:, vocdoni_process_id: process_id,
-                   metadata: { "questions" => [{ "decidim_question_id" => question.id,
-                                                 "vocdoni_question_id" => vocdoni_question_id,
-                                                 "vocdoni_status" => "READY" }] })
+        describe "a stale action" do
+          context "when enable_voting runs after the results were published" do
+            let(:question_traits) { [:voting_enabled, :published_results] }
+
+            it "does nothing" do
+              expect { described_class.perform_now(question.id, "enable_voting") }
+                .not_to have_enqueued_job
+
+              expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
+            end
           end
 
-          it "skips the SaaS call for enable_voting" do
-            described_class.perform_now(question.id, "enable_voting")
+          context "when publish_results runs for a question whose results are not published" do
+            it "does nothing" do
+              expect { described_class.perform_now(question.id, "publish_results") }
+                .not_to have_enqueued_job
 
-            expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
-          end
-
-          it "does not enqueue a sync for enable_voting" do
-            expect { described_class.perform_now(question.id, "enable_voting") }
-              .not_to have_enqueued_job(SyncElectionResultsJob)
+              expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
+            end
           end
         end
 
-        context "when the question is already ENDED" do
-          let!(:vocdoni_process) do
-            create(:vocdoni_process, :published,
-                   election:, vocdoni_process_id: process_id,
-                   metadata: { "questions" => [{ "decidim_question_id" => question.id,
-                                                 "vocdoni_question_id" => vocdoni_question_id,
-                                                 "vocdoni_status" => "ENDED" }] })
+        describe "the live chain status" do
+          context "when the question is already READY" do
+            before { stub_live_status("READY") }
+
+            it "skips the move and the results sync for enable_voting" do
+              status_change = stub_status_change("READY")
+
+              expect { described_class.perform_now(question.id, "enable_voting") }
+                .not_to have_enqueued_job(SyncElectionResultsJob)
+
+              expect(status_change).not_to have_been_requested
+            end
           end
 
-          it "skips the SaaS call but still enqueues a results sync for recovery" do
+          context "when the question is already ENDED" do
+            let(:question_traits) { [:voting_enabled, :published_results] }
+
+            before { stub_live_status("ENDED") }
+
+            it "skips the move but still syncs the tally" do
+              status_change = stub_status_change("ENDED")
+
+              expect { described_class.perform_now(question.id, "publish_results") }
+                .to have_enqueued_job(SyncElectionResultsJob).with(election.id, question_ids: [question.id])
+
+              expect(status_change).not_to have_been_requested
+            end
+          end
+
+          context "when the question is ENDED on chain but still enabled in Decidim" do
+            before { stub_live_status("ENDED") }
+
+            it "never reopens it" do
+              status_change = stub_status_change("READY")
+
+              described_class.perform_now(question.id, "enable_voting")
+
+              expect(status_change).not_to have_been_requested
+            end
+          end
+
+          context "when the cached status is stale" do
+            let(:cached_status) { "READY" }
+
+            before { stub_live_status("PAUSED") }
+
+            it "trusts the live status and moves the question" do
+              status_change = stub_status_change("READY")
+
+              described_class.perform_now(question.id, "enable_voting")
+
+              expect(status_change).to have_been_requested
+            end
+          end
+
+          context "when the live status cannot be read" do
+            let(:cached_status) { "READY" }
+
+            before do
+              stub_request(:get, "#{api_url}/processes/#{process_id}")
+                .to_return(status: 404, body: { error: "not found", code: 40_400 }.to_json, headers: json_headers)
+            end
+
+            it "moves the question anyway" do
+              status_change = stub_status_change("READY")
+
+              described_class.perform_now(question.id, "enable_voting")
+
+              expect(status_change).to have_been_requested
+            end
+          end
+        end
+
+        describe "a failed close" do
+          let(:question_traits) { [:voting_enabled, :published_results] }
+          let(:failure) { vocdoni_process.reload.question_failures[question.id.to_s] }
+
+          before { stub_live_status("READY") }
+
+          it "retries a rejected move on the after-end schedule" do
+            stub_status_rejected(400)
+
             expect { described_class.perform_now(question.id, "publish_results") }
-              .to have_enqueued_job(SyncElectionResultsJob).with(election.id, question_ids: [question.id])
+              .to have_enqueued_job(described_class)
+              .with(question.id, "publish_results", attempt: 2)
+              .at(a_value_within(2.seconds).of(SyncElectionResultsJob.poll_delay(1).seconds.from_now))
+          end
 
-            expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
+          it "retries a transient error without raising" do
+            stub_status_rejected(503)
+
+            expect { described_class.perform_now(question.id, "publish_results", attempt: 6) }
+              .to have_enqueued_job(described_class)
+              .with(question.id, "publish_results", attempt: 7)
+              .at(a_value_within(2.seconds).of(SyncElectionResultsJob::POLL_CADENCE_S.seconds.from_now))
+          end
+
+          it "records the failure for the dashboard without failing the process" do
+            stub_status_rejected(400)
+
+            described_class.perform_now(question.id, "publish_results")
+
+            expect(vocdoni_process.reload.state).to eq("published")
+            expect(failure).to include("step" => "question_publish_results", "attempts" => 1, "gave_up" => false)
+            expect(vocdoni_process.metadata.dig("last_error", "step")).to eq("question_publish_results")
+          end
+
+          it "stops retrying after about an hour and says so" do
+            stub_status_rejected(400)
+            last = described_class::CLOSE_ATTEMPTS
+
+            expect { described_class.perform_now(question.id, "publish_results", attempt: last) }
+              .not_to have_enqueued_job(described_class)
+
+            expect(failure).to include("attempts" => last, "gave_up" => true)
+          end
+
+          it "spans about an hour of retries" do
+            total = (1...described_class::CLOSE_ATTEMPTS).sum { |attempt| described_class.close_delay(attempt) }
+
+            expect(total).to be_within(10.minutes).of(1.hour)
+          end
+
+          it "clears the failure once the question is closed" do
+            vocdoni_process.record_question_failure!(question.id, "boom", step: "question_publish_results", retries: { attempts: 1 })
+            stub_status_change("ENDED")
+
+            described_class.perform_now(question.id, "publish_results", attempt: 2)
+
+            expect(vocdoni_process.reload.question_failures).to be_empty
           end
         end
 
-        context "when the SaaS rejects the change" do
-          it "records the error without failing the whole process" do
-            stub_request(:put, "#{api_url}/processes/#{process_id}/questions/status")
-              .to_return(status: 400, body: vocdoni_fixture("error_invalid_body"), headers: json_headers)
+        context "when the SaaS rejects enable_voting" do
+          before { stub_live_status("PAUSED") }
 
-            described_class.perform_now(question.id, "enable_voting")
+          it "records the error for the question without failing the process or retrying" do
+            stub_status_rejected(400)
+
+            expect { described_class.perform_now(question.id, "enable_voting") }
+              .not_to have_enqueued_job(described_class)
 
             vocdoni_process.reload
             expect(vocdoni_process.state).to eq("published")
             expect(vocdoni_process.metadata.dig("last_error", "step")).to eq("question_enable_voting")
+            expect(vocdoni_process.question_failures[question.id.to_s]).to include("step" => "question_enable_voting")
           end
         end
       end
