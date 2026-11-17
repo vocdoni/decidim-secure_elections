@@ -1,9 +1,10 @@
 <%#
-  Alert on upstream's Dashboard tab for a `per_question` election whose
-  chain disagrees with Decidim: a question the admin opened or closed whose
-  status change failed on chain (`Process#question_failures`). Rendered from
-  the security card partial, before that card; it stays until the job moves
-  the question.
+  Alert on upstream's Dashboard tab for a question whose chain disagrees
+  with Decidim (`Process#question_failures`): in a `per_question` election,
+  one the admin opened or closed whose status change failed on chain; in any
+  election, one whose tally could not be mapped onto its options. Rendered
+  from the security card partial, before that card; it stays until a job
+  succeeds for the question.
 %>
 <% failures = election.vocdoni_process&.question_failures.to_h %>
 <% if failures.any? %>
@@ -17,6 +18,8 @@
           <% if failure["step"] == "question_publish_results" %>
             <p><%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.question_publish_results") %>
               <%= failure["gave_up"] ? t("decidim.elections.vocdoni.admin.dashboard.question_failures.gave_up") : t("decidim.elections.vocdoni.admin.dashboard.question_failures.retrying") %></p>
+          <% elsif failure["step"] == "sync_results" %>
+            <p><%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.question_sync_results") %></p>
           <% else %>
             <p><%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.question_enable_voting") %></p>
           <% end %>

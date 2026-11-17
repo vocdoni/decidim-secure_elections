@@ -54,15 +54,25 @@ module Decidim
           SyncElectionResultsJob.poll_delay(attempt)
         end
 
-        def perform(question_id, action, attempt: 1)
+        # While {PublishElectionJob} is pushing the process (about 15 s, longer
+        # for a large census), the job waits for it: 40 checks 15 s apart
+        # cover 10 minutes. This backs up the publish job's own replay, which
+        # a worker crash between the two steps would lose.
+        PUBLISH_WAIT_ATTEMPTS = 40
+        PUBLISH_WAIT_S = 15
+
+        def perform(question_id, action, attempt: 1, publish_wait: 0)
           @action = action.to_s
           @attempt = attempt
+          @publish_wait = publish_wait
           status = TARGET_STATUS[@action]
           raise ArgumentError, "Unknown question action #{action.inspect}" if status.nil?
 
           @question = Decidim::Elections::Question.find_by(id: question_id)
-          vocdoni_question_id = question && on_chain_id
-          return if vocdoni_question_id.blank?
+          return if question.blank?
+
+          vocdoni_question_id = on_chain_id
+          return wait_for_publish if vocdoni_question_id.blank?
           return if stale?
 
           reached = reach!(vocdoni_question_id, status)
@@ -79,7 +89,7 @@ module Decidim
 
         private
 
-        attr_reader :process, :question, :action, :attempt
+        attr_reader :process, :question, :action, :attempt, :publish_wait
 
         def closing?
           action == "publish_results"
@@ -166,6 +176,23 @@ module Decidim
         def record_enable_failure(error)
           process.record_question_failure!(question.id, redact(error.message), step: "question_#{action}", code: error.try(:code))
           raise error if error.transient?
+        end
+
+        # Runs the action again shortly while the process is being pushed.
+        # Both this and the publish job's replay may then reach the question;
+        # the second one finds it already moved (#reach! reads the live
+        # status, and the SaaS treats a move to the current status as done).
+        def wait_for_publish
+          return unless process&.publishing?
+          return if stale?
+
+          if publish_wait >= PUBLISH_WAIT_ATTEMPTS
+            Rails.logger.warn "[vocdoni] question ##{question.id}: the process is still publishing after " \
+                              "#{publish_wait} checks; leaving #{action} to PublishElectionJob"
+            return
+          end
+
+          self.class.set(wait: PUBLISH_WAIT_S.seconds).perform_later(question.id, action, publish_wait: publish_wait + 1)
         end
 
         # The question's SaaS id, or nil while the process is not on chain:

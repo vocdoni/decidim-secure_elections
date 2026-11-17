@@ -10,5 +10,6 @@ en:
               gave_up: "Automatic retries have stopped. Contact Vocdoni support."
               question_enable_voting: "Opening this question on the blockchain failed. Voters cannot vote on it yet."
               question_publish_results: "Closing this question on the blockchain failed. It is still open there, so votes can still be cast, and its results are not revealed."
+              question_sync_results: "Decidim could not read the results of this question from the blockchain, so its counts are not shown. Contact Vocdoni support."
               retrying: "Retrying automatically."
               title: "Some questions are out of step with the blockchain"

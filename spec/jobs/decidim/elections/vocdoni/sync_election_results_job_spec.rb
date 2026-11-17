@@ -11,7 +11,7 @@ module Decidim
         let(:json_headers) { { "Content-Type" => "application/json" } }
         let(:election) { create(:election) }
         let!(:question) do
-          create(:election_question, :with_response_options, election:)
+          create(:election_question, :with_response_options, election:, question_type: "single_option")
         end
         let!(:vocdoni_process) do
           create(:vocdoni_process, :published,
@@ -100,7 +100,7 @@ module Decidim
         end
 
         context "when limited to some questions" do
-          let!(:other) { create(:election_question, :with_response_options, election:) }
+          let!(:other) { create(:election_question, :with_response_options, election:, question_type: "single_option") }
           let!(:vocdoni_process) do
             create(:vocdoni_process, :published,
                    vocdoni_process_id: process_id, election:,
@@ -138,6 +138,137 @@ module Decidim
             described_class.perform_now(election.id, question_ids: [other.id])
 
             expect(other.response_options.order(:id).pluck(:votes_count)).to eq([7, 8])
+          end
+        end
+
+        describe "result matrices" do
+          let(:election) { create(:election, results_availability: "after_end") }
+          let!(:question) do
+            create(:election_question, election:, question_type: "single_option").tap do |q|
+              create_list(:election_response_option, 3, question: q)
+            end
+          end
+          let!(:multi) do
+            create(:election_question, election:, question_type: "multiple_option", max_choices: 2).tap do |q|
+              create_list(:election_response_option, 3, question: q)
+            end
+          end
+          let!(:approval) do
+            create(:election_question, election:, question_type: "multiple_option", max_choices: nil).tap do |q|
+              create_list(:election_response_option, 2, question: q)
+            end
+          end
+          let!(:vocdoni_process) do
+            create(:vocdoni_process, :published,
+                   vocdoni_process_id: process_id, election:,
+                   metadata: { "questions" => [
+                     { "decidim_question_id" => question.id, "vocdoni_question_id" => "q-single" },
+                     { "decidim_question_id" => multi.id, "vocdoni_question_id" => "q-multi" },
+                     { "decidim_question_id" => approval.id, "vocdoni_question_id" => "q-approval" }
+                   ] })
+          end
+
+          # As the SaaS relays the Vochain tally: a singlechoice question is
+          # one field (one row, a bucket per choice); a multichoice question
+          # is a 0/1 field per choice (a row per choice: [not selected, selected]).
+          let(:remote_questions) do
+            [
+              { "questionId" => "q-single", "voteCount" => 6, "finalResults" => true, "results" => [%w(3 1 2)] },
+              # 5 ballots picking up to 2 of 3: A on 4, B on 1, C on 3.
+              { "questionId" => "q-multi", "voteCount" => 5, "finalResults" => true,
+                "results" => [%w(1 4), %w(4 1), %w(2 3)] },
+              # The dev E2E tally (election #54): one ballot for the first option.
+              { "questionId" => "q-approval", "voteCount" => 1, "finalResults" => true,
+                "results" => [%w(0 1), %w(1 0)] }
+            ]
+          end
+
+          before do
+            # Read at request time, so an example can edit the tally first.
+            stub_request(:get, "#{api_url}/processes/#{process_id}/results")
+              .to_return { { status: 200, headers: json_headers, body: { "questions" => remote_questions }.to_json } }
+          end
+
+          def counts(local)
+            local.response_options.order(:id).pluck(:votes_count)
+          end
+
+          it "writes the count of every option of every question" do
+            described_class.perform_now(election.id)
+
+            expect(counts(question)).to eq([3, 1, 2])
+            expect(counts(multi)).to eq([4, 1, 3])
+            expect(counts(approval)).to eq([1, 0])
+            expect(election.reload.votes_count).to eq(12)
+          end
+
+          it "writes one multiple-option question of a per-question election" do
+            described_class.perform_now(election.id, question_ids: [multi.id])
+
+            expect(counts(multi)).to eq([4, 1, 3])
+            expect(counts(question)).to eq([0, 0, 0])
+            expect(counts(approval)).to eq([0, 0])
+          end
+
+          it "leaves a question with no tally yet alone" do
+            remote_questions[1] = remote_questions[1].merge("results" => nil, "finalResults" => false)
+
+            described_class.perform_now(election.id, mode: :one_shot)
+
+            expect(counts(multi)).to eq([0, 0, 0])
+            expect(vocdoni_process.reload.question_failures).to be_empty
+          end
+
+          context "when a matrix does not have the shape of its question" do
+            # A single-row matrix for a three-option multiple-option question.
+            before { remote_questions[1] = remote_questions[1].merge("results" => [%w(4 1 3)]) }
+
+            it "writes no counts for it and raises a dashboard alert" do
+              described_class.perform_now(election.id)
+
+              expect(counts(multi)).to eq([0, 0, 0])
+              expect(counts(question)).to eq([3, 1, 2])
+              failure = vocdoni_process.reload.question_failures[multi.id.to_s]
+              expect(failure).to include("step" => "sync_results")
+              expect(failure["message"]).to include("multiple_option question with 3 options")
+              expect(vocdoni_process).to be_published
+            end
+
+            it "clears the alert once a run maps the tally" do
+              described_class.perform_now(election.id, mode: :one_shot)
+              remote_questions[1] = remote_questions[1].merge("results" => [%w(1 4), %w(4 1), %w(2 3)])
+
+              described_class.perform_now(election.id, mode: :one_shot)
+
+              expect(counts(multi)).to eq([4, 1, 3])
+              expect(vocdoni_process.reload.question_failures).to be_empty
+            end
+          end
+
+          it "rejects a single-option row that does not have a bucket per option" do
+            remote_questions[0] = remote_questions[0].merge("results" => [%w(3 1)])
+
+            described_class.perform_now(election.id, mode: :one_shot)
+
+            expect(counts(question)).to eq([0, 0, 0])
+            expect(vocdoni_process.reload.question_failures[question.id.to_s]).to include("step" => "sync_results")
+          end
+
+          it "rejects a count that is not a number" do
+            remote_questions[2] = remote_questions[2].merge("results" => [%w(0 x), %w(1 0)])
+
+            described_class.perform_now(election.id, mode: :one_shot)
+
+            expect(counts(approval)).to eq([0, 0])
+            expect(vocdoni_process.reload.question_failures).to have_key(approval.id.to_s)
+          end
+
+          it "keeps a chain status failure of the same question" do
+            vocdoni_process.record_question_failure!(multi.id, "boom", step: "question_publish_results")
+
+            described_class.perform_now(election.id, mode: :one_shot)
+
+            expect(vocdoni_process.reload.question_failures[multi.id.to_s]).to include("step" => "question_publish_results")
           end
         end
 

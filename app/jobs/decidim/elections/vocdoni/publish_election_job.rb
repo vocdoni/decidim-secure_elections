@@ -460,10 +460,13 @@ module Decidim
 
         # Questions the admin opened or closed while the process was still
         # being pushed: their subscriber found no chain election to move.
+        # The questions are read again because `election.questions` was
+        # loaded when this run started, before an admin action taken during
+        # the push.
         def catch_up_questions!
           return unless election.per_question?
 
-          election.questions.each do |question|
+          election.questions.reload.each do |question|
             action = if question.published_results? then "publish_results"
                      elsif question.voting_enabled_at.present? then "enable_voting"
                      end
@@ -506,8 +509,11 @@ module Decidim
           # Only multichoice carries typeSetup: singlechoice ignores it, ranked
           # and cumulative reject it. `uniqueChoices` is rejected because each
           # choice is an independent 0/1 field, so a duplicate is impossible.
+          # A blank `max_choices` means no limit in Decidim, so the cap is
+          # every option; the SaaS turns `maxChoices` into the ballot's
+          # maxTotalCost.
           if type == "multichoice"
-            max = question.max_choices.to_i
+            max = question.max_choices.presence || question.response_options.size
             payload["typeSetup"] = {
               "maxChoices" => [max, 1].max,
               "minChoices" => question.mandatory? ? 1 : 0

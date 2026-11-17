@@ -111,6 +111,61 @@ namespace :decidim_elections_vocdoni do
     end
   end
 
+  desc "List multiple-option questions with votes on chain but no option counts in Decidim (read-only)"
+  task find_unsynced_results: :environment do
+    questions = Decidim::Elections::Question
+                .unscope(:order)
+                .joins(election: :vocdoni_process)
+                .merge(Decidim::Elections::Vocdoni::Process.published)
+                .where(question_type: "multiple_option")
+                .where("decidim_elections_questions.votes_count > 0")
+                .order(:election_id, :position)
+    affected = questions.select { |question| question.response_options.sum(:votes_count).zero? }
+
+    if affected.empty?
+      puts "No multiple-option question with votes is missing its counts."
+      next
+    end
+
+    affected.group_by(&:election).each do |election, election_questions|
+      ids = election_questions.map(&:id).join(", ")
+      puts "election ##{election.id} (#{election.results_availability}): question(s) #{ids}"
+    end
+    puts "\nResync each one with: bin/rails 'decidim_elections_vocdoni:resync_results[ELECTION_ID]'"
+  end
+
+  # Rewrites the option counts the results job writes, from the tally the
+  # SaaS reports now; nothing else changes. A `per_question` election only
+  # gets the questions whose results Decidim already shows.
+  desc "Re-read an election's results from Vocdoni and rewrite its option counts"
+  task :resync_results, [:election_id] => :environment do |_t, args|
+    election = Decidim::Elections::Election.find_by(id: args[:election_id])
+    abort "No election with id #{args[:election_id].inspect}." if election.nil?
+
+    process = election.vocdoni_process
+    abort "Election ##{election.id} is not on chain with Vocdoni." unless process&.published? && process.vocdoni_process_id.present?
+
+    question_ids = (election.questions.published_results.ids if election.per_question?)
+    abort "Election ##{election.id} has no question with published results to resync." if question_ids == []
+
+    print_counts = lambda do |label|
+      puts label
+      election.questions.reload.each do |question|
+        next if question_ids && question_ids.exclude?(question.id)
+
+        counts = question.response_options.order(:id).pluck(:votes_count)
+        puts "  question ##{question.id} (#{question.question_type}): votes #{question.votes_count}, options #{counts.inspect}"
+      end
+    end
+
+    print_counts.call("Before:")
+    Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_now(election.id, mode: :one_shot, question_ids:)
+    print_counts.call("After:")
+
+    failures = process.reload.question_failures.select { |_id, failure| failure["step"] == "sync_results" }
+    failures.each { |id, failure| puts "  question ##{id} not written: #{failure["message"]}" }
+  end
+
   # Reports whether a Sidekiq worker is running that listens on the `vocdoni`
   # queue. Sidekiq is queried through its own API rather than by parsing
   # sidekiq.yml, because the answer that matters is what is *running*, not

@@ -10,7 +10,7 @@ module Decidim
         let(:process_id) { "6885f0c2c1a4e2f0b1d33a01" }
         let(:json_headers) { { "Content-Type" => "application/json" } }
         let(:election) { create(:election, results_availability: "real_time") }
-        let!(:question) { create(:election_question, :with_response_options, election:) }
+        let!(:question) { create(:election_question, :with_response_options, election:, question_type: "single_option") }
         let!(:vocdoni_process) do
           create(:vocdoni_process, :published,
                  vocdoni_process_id: process_id,
