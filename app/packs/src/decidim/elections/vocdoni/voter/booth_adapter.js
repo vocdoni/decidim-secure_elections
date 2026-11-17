@@ -3,6 +3,7 @@ import { createVoterFlow } from "src/decidim/elections/vocdoni/voter/flow";
 import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
 import { message } from "src/decidim/elections/vocdoni/voter/booth_text";
 import { runOtp } from "src/decidim/elections/vocdoni/voter/booth_otp";
+import { closedMessage, splitClosed } from "src/decidim/elections/vocdoni/voter/closed_gate";
 import { createNextQuestionWatcher, holdUntilOpen } from "src/decidim/elections/vocdoni/voter/per_question";
 
 /**
@@ -177,14 +178,16 @@ const createAdapter = () => {
       const unconfirmed = [];
       const failed = [];
 
-      const votable = ballot.filter((entry) => {
-        const question = questionsByDecidimId.get(String(entry.questionId));
-
-        return question && question.canVote;
+      const votable = ballot.
+        map((entry) => ({ entry, question: questionsByDecidimId.get(String(entry.questionId)) })).
+        filter(({ question }) => question && question.canVote);
+      // Per-question: a question closed in Decidim after `prepare` is not cast.
+      const { open, closed } = await splitClosed(config, votable);
+      closed.forEach(({ question }) => {
+        failed.push({ questionId: question.questionId, label: question.title, error: closedMessage(config) });
       });
 
-      for (const entry of votable) {
-        const question = questionsByDecidimId.get(String(entry.questionId));
+      for (const { entry, question } of open) {
         const selectedValues = entry.responseOptionIds.
           map((id) => question.choices[String(id)]).
           filter((value) => typeof value === "number");

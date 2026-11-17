@@ -1,0 +1,14 @@
+es:
+  decidim:
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            question_failures:
+              attempts: "Intentos: %{number}."
+              error: "Error de Vocdoni: %{message}"
+              gave_up: "Los reintentos automáticos se han detenido. Contacta con el soporte de Vocdoni."
+              question_enable_voting: "No se ha podido abrir esta pregunta en la blockchain. Todavía no se puede votar."
+              question_publish_results: "No se ha podido cerrar esta pregunta en la blockchain. Sigue abierta allí, así que se pueden emitir votos, y sus resultados no se revelan."
+              retrying: "Se reintenta automáticamente."
+              title: "Algunas preguntas no están sincronizadas con la blockchain"

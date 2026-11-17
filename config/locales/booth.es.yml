@@ -4,6 +4,7 @@ es:
       vocdoni:
         booth:
           per_question:
+            closed: La votación de esta pregunta se ha cerrado.
             not_open: Esta pregunta todavía no está abierta en la red de votación. Vuelve a intentarlo en unos momentos.
             opening: Abriendo la pregunta en la red de votación…
             waiting: Esperando a que la organización abra la siguiente pregunta. Esta página se actualizará sola.

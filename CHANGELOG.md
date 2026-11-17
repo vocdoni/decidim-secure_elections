@@ -102,3 +102,10 @@ All notable changes to this module are documented here. The format follows
   collector.
 - Nothing from a voting session is written to storage, a cookie, the URL or a
   session — no auth token, no one-time code, no ballot.
+- Closing a question of a `per_question` election fails closed:
+  `UpdateQuestionOnChainJob` retries `publish_results` (the move to `ENDED`) on
+  any SaaS error for about an hour, and the admin Dashboard shows an alert for
+  each question whose chain status change failed until it succeeds. The job
+  drops an action the question's Decidim state has moved past and reads the
+  live chain status before skipping a move. The booth does not cast a question
+  Decidim closed after the ballot was opened.

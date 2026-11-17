@@ -128,6 +128,38 @@ module Decidim
           self.state = "failed" unless keep_state
           save!
         end
+
+        # Chain status changes that failed for one question of a
+        # `per_question` election, keyed by Decidim question id (a string).
+        # Each entry stays until that question reaches its status on chain, so
+        # the admin dashboard keeps showing it while Decidim and the chain
+        # disagree.
+        def question_failures
+          metadata["question_failures"].to_h
+        end
+
+        # Records the failure for the question as well as in `last_error`. The
+        # process stays `published`: the other questions keep voting.
+        # `retries` is `{ attempts:, gave_up: }` for a job that retries on its
+        # own: the tries made so far and whether it stopped.
+        def record_question_failure!(question_id, message, step:, code: nil, retries: {})
+          with_lock do
+            entry = { "message" => message.to_s, "step" => step.to_s, "code" => code,
+                      "attempts" => retries[:attempts], "gave_up" => retries.fetch(:gave_up, false),
+                      "at" => Time.current.iso8601 }.compact
+            self.metadata = metadata.merge("question_failures" => question_failures.merge(question_id.to_s => entry))
+            record_failure!(message, step:, code:, keep_state: true)
+          end
+        end
+
+        def clear_question_failure!(question_id)
+          return unless question_failures.has_key?(question_id.to_s)
+
+          with_lock do
+            self.metadata = metadata.merge("question_failures" => question_failures.except(question_id.to_s))
+            save!
+          end
+        end
       end
     end
   end
