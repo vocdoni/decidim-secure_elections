@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 module Decidim
   module Elections
     module Vocdoni
@@ -8,7 +10,17 @@ module Decidim
       # and receipt screens; `public/vocdoni/booth-adapter.js` authenticates
       # against the Vocdoni CSP and casts from the browser.
       module VotingBackend
-        ADAPTER_SCRIPT = "/vocdoni/booth-adapter.js"
+        ADAPTER_PATH = "/vocdoni/booth-adapter.js"
+
+        # Adapter URL with a content digest, so browsers and CDNs that cache the
+        # fixed path (Cloudflare applies a 4 h browser TTL) fetch the new bundle
+        # as soon as a deploy changes it.
+        def self.adapter_script
+          @adapter_script ||= begin
+            file = Engine.root.join("public", ADAPTER_PATH.delete_prefix("/"))
+            file.file? ? "#{ADAPTER_PATH}?v=#{Digest::SHA256.file(file).hexdigest[0, 12]}" : ADAPTER_PATH
+          end
+        end
 
         def self.available?
           Decidim::Elections.respond_to?(:voting_backends)
@@ -30,7 +42,7 @@ module Decidim
           Decidim::Elections.voting_backends.register(:vocdoni) do |manifest|
             manifest.transport = :client
             manifest.client_adapter = "vocdoni"
-            manifest.client_script = ADAPTER_SCRIPT
+            manifest.client_script = adapter_script
             manifest.pre_ballot_partial = "decidim/elections/vocdoni/booth/otp_panel"
             manifest.receipt_partial = "decidim/elections/vocdoni/booth/receipt_note"
             manifest.vote_overwrite = false

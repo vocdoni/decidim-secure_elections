@@ -111,6 +111,13 @@ module Decidim
             expect(manifest.transport).to eq(:client)
             expect(manifest.client?).to be(true)
           end
+
+          it "points the client script at the adapter with a content digest" do
+            file = Engine.root.join("public/vocdoni/booth-adapter.js")
+            digest = Digest::SHA256.file(file).hexdigest[0, 12]
+            manifest = Decidim::Elections.voting_backends.find(:vocdoni)
+            expect(manifest.client_script).to eq("/vocdoni/booth-adapter.js?v=#{digest}")
+          end
         end
 
         describe ".booth_config" do
