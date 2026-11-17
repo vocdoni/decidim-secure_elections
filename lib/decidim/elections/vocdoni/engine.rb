@@ -4,7 +4,6 @@ require "rails"
 require "active_support/all"
 require "decidim/core"
 require "decidim/elections"
-require_relative "dev_login_prefill_middleware"
 require_relative "voting_backend"
 
 module Decidim
@@ -100,37 +99,6 @@ module Decidim
             File.expand_path("public", root),
             headers: { "cache-control" => "public, max-age=0, must-revalidate" }
           )
-        end
-
-        # Pre-fill the Devise sign-in form with the default seeded admin
-        # credentials in dev, matching `try.decidim.org`. Dev only — never
-        # inject credentials on a non-dev boot.
-        initializer "decidim_elections_vocdoni.dev_login_prefill" do |app|
-          app.middleware.use Decidim::Elections::Vocdoni::DevLoginPrefillMiddleware if Rails.env.development?
-        end
-
-        # Turn off Decidim's admin strong-password gate in dev so an operator
-        # never lands on `/change_password` after logging in with the
-        # prefilled `admin@example.org` / `decidim123456789` (see
-        # `dev_login_prefill` above). The flag is one switch on Decidim
-        # core that governs three otherwise separate behaviours:
-        #
-        #   - `Decidim::NeedsPasswordChange` — the before_action that
-        #     redirects any admin whose `password_updated_at` is nil or
-        #     older than `admin_password_expiration_days`.
-        #   - `Decidim::User#save_password_change` — pushes every
-        #     `encrypted_password_was` onto `previous_passwords` on save,
-        #     which grows the column one entry per admin password write.
-        #   - `Decidim::PasswordValidator`'s admin-specific rules (longer
-        #     minimum, host-similarity, "different from your old passwords",
-        #     …), the ones that reject `decidim123456789` on a
-        #     `decidim.*` host.
-        #
-        # All three exist for production hardening and belong on there.
-        # Dev deploys ship the prefill middleware precisely to skip login
-        # friction; keeping the strong-password gate on defeats that.
-        initializer "decidim_elections_vocdoni.dev_disable_admin_password_strong", after: :load_config_initializers do
-          Decidim.config.admin_password_strong = false if Rails.env.development?
         end
 
         # Decorate upstream `Decidim::Elections::Election` with the sidecar
