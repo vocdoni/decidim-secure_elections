@@ -30,6 +30,47 @@ module Decidim
               .and have_enqueued_job(UpdateQuestionOnChainJob).with(closed.id, "publish_results")
             expect(UpdateQuestionOnChainJob).not_to have_been_enqueued.with(idle.id, anything)
           end
+
+          # The admin enables the question while the process is being pushed:
+          # the run has already loaded `election.questions`, and the
+          # subscriber's job found no chain election to open.
+          it "replays an action taken after the run loaded the questions" do
+            question = create(:election_question, :with_response_options, election:)
+            job.send(:process_payload)
+
+            Decidim::Elections::Question.find(question.id).update!(voting_enabled_at: Time.current)
+
+            expect { job.send(:catch_up_questions!) }
+              .to have_enqueued_job(UpdateQuestionOnChainJob).with(question.id, "enable_voting")
+          end
+        end
+
+        describe "the multiple-option ballot" do
+          let(:results_availability) { "after_end" }
+
+          def type_setup(question)
+            job.send(:question_payload, question)["typeSetup"]
+          end
+
+          it "caps the selections at max_choices" do
+            question = create(:election_question, election:, question_type: "multiple_option", max_choices: 2)
+            create_list(:election_response_option, 3, question:)
+
+            expect(type_setup(question)).to include("maxChoices" => 2)
+          end
+
+          it "lets a voter pick every option when max_choices is blank, as Decidim does" do
+            question = create(:election_question, election:, question_type: "multiple_option", max_choices: nil)
+            create_list(:election_response_option, 3, question:)
+
+            expect(type_setup(question)).to include("maxChoices" => 3)
+          end
+
+          it "sends no typeSetup for a single-option question" do
+            question = create(:election_question, :with_response_options, election:, question_type: "single_option")
+
+            expect(type_setup(question)).to be_nil
+          end
         end
 
         context "with an after_end election" do

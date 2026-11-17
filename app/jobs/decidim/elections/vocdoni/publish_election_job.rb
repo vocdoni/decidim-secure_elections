@@ -460,10 +460,13 @@ module Decidim
 
         # Questions the admin opened or closed while the process was still
         # being pushed: their subscriber found no chain election to move.
+        # The questions are read again because `election.questions` was
+        # loaded when this run started, before an admin action taken during
+        # the push.
         def catch_up_questions!
           return unless election.per_question?
 
-          election.questions.each do |question|
+          election.questions.reload.each do |question|
             action = if question.published_results? then "publish_results"
                      elsif question.voting_enabled_at.present? then "enable_voting"
                      end

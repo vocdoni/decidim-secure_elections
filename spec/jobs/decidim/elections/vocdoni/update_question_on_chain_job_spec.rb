@@ -85,8 +85,48 @@ module Decidim
         context "when the process is not on chain yet" do
           let(:state) { "publishing" }
 
+          it "checks again shortly instead of calling the SaaS" do
+            expect { described_class.perform_now(question.id, "enable_voting") }
+              .to have_enqueued_job(described_class)
+              .with(question.id, "enable_voting", publish_wait: 1)
+              .at(a_value_within(2.seconds).of(described_class::PUBLISH_WAIT_S.seconds.from_now))
+
+            expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
+          end
+
+          it "stops checking after the wait budget and leaves the action to PublishElectionJob" do
+            expect { described_class.perform_now(question.id, "enable_voting", publish_wait: described_class::PUBLISH_WAIT_ATTEMPTS) }
+              .not_to have_enqueued_job(described_class)
+          end
+
+          it "does not wait for an action Decidim has moved past" do
+            question.update!(voting_enabled_at: nil)
+
+            expect { described_class.perform_now(question.id, "enable_voting") }
+              .not_to have_enqueued_job(described_class)
+          end
+
+          context "when the publish lands while the job waits" do
+            before { stub_live_status("PAUSED") }
+
+            it "opens the question on the next check" do
+              status_change = stub_status_change("READY")
+              described_class.perform_now(question.id, "enable_voting")
+
+              vocdoni_process.update!(state: "published")
+              described_class.perform_now(question.id, "enable_voting", publish_wait: 1)
+
+              expect(status_change).to have_been_requested.once
+            end
+          end
+        end
+
+        context "when the process is waiting for a scheduled publish" do
+          let(:state) { "pending" }
+
           it "leaves the action to PublishElectionJob" do
-            described_class.perform_now(question.id, "enable_voting")
+            expect { described_class.perform_now(question.id, "enable_voting") }
+              .not_to have_enqueued_job(described_class)
 
             expect(a_request(:any, /saas-api\.example\.org/)).not_to have_been_made
           end
