@@ -8,7 +8,11 @@
   The level is the saved one (`SecurityForm.level_for`), so it reads the
   same as the Security tab after saving. The chrome is upstream's
   `card`/`card-divider`/`card-title`, as on the sibling cards.
+
+  The question failure alert renders first, so a chain status change that
+  failed shows above the module's cards.
 %>
+<%= render partial: "decidim/elections/vocdoni/admin/dashboard/question_failures" %>
 <% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 <% level = Decidim::Elections::Vocdoni::AdminForms::SecurityForm.level_for(election) %>
 <div class="card vocdoni-security-summary">

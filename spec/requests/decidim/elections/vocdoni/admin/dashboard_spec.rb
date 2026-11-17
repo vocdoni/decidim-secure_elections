@@ -67,6 +67,45 @@ module Decidim
           end
         end
 
+        context "when closing a question on chain failed" do
+          let(:alert) { html.at_css(".item__edit-form > .vocdoni-question-failures") }
+          let(:scope) { "decidim.elections.vocdoni.admin.dashboard.question_failures" }
+          let!(:election) do
+            create(:election, :with_token_csv_census, :per_question, :published, :ongoing, component:).tap do |record|
+              closed = create(:election_question, :with_response_options, :voting_enabled, :published_results, election: record)
+              create(:election_question, :with_response_options, election: record)
+              create(:vocdoni_process, :published, election: record, metadata: {
+                       "question_failures" => {
+                         closed.id.to_s => { "message" => "invalid body", "step" => "question_publish_results",
+                                             "attempts" => 35, "gave_up" => true }
+                       }
+                     })
+            end
+          end
+
+          it "shows an alert above the security card naming the question and the error" do
+            expect(response).to have_http_status(:ok)
+            expect(alert).to be_present
+            expect(alert["role"]).to eq("alert")
+            expect(alert.next_element).to eq(card)
+
+            text = alert.text.squish
+            expect(text).to include(I18n.t("#{scope}.title"))
+            expect(text).to include(I18n.t("#{scope}.question_publish_results"))
+            expect(text).to include(I18n.t("#{scope}.gave_up"))
+            expect(text).to include("invalid body")
+            expect(alert.css("li").size).to eq(1)
+          end
+        end
+
+        context "when no question failed on chain" do
+          let!(:election) { create(:election, :with_token_csv_census, component:) }
+
+          it "shows no alert" do
+            expect(html.at_css(".vocdoni-question-failures")).to be_nil
+          end
+        end
+
         context "when the election is opted in with a one-time code" do
           let!(:election) do
             create(:election, :with_token_csv_census, component:).tap do |record|

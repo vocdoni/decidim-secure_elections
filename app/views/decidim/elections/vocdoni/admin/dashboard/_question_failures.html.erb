@@ -1,0 +1,31 @@
+<%#
+  Alert on upstream's Dashboard tab for a `per_question` election whose
+  chain disagrees with Decidim: a question the admin opened or closed whose
+  status change failed on chain (`Process#question_failures`). Rendered from
+  the security card partial, before that card; it stays until the job moves
+  the question.
+%>
+<% failures = election.vocdoni_process&.question_failures.to_h %>
+<% if failures.any? %>
+  <div class="callout alert vocdoni-question-failures" role="alert">
+    <p class="font-bold"><%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.title") %></p>
+    <ul>
+      <% election.questions.where(id: failures.keys).each do |question| %>
+        <% failure = failures[question.id.to_s] %>
+        <li class="py-2" data-question-id="<%= question.id %>" data-step="<%= failure["step"] %>">
+          <strong><%= translated_attribute(question.body) %></strong>
+          <% if failure["step"] == "question_publish_results" %>
+            <p><%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.question_publish_results") %>
+              <%= failure["gave_up"] ? t("decidim.elections.vocdoni.admin.dashboard.question_failures.gave_up") : t("decidim.elections.vocdoni.admin.dashboard.question_failures.retrying") %></p>
+          <% else %>
+            <p><%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.question_enable_voting") %></p>
+          <% end %>
+          <p>
+            <%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.error", message: failure["message"]) %>
+            <% if failure["attempts"] %><%= t("decidim.elections.vocdoni.admin.dashboard.question_failures.attempts", number: failure["attempts"]) %><% end %>
+          </p>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

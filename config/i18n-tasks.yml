@@ -12,6 +12,7 @@ data:
     - config/locales/security.%{locale}.yml
     - config/locales/%{locale}.vote.yml
     - config/locales/explorer.%{locale}.yml
+    - config/locales/question_status.%{locale}.yml
   write:
     - config/locales/security.%{locale}.yml
 
