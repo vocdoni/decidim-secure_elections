@@ -49,9 +49,9 @@ end
 # rubocop:enable Bundler/DuplicatedGem
 
 group :development, :test do
-  gem "bootsnap", "~> 1.24"
+  gem "bootsnap", "~> 1.26"
   gem "puma", ">= 6.3.1"
-  gem "webmock", "~> 3.23"
+  gem "webmock", "~> 3.34"
 end
 
 group :development do

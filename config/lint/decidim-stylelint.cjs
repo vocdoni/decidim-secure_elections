@@ -2,9 +2,10 @@
 //
 // Same reason as `decidim-eslint.cjs`: the published `@decidim/stylelint-config`
 // is 0.31 and expects Stylelint 15, while Decidim 0.33 is on Stylelint 17 and
-// has not published its config. Copied verbatim from
-// `packages/stylelint-config/index.js` in decidim/decidim (0.33.0-dev). Delete
-// it and extend the package once 0.33 is published.
+// has not published its config. Copied from
+// `packages/stylelint-config/index.js` in decidim/decidim (0.33.0-dev) except
+// for `declaration-block-single-line-max-declarations`, which Stylelint 18 does
+// not have. Delete it and extend the package once 0.33 is published.
 
 module.exports = { // eslint-disable-line
   "extends": ["stylelint-prettier/recommended"],
@@ -63,7 +64,6 @@ module.exports = { // eslint-disable-line
     ],
     "declaration-block-no-redundant-longhand-properties": true,
     "declaration-block-no-shorthand-property-overrides": true,
-    "declaration-block-single-line-max-declarations": 1,
     "declaration-empty-line-before": [
       "always",
       {
