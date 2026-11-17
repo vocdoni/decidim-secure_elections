@@ -206,3 +206,53 @@ describe("prepare() — again on the same page, for a question opened in place",
     expect(ctx.config.questions.map((question) => question.canVote)).toEqual([false, true]);
   });
 });
+
+describe("cast() — per-question election, a question closed after prepare", () => {
+  const ready = { questions: [{ id: "q1", status: "READY" }, { id: "q2", status: "READY" }] };
+  const ballot = [{ questionId: "1", responseOptionIds: ["10"] }, { questionId: "2", responseOptionIds: ["21"] }];
+
+  const preparedCtx = async () => {
+    const ctx = makeCtx();
+    ctx.config.perQuestion = true;
+    ctx.config.waitingUrl = "/waiting.json";
+    // eslint-disable-next-line camelcase -- mirrors the Rails i18n key
+    ctx.config.perQuestionI18n = { opening: "Opening…", waiting: "Wait", not_open: "Not open yet", closed: "Closed" };
+    await adapter.prepare(ctx);
+
+    return ctx;
+  };
+
+  beforeEach(() => {
+    mockFlow.loadProcess.mockResolvedValue(ready);
+    mockFlow.check.mockResolvedValue(checkResponse());
+    mockFlow.castQuestion.mockResolvedValue({ nullifier: "0xbb" });
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, "fetch");
+  });
+
+  it("refuses the question Decidim has closed and casts the rest", async () => {
+    const ctx = await preparedCtx();
+    // eslint-disable-next-line camelcase -- the server's JSON key
+    window.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ url: "/booth", open_question_ids: ["2"] }) });
+
+    const result = await adapter.cast(ctx, ballot);
+
+    expect(mockFlow.castQuestion).toHaveBeenCalledTimes(1);
+    expect(mockFlow.castQuestion).toHaveBeenCalledWith(expect.objectContaining({ questionId: "q2" }));
+    expect(result.failed).toEqual([{ questionId: "1", label: "Q1", error: "Closed" }]);
+    expect(result.receipts.map((receipt) => receipt.questionId)).toEqual(["2"]);
+    expect(ctx.config.questions[0].closed).toBe(true);
+  });
+
+  it("casts every question when Decidim's answer cannot be read", async () => {
+    const ctx = await preparedCtx();
+    window.fetch = jest.fn().mockRejectedValue(new Error("offline"));
+
+    const result = await adapter.cast(ctx, ballot);
+
+    expect(mockFlow.castQuestion).toHaveBeenCalledTimes(2);
+    expect(result.failed).toEqual([]);
+  });
+});
