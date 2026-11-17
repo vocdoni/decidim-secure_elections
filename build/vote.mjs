@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
-import yaml from "js-yaml";
+import { load as loadYaml } from "js-yaml";
 
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -88,7 +88,7 @@ const readLocaleTrees = async () => {
   const trees = {};
 
   for (const name of files) {
-    const parsed = yaml.load(await fs.readFile(path.join(dir, name), "utf8")) || {};
+    const parsed = loadYaml(await fs.readFile(path.join(dir, name), "utf8")) || {};
 
     Object.entries(parsed).forEach(([locale, tree]) => {
       trees[locale] = deepMerge(trees[locale] || {}, tree);
