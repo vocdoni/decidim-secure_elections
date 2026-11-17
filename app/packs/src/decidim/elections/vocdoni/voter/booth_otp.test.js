@@ -22,7 +22,8 @@ const ctxFor = () => {
         errors: { unknown: "Unknown error" }
       }
     },
-    showPanel: () => document.querySelector("[data-panel]")
+    showPanel: () => document.querySelector("[data-panel]"),
+    progress: jest.fn()
   };
 };
 
@@ -72,6 +73,9 @@ describe("runOtp()", () => {
     submit("  ");
 
     expect(flow.confirmOtp).not.toHaveBeenCalled();
-    expect(document.querySelector("[data-vocdoni-otp-feedback]").textContent).toBe("Code required");
+    const feedback = document.querySelector("[data-vocdoni-otp-feedback]");
+    expect(feedback.textContent).toBe("Code required");
+    expect(feedback.classList.contains("is-visible")).toBe(true);
+    expect(document.querySelector("[data-vocdoni-otp-code]").classList.contains("is-invalid-input")).toBe(true);
   });
 });
