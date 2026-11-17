@@ -110,7 +110,7 @@ jobs forever. `decidim_elections_vocdoni:doctor` catches this on Sidekiq.
 | `api_url` | `VOCDONI_API_URL` | yes | Vocdoni SaaS base URL. Production `https://saas-api.vocdoni.net`; staging `https://saas-api-stg.vocdoni.net`; development `https://saas-api-dev.vocdoni.net`. |
 | `api_key` | `VOCDONI_API_KEY` (or credential `vocdoni.api_key`) | yes | Integrator API key. Server-side only. |
 | `org_address` | `VOCDONI_ORG_ADDRESS` | yes | Address of the managed organization the processes belong to. |
-| `explorer_url` | `VOCDONI_EXPLORER_URL` | no | Derived from `api_url` so the two cannot disagree. Set it only for a self-hosted network. |
+| `explorer_url` | `VOCDONI_EXPLORER_URL` | no | Explorer for receipt checks and the per-question election links. Derived from `api_url` so the two cannot disagree. Set it only for a self-hosted network. |
 | `open_timeout` | `VOCDONI_OPEN_TIMEOUT` | no | HTTP connect timeout, in seconds. Default `5`. |
 | `timeout` | `VOCDONI_TIMEOUT` | no | HTTP read timeout, in seconds. Default `30`. |
 | `job_timeout` | `VOCDONI_JOB_TIMEOUT` | no | How long a background job waits for an async SaaS job before giving up. Default `120`. |

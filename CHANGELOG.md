@@ -71,6 +71,9 @@ All notable changes to this module are documented here. The format follows
   fixed live poll runs every 60 s as a fallback. Adds columns to
   `decidim_vocdoni_processes`: run `decidim_elections_vocdoni:install:migrations`
   and `db:migrate` when upgrading.
+- **Explorer links**: once an election is on chain, the public election page
+  gets a "Vocdoni explorer" tab and the admin Dashboard a card, each with one
+  link per question to `<explorer_url>/process/<electionId>`.
 
 ### Changed
 

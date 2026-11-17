@@ -1,0 +1,12 @@
+es:
+  decidim:
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            explorer:
+              title: "En el explorador de Vocdoni"
+        explorer:
+          intro: "Cada pregunta es una votación en la blockchain de Vocdoni. Cualquier persona puede comprobar sus votos y resultados en el explorador público."
+          tab: "Explorador de Vocdoni"
+          view: "Ver en el explorador"

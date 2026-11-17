@@ -109,6 +109,16 @@ module Decidim
                             NETWORKS.fetch(api_url.to_s.sub(%r{/+\z}, ""), "https://explorer.vote")
         end
 
+        # Explorer page of one on-chain election. explorer.vote and its
+        # staging and dev instances route `/process/<electionId>` and take the
+        # id as bare lowercase hex. Nil for a blank id.
+        def explorer_election_url(election_id)
+          id = election_id.to_s.strip.sub(/\A0x/i, "").downcase
+          return nil if id.empty?
+
+          "#{explorer_url.to_s.sub(%r{/+\z}, "")}/process/#{id}"
+        end
+
         # HTTP timeouts, in seconds, for calls to the SaaS API.
         def open_timeout
           @open_timeout ||= ENV.fetch("VOCDONI_OPEN_TIMEOUT", "5").to_i

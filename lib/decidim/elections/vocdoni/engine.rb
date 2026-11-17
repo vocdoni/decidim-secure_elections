@@ -43,6 +43,9 @@ module Decidim
 
         initializer "decidim_elections_vocdoni.add_cells_view_paths" do
           Cell::ViewModel.view_paths << File.expand_path(
+            "#{Decidim::Elections::Vocdoni::Engine.root}/app/cells"
+          )
+          Cell::ViewModel.view_paths << File.expand_path(
             "#{Decidim::Elections::Vocdoni::Engine.root}/app/views"
           )
         end
@@ -219,6 +222,18 @@ module Decidim
               resource :vocdoni_cast_notification, only: :create,
                                                    controller: "/decidim/elections/vocdoni/cast_notifications"
             end
+          end
+        end
+
+        # Adds a "Vocdoni explorer" tab, next to upstream's attachment tabs,
+        # to the public election page: one explorer link per on-chain
+        # election. Upstream's show view has no hook; its `tab_panel_items`
+        # helper is the one extension point, so the module wraps it.
+        initializer "decidim_elections_vocdoni.explorer_tab" do |app|
+          app.config.to_prepare do
+            elections = Decidim::Elections::ElectionsController
+            tab = Decidim::Elections::Vocdoni::ExplorerTabPanel
+            elections.prepend(tab) unless elections <= tab
           end
         end
 
