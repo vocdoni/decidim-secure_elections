@@ -13,11 +13,12 @@ ca:
             census_snapshot:
               title: "Cens per al vot secret"
               count:
-                one: "En publicar, es registrarà per al vot secret el participant que hi ha ara al cens."
-                other: "En publicar, es registraran per al vot secret els %{count} participants que hi ha ara al cens."
-              empty: "El cens és buit: la publicació fallarà fins que hi hagi almenys un participant."
-              late_joiners: "Els participants que entrin al cens després de publicar (per exemple, perquè es verifiquen més tard) no podran votar en aquesta votació."
-              verify_before_publishing: "Abans de publicar, els participants necessiten un compte i les verificacions que demana aquest cens (com el cens de l'organització)."
+                one: "Quan comenci la votació, es registraran per al vot secret els participants que hi hagi al cens en aquell moment. Ara mateix n'hi ha 1."
+                other: "Quan comenci la votació, es registraran per al vot secret els participants que hi hagi al cens en aquell moment. Ara mateix n'hi ha %{count}."
+              empty: "El cens és buit: el vot secret no podrà començar fins que hi hagi almenys un participant."
+              limitations: "Per les limitacions actuals de com està implementat el vot secret:"
+              late_joiners: "Els participants que entrin al cens després que comenci la votació (per exemple, perquè es verifiquen més tard) no podran votar en aquesta votació."
+              verify_before_start: "Els participants necessiten un compte i les verificacions que demana aquest cens (com el cens de l'organització) abans que comenci la votació."
           security:
             show:
               title: "Seguretat"
@@ -45,7 +46,7 @@ ca:
                   powered_by: "Impulsat pel protocol de votació Vocdoni."
                   guide_url: ""
                   guide_link: "Llegeix la guia completa"
-                good_to_know_html: "<strong>Bon a saber:</strong> pots canviar aquesta tria fins que l'elecció estigui publicada. Les persones votants no notaran cap diferència, excepte el codi d'un sol ús si l'actives."
+                good_to_know_html: "<strong>Bon a saber:</strong> pots canviar aquesta tria fins que comenci la votació. Les persones votants no notaran cap diferència, excepte el codi d'un sol ús si l'actives."
               two_factor:
                 legend: "Confirma la identitat dels votants amb un codi d'un sol ús"
                 lead: "Cada votant rep un codi d'un sol ús quan obre la papereta i l'ha d'introduir abans de votar. Evita que algú voti en nom d'una altra persona i fa el resultat més difícil d'impugnar."

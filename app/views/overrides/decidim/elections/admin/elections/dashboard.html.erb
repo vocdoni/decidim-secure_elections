@@ -1,17 +1,19 @@
 <%#
   Copy of upstream's
   decidim-elections/app/views/decidim/elections/admin/elections/dashboard.html.erb
-  at decidim/decidim 4c4d062fb9db171daac7fdad05d3bc5154ee15b2, with three lines
+  at decidim/decidim 4c4d062fb9db171daac7fdad05d3bc5154ee15b2, with four lines
   added: the "Your security configuration" card, after the Results card for a
   published election and before the Main card for an unpublished one; and the
-  "Census for the secret vote" card after the Census card of an unpublished one.
+  "Census for the secret vote" card, after the security card for a published
+  election and after the Census card for an unpublished one (it renders only
+  until voting starts).
 
   Upstream's dashboard has no view hook, so the engine prepends
   `app/views/overrides` to `Decidim::Elections::Admin::ElectionsController`
   only (see `extend_upstream` in lib/decidim/elections/vocdoni/engine.rb).
   spec/lib/decidim/elections/vocdoni/dashboard_override_spec.rb pins the
   SHA-256 of upstream's file and fails on any upstream change: re-copy the
-  file, re-add the three lines, update the pinned commit here and the digest
+  file, re-add the four lines, update the pinned commit here and the digest
   in the spec.
 %>
 <% add_decidim_page_title(t(".title")) %>
@@ -44,6 +46,7 @@
     </div>
     <%= render partial: "decidim/elections/admin/dashboard/results" %>
     <%= render partial: "decidim/elections/vocdoni/admin/dashboard/security" %>
+    <%= render partial: "decidim/elections/vocdoni/admin/dashboard/census_snapshot" %>
   <% else %>
     <p class="mb-4"><%= t(".subtitle") %></p>
     <%= render partial: "decidim/elections/vocdoni/admin/dashboard/security" %>

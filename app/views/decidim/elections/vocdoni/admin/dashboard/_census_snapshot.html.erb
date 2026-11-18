@@ -1,12 +1,15 @@
 <%#
-  "Census for the secret vote" card on upstream's Dashboard tab, after the
-  Census card of an unpublished election that opted in to Vocdoni.
+  "Census for the secret vote" card on upstream's Dashboard tab, for an
+  opted-in election whose voting has not started: after the Census card while
+  unpublished, after the security card once published.
 
-  Publishing registers the census as it is at that moment; anyone who joins
-  it afterwards (e.g. a participant who gets verified later) cannot vote, so
-  the admin sees the count that will be registered before publishing.
+  `PublishElectionJob` registers the census as it is when voting starts (at
+  `start_at`, or when the admin clicks Start); anyone who joins it afterwards
+  (e.g. a participant verified later) cannot vote, so the admin sees the
+  current count and that limitation beforehand.
 %>
-<% if election.vocdoni_process.present? %>
+<% process = election.vocdoni_process %>
+<% if process.present? && !process.published? && !election.started? %>
   <% count = census_count(election) %>
   <% scope = "decidim.elections.vocdoni.admin.dashboard.census_snapshot" %>
   <div class="card vocdoni-census-snapshot" data-census-count="<%= count %>">
@@ -25,10 +28,13 @@
         <% else %>
           <p class="mb-2"><%= t("count", scope:, count:) %></p>
         <% end %>
-        <p class="mb-2"><%= t("late_joiners", scope:) %></p>
-        <% if election.census&.name.to_s == "internal_users" %>
-          <p class="text-gray-2 text-sm"><%= t("verify_before_publishing", scope:) %></p>
-        <% end %>
+        <p class="mb-2"><%= t("limitations", scope:) %></p>
+        <ul class="list-disc ml-6">
+          <li><%= t("late_joiners", scope:) %></li>
+          <% if election.census&.name.to_s == "internal_users" %>
+            <li><%= t("verify_before_start", scope:) %></li>
+          <% end %>
+        </ul>
       </div>
     </div>
   </div>

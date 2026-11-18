@@ -3,10 +3,12 @@
 module Decidim
   module Elections
     module Vocdoni
-      # Enqueued from a subscriber to
+      # Runs when voting starts on an election that has opted in to Vocdoni:
+      # scheduled for `start_at` by the subscriber to
       # `decidim.elections.admin.publish_election:after` (upstream event added
-      # by vocdoni/decidim#2) whenever an election that has opted in to
-      # Vocdoni is published from the Decidim admin.
+      # by vocdoni/decidim#2), or enqueued when the admin clicks Start on a
+      # manual-start election. The census is registered as it is at that
+      # moment.
       #
       # Talks to the Vocdoni SaaS API through the shared {ApiClient} and lands
       # the process on chain:
@@ -169,7 +171,7 @@ module Decidim
           return if election.census_ready?
 
           raise Decidim::Elections::Vocdoni::ApiError.new(
-            "This election's census is not ready: finish it on the Census tab before publishing",
+            "This election's census is not ready: finish it on the Census tab before voting starts",
             transient: false
           )
         end

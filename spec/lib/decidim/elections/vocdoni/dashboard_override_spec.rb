@@ -3,7 +3,7 @@
 require "spec_helper"
 require "digest"
 
-# The Dashboard card needs one line in upstream's dashboard, which has no view
+# The Dashboard cards need lines in upstream's dashboard, which has no view
 # hook, so the module ships a copy of that file (see its header) and the engine
 # prepends its directory to `Decidim::Elections::Admin::ElectionsController`
 # only. These examples keep the copy honest: any upstream change to the file
@@ -20,6 +20,7 @@ module Decidim
         let(:upstream_path) { Decidim::Elections::Engine.root.join("app/views", relative_path) }
         let(:copy_path) { overrides.join(relative_path) }
         let(:added_line) { %(    <%= render partial: "decidim/elections/vocdoni/admin/dashboard/security" %>\n) }
+        let(:snapshot_line) { %(    <%= render partial: "decidim/elections/vocdoni/admin/dashboard/census_snapshot" %>\n) }
 
         let(:copy_lines) { copy_path.readlines }
         let(:header_end) { copy_lines.index("%>\n") }
@@ -27,7 +28,7 @@ module Decidim
 
         it "is synced with the installed upstream dashboard" do
           digest = Digest::SHA256.file(upstream_path).hexdigest
-          hint = "#{upstream_path} changed upstream: re-copy it into #{copy_path}, re-add the two render lines, " \
+          hint = "#{upstream_path} changed upstream: re-copy it into #{copy_path}, re-add the four render lines, " \
                  "and update the pinned commit (file header) and digest (this spec)"
 
           expect(digest).to eq(pinned_digest), hint
@@ -41,14 +42,20 @@ module Decidim
           expect(header).to include("4c4d062fb9db171daac7fdad05d3bc5154ee15b2")
         end
 
-        it "differs from upstream only by the two added render lines" do
+        it "differs from upstream only by the four added render lines" do
           expect(copy_body.count(added_line)).to eq(2)
-          expect(copy_body - [added_line]).to eq(upstream_path.readlines)
+          expect(copy_body.count(snapshot_line)).to eq(2)
+          expect(copy_body - [added_line, snapshot_line]).to eq(upstream_path.readlines)
         end
 
         it "adds the card after Results when published and before Main when not" do
           expect(copy_body[copy_body.index(added_line) - 1]).to include("admin/dashboard/results")
           expect(copy_body[copy_body.rindex(added_line) + 1]).to include("admin/dashboard/main")
+        end
+
+        it "adds the census snapshot card after the security card when published and after Census when not" do
+          expect(copy_body[copy_body.index(snapshot_line) - 1]).to eq(added_line)
+          expect(copy_body[copy_body.rindex(snapshot_line) - 1]).to include("admin/dashboard/census")
         end
 
         it "shadows no other upstream view" do

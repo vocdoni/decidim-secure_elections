@@ -166,10 +166,43 @@ module Decidim
             end
           end
 
-          it "warns that publishing will fail and asks for verifications first" do
+          it "warns that the secret vote cannot start and asks for verifications first" do
             expect(snapshot["data-census-count"]).to eq("0")
             expect(snapshot.at_css(".callout.alert").text.squish).to eq(I18n.t("#{scope}.empty"))
-            expect(snapshot.text.squish).to include(I18n.t("#{scope}.verify_before_publishing"))
+
+            text = snapshot.text.squish
+            expect(text).to include(I18n.t("#{scope}.limitations"))
+            expect(text).to include(I18n.t("#{scope}.verify_before_start"))
+          end
+        end
+
+        context "when the election is published but voting has not started" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, :published, :scheduled, component:).tap do |record|
+              create_list(:election_question, 1, :with_response_options, election: record)
+              create(:vocdoni_process, election: record)
+            end
+          end
+
+          it "renders after the security card, without the verifications item for a CSV census" do
+            expect(response).to have_http_status(:ok)
+            expect(snapshot["data-census-count"]).to eq("3")
+            expect(snapshot.previous_element["class"]).to include("vocdoni-security-summary")
+            expect(snapshot.text.squish).not_to include(I18n.t("#{scope}.verify_before_start"))
+          end
+        end
+
+        context "when voting has started" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, :published, :ongoing, component:).tap do |record|
+              create_list(:election_question, 1, :with_response_options, election: record)
+              create(:vocdoni_process, election: record)
+            end
+          end
+
+          it "does not render the card" do
+            expect(response).to have_http_status(:ok)
+            expect(snapshot).to be_nil
           end
         end
 

@@ -20,11 +20,13 @@ Opting in is materialised by a `Decidim::Elections::Vocdoni::Process` sidecar
 row keyed to the upstream `Decidim::Elections::Election`. Its presence is the
 opt-in signal; upstream's own tables and models are not touched.
 
-- **On publish**, an upstream notification triggers `PublishElectionJob`, which
-  pushes the roster to the Vocdoni memberbase, builds a member group, validates
-  the census, creates and publishes the process on chain, and mirrors the
-  resulting Vocdoni ids back onto the sidecar. Manual-start elections push at
-  Start-time; scheduled elections push at `start_at`.
+- **When voting starts** (at `start_at` for a scheduled election, when the
+  admin clicks Start for a manual-start one), `PublishElectionJob` pushes the
+  roster to the Vocdoni memberbase, builds a member group, validates the
+  census, creates and publishes the process on chain, and mirrors the
+  resulting Vocdoni ids back onto the sidecar. Publishing in Decidim only
+  schedules that push; the census is registered as it is when voting starts,
+  so participants who join it later cannot vote.
 - **On the voter side**, upstream's `Decidim::Elections::VotesController` is
   hijacked for Vocdoni-backed elections: the voter is handed to the static
   voting page served from `public/vocdoni/vote.html`, which does census
