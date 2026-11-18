@@ -30,7 +30,7 @@ describe Decidim::Elections::Vocdoni::Attestation do
     expect(attestation.domain_separator(contract)).to eq(bytes(vectors["domainSeparator"]))
   end
 
-  it "reproduces every vector byte for byte" do
+  def expect_every_vector
     expect(vectors["cases"].size).to eq(4)
     vectors["cases"].each do |vector|
       if vector["kind"].to_s.empty?
@@ -43,6 +43,27 @@ describe Decidim::Elections::Vocdoni::Attestation do
       digest = attestation.digest(contract, **fields(vector))
       expect(digest).to eq(bytes(vector["digest"])), vector["name"]
       expect(attestation.sign(priv, digest)).to eq(bytes(vector["signature"])), vector["name"]
+    end
+  end
+
+  it "reproduces every vector byte for byte" do
+    expect_every_vector
+  end
+
+  # GitHub's runners and older images ship OpenSSL < 3.2, so the pure-Ruby Keccak must give the
+  # same bytes, type hashes included.
+  context "without OpenSSL's KECCAK-256" do
+    before { stub_const("Decidim::Elections::Vocdoni::Attestation::OPENSSL_KECCAK", false) }
+
+    it "reproduces every vector byte for byte" do
+      expect(Decidim::Elections::Vocdoni::Keccak).to receive(:digest).at_least(:once).and_call_original
+      expect(attestation.keccak("EIP712Domain(string name,string version,address verifyingContract)"))
+        .to eq(described_class::DOMAIN_TYPEHASH)
+      expect(attestation.keccak("Attestation(bytes12 processId,bytes32 voterId,bytes32 contactHash,uint64 expiresAt)"))
+        .to eq(described_class::ATTESTATION_TYPEHASH)
+      expect(attestation.address(priv)).to eq(bytes(vectors["signer"]))
+      expect(attestation.domain_separator(contract)).to eq(bytes(vectors["domainSeparator"]))
+      expect_every_vector
     end
   end
 

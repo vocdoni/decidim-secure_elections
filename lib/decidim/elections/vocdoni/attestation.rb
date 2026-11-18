@@ -2,13 +2,14 @@
 
 require "openssl"
 require "securerandom"
+require_relative "keccak"
 
 module Decidim
   module Elections
     module Vocdoni
-      # EIP-712 attestations Decidim signs for the voters of an attested census, in stdlib Ruby
-      # (OpenSSL >= 3.2 for KECCAK-256). Byte-compatible with saas-backend `csp/attestation`; the
-      # spec pins it against the vectors that package exports.
+      # EIP-712 attestations Decidim signs for the voters of an attested census, in stdlib Ruby.
+      # Byte-compatible with saas-backend `csp/attestation`; the spec pins it against the vectors
+      # that package exports.
       module Attestation
         class Error < StandardError; end
 
@@ -20,7 +21,16 @@ module Decidim
         GROUP = OpenSSL::PKey::EC::Group.new("secp256k1")
         SALT_BYTES = 32
 
-        def keccak(bytes) = OpenSSL::Digest.new("KECCAK-256").digest(bytes)
+        # OpenSSL serves KECCAK-256 from 3.2 on and only recent openssl gems look it up (older ones
+        # raise RuntimeError, newer ones DigestError); otherwise the pure-Ruby Keccak does.
+        OPENSSL_KECCAK = begin
+          OpenSSL::Digest.new("KECCAK-256")
+          true
+        rescue OpenSSL::Digest::DigestError, RuntimeError
+          false
+        end
+
+        def keccak(bytes) = OPENSSL_KECCAK ? OpenSSL::Digest.new("KECCAK-256").digest(bytes) : Keccak.digest(bytes)
 
         def i2b(int, size = 32) = [int.to_s(16).rjust(size * 2, "0")].pack("H*")
 
