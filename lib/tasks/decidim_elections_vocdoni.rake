@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
 namespace :decidim_elections_vocdoni do
-  desc "Rotate the attestation signer of an attested election (registers the new signer with the SaaS first)"
+  desc "Rotate the attestation signer of an election (registers the new signer with the SaaS first)"
   task :rotate_attestation_signer, [:election_id] => :environment do |_t, args|
     process = Decidim::Elections::Vocdoni::Process.find_by!(decidim_election_id: args[:election_id])
-    abort "election #{args[:election_id]} does not use an attested census" unless process.attested?
     abort "election #{args[:election_id]} has no SaaS process yet" if process.vocdoni_process_id.blank?
 
     client = Decidim::Elections::Vocdoni::ApiClient.new
@@ -68,9 +67,8 @@ namespace :decidim_elections_vocdoni do
 
     begin
       # Authenticated — proves the key works and is scoped to the configured org.
-      groups = client.organizations.groups(Decidim::Elections::Vocdoni.org_address)
-      total = groups["groups"]&.sum { |g| g["membersCount"].to_i }
-      puts "Credentials OK. #{groups["groups"]&.size.to_i} member group(s), #{total.to_i} member(s)."
+      client.request(:get, "/processes?orgAddress=#{Decidim::Elections::Vocdoni.org_address}&limit=1", auth: :required)
+      puts "Credentials OK."
     rescue StandardError => e
       puts "Credentials rejected: #{e.class}: #{e.message}"
     end

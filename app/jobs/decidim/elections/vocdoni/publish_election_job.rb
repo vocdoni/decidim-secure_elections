@@ -7,17 +7,19 @@ module Decidim
       # scheduled for `start_at` by the subscriber to
       # `decidim.elections.admin.publish_election:after` (upstream event added
       # by vocdoni/decidim#2), or enqueued when the admin clicks Start on a
-      # manual-start election. The census is registered as it is at that
-      # moment.
+      # manual-start election. The census size it declares is the census at
+      # that moment plus room for late joiners.
       #
       # Talks to the Vocdoni SaaS API through the shared {ApiClient} and lands
       # the process on chain:
       #
-      #   add members → create group → validate group →
-      #   create census → publish census → create process → publish process →
-      #   persist ids on the {Process} sidecar.
+      #   draw the attestation secrets → create process (attested census) →
+      #   publish process → persist ids on the {Process} sidecar.
       #
-      # The Vocdoni-side state (process id, chain id, group id, per-question
+      # No roster leaves Decidim: the process declares the election's signer and a maximum census
+      # size, and the booth attests each voter Decidim's census admits.
+      #
+      # The Vocdoni-side state (process id, chain id, per-question
       # upstream ids) is written into the {Process} sidecar row that
       # {Admin::UpdateElectionSecurity} bootstrapped in state `pending` when
       # the admin ticked "Enable Vocdoni" on the Security tab.
@@ -31,26 +33,9 @@ module Decidim
       class PublishElectionJob < ApplicationJob
         queue_as :vocdoni
 
-        # Only transient failures (network flap, 5xx, 429) are retried — a
-        # permanent rejection (4xx or a 2xx with `errors` in the body) fails
-        # identically on retry and, when the failing call is `POST /members`,
-        # creates fresh duplicated members upstream on each attempt.
+        # Only transient failures (network flap, 5xx, 429) are retried: a permanent rejection (4xx
+        # or a 2xx with `errors` in the body) fails identically on retry.
         retry_on Decidim::Elections::Vocdoni::ApiError, wait: :polynomially_longer, attempts: 3
-
-        # The SaaS's largest page size for `GET /organizations/{addr}/members`.
-        MEMBERS_PAGE_SIZE = 100
-
-        # Defensive bound on the memberbase pagination walk: enough pages to
-        # read a full memberbase (the SaaS caps one at 50,000 members).
-        MAX_MEMBER_PAGES = 600
-
-        # Members per `POST /organizations/{addr}/members`. The SaaS sets no
-        # per-call cap, but it hashes every phone with Argon2 one after
-        # another, so a batch has to finish within `Vocdoni.job_timeout`.
-        # Override with `VOCDONI_MEMBER_BATCH_SIZE`.
-        def self.member_batch_size
-          [ENV.fetch("VOCDONI_MEMBER_BATCH_SIZE", "200").to_i, 1].max
-        end
 
         def perform(election_id, scheduled_start_at = nil) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
           return unless bootstrap!(election_id)
@@ -77,7 +62,6 @@ module Decidim
 
           process.update!(state: "publishing")
 
-          adopt_census_mode!
           prepare_census!
           ensure_process_created!
           ensure_process_published!
@@ -122,22 +106,11 @@ module Decidim
           true
         end
 
-        # The census mode is fixed when the SaaS process is created; a resumed publish keeps the
-        # mode its process was created with.
-        def adopt_census_mode!
-          return if process.vocdoni_process_id.present?
-
-          process.update!(census_mode: Decidim::Elections::Vocdoni.census_mode)
-        end
-
+        # The census pushes no roster: the election's signer vouches for each voter at booth time.
         def prepare_census!
           ensure_census_ready!
-
-          return prepare_attested_census! if process.attested?
-
-          ensure_members_pushed!
-          ensure_group_created!
-          ensure_census_validated!
+          check_two_fa_fields!
+          process.ensure_attestation_secrets!
         end
 
         # SaaS 400s carry `{"error":..., "code":..., "data":{...}}` as JSON;
@@ -145,8 +118,7 @@ module Decidim
         # response's `Content-Type` matches `/\bjson$/`, so anything with a
         # `; charset=utf-8` suffix (or a proxy that stripped it) leaves us
         # with the raw body as a String. Fall back to a manual JSON parse
-        # so `data.duplicates` / `data.missingData` reach the admin either
-        # way.
+        # so the SaaS's `data` reaches the admin either way.
         def extract_error_data(error)
           return nil unless error.respond_to?(:body)
 
@@ -186,96 +158,6 @@ module Decidim
             "This election's census is not ready: finish it on the Census tab before voting starts",
             transient: false
           )
-        end
-
-        def ensure_members_pushed!
-          @step = "add_members"
-          # Skip when we already have a group id from a previous attempt.
-          return if process.census_group_id.present?
-
-          payloads = voter_payloads
-          if payloads.empty?
-            raise Decidim::Elections::Vocdoni::ApiError.new(
-              "This election's census resolves to zero voters — nothing to push to the Vocdoni memberbase",
-              transient: false
-            )
-          end
-
-          # POST /organizations/{addr}/members is *not* upsert-by-memberNumber
-          # upstream: pushing the same roster twice creates fresh OrgMember docs
-          # with duplicate memberNumbers, and the census publish then dupe-keys
-          # on the (censusId, loginHash) unique index because the clones all
-          # hash to the same auth-field value. Filter by what is already there.
-          existing = upstream_member_index
-          fresh = payloads.reject { |p| existing.has_key?(p["memberNumber"]) }
-          return if fresh.empty?
-
-          # A failed batch stops the push; a retry skips the batches already in.
-          fresh.each_slice(self.class.member_batch_size) { |batch| push_members!(batch) }
-          # The push added rows the memoized index has not seen; drop it so
-          # resolve_member_ids! rewalks and picks up the new ids.
-          @upstream_member_index = nil
-        end
-
-        def push_members!(batch)
-          response = client.organizations.add_members(org_address, batch).to_h
-          job = await_job!(response["jobId"]).to_h
-
-          errors = (Array(response["errors"]) + Array(job["errors"])).map(&:to_s).compact_blank
-          return if errors.empty?
-
-          # The SaaS may echo a rejected member's credential; this error also
-          # reaches the job's logs when re-raised, so scrub it here.
-          raise Decidim::Elections::Vocdoni::ApiError.new(
-            redact("The Vocdoni memberbase rejected #{errors.size} of #{batch.size} voters: #{errors.join("; ")}"),
-            body: redact_data(response),
-            transient: false
-          )
-        end
-
-        def ensure_group_created!
-          return if process.census_group_id.present?
-
-          @step = "create_group"
-          member_ids = resolve_member_ids!
-          if member_ids.empty?
-            raise Decidim::Elections::Vocdoni::ApiError.new(
-              "None of the census voters could be identified in the Vocdoni memberbase",
-              transient: false
-            )
-          end
-
-          response = client.organizations.create_group(
-            org_address,
-            title: group_title,
-            description: group_description,
-            member_ids:
-          ).to_h
-
-          group_id = response["id"].presence
-          raise Decidim::Elections::Vocdoni::ApiError.new("POST /organizations/{addr}/groups returned no id", body: response, transient: false) if group_id.blank?
-
-          process.update!(census_group_id: group_id)
-        end
-
-        # Pre-flight check that the census's authFields/twoFaFields produce
-        # unique, complete credentials over the group members.
-        def ensure_census_validated!
-          @step = "validate_census"
-          client.elections.validate_census(org_address, census_payload)
-        rescue Decidim::Elections::Vocdoni::ApiError => e
-          if e.status == 400
-            # A 400's `data` lists the offending members by credential.
-            raise Decidim::Elections::Vocdoni::ApiError.new(
-              redact(e.message),
-              body: redact_data(e.try(:body)),
-              status: e.try(:status),
-              code: e.try(:code),
-              transient: false
-            )
-          end
-
-          raise
         end
 
         # ---------------------------------------------------------------------
@@ -351,107 +233,6 @@ module Decidim
         end
 
         # ---------------------------------------------------------------------
-        # Voter roster
-        # ---------------------------------------------------------------------
-
-        def voter_payloads
-          @voter_payloads ||= census_subjects.map do |subject|
-            CensusMember.payload(election, subject, two_fa_fields:)
-          end.compact_blank
-        end
-
-        # The voters of the election's upstream census, whatever its type:
-        # `Decidim::User`s for `internal_users`, `Decidim::Elections::Voter`
-        # rows for `token_csv`. The manifest's own query picks them, so the
-        # roster follows the same rules as Decidim's census check.
-        def census_subjects
-          @census_subjects ||= census_records.select { |record| admitted?(record) }
-        end
-
-        # `users(election, 0, nil)` is the manifest's whole relation (a nil
-        # limit is no limit); `find_each` walks it in id order, in batches.
-        def census_records
-          census = election.census
-          return [] if census.nil?
-
-          records = census.users(election, 0, nil)
-          records = records.respond_to?(:find_each) ? records.find_each.to_a : Array(records)
-          unsupported = records.reject { |record| record.is_a?(Decidim::User) || record.is_a?(Decidim::Elections::Voter) }
-          return records if unsupported.empty?
-
-          raise Decidim::Elections::Vocdoni::ApiError.new(
-            "The #{election.census_manifest} census lists #{unsupported.first.class.name} records, which cannot be pushed to Vocdoni",
-            transient: false
-          )
-        end
-
-        # `internal_users` only queries who holds the authorizations; the
-        # handlers' options (say, a postal code) are checked by the census's
-        # voter form. `valid_user?` runs that same check, so a participant
-        # Decidim would turn away from the booth is not pushed either.
-        # CSV rows are the census as uploaded.
-        def admitted?(record)
-          return true unless record.is_a?(Decidim::User)
-
-          election.census.valid_user?(election, {}, current_user: record)
-        end
-
-        # The memberbase is shared by every election of the organization, so
-        # members are matched by the credential alone: an email or phone
-        # match may be the same person's member from another election, whose
-        # memberNumber is not this election's credential.
-        def resolve_member_ids!
-          @step = "list_members"
-          index = upstream_member_index
-
-          missing = 0
-          ids = voter_payloads.filter_map do |payload|
-            id = index[payload["memberNumber"]]
-            missing += 1 if id.blank?
-            id
-          end
-          return ids.uniq if missing.zero?
-
-          raise Decidim::Elections::Vocdoni::ApiError.new(
-            "#{missing} of #{voter_payloads.size} voters are missing from the Vocdoni memberbase after the push",
-            transient: false
-          )
-        end
-
-        # Memoized so ensure_members_pushed! (which reads it to dedupe against
-        # the memberbase) and resolve_member_ids! (which reads it to look up
-        # ids for the group) share one walk. Callers that add members must
-        # invalidate `@upstream_member_index` so the next read rewalks.
-        # Maps memberNumber to member id.
-        def upstream_member_index
-          return @upstream_member_index if @upstream_member_index
-
-          index = {}
-          page = 1
-          pages = 0
-
-          while pages < MAX_MEMBER_PAGES
-            response = client.organizations.members(org_address, page:, limit: MEMBERS_PAGE_SIZE).to_h
-            members = Array(response["members"]).grep(Hash)
-            break if members.empty?
-
-            members.each do |member|
-              id = member["id"].presence
-              number = member["memberNumber"].to_s.strip
-              index[number] ||= id if id.present? && number.present?
-            end
-
-            pages += 1
-            next_page = response.dig("pagination", "nextPage").to_i
-            break if next_page <= page
-
-            page = next_page
-          end
-
-          @upstream_member_index = index
-        end
-
-        # ---------------------------------------------------------------------
         # Payload
         # ---------------------------------------------------------------------
 
@@ -488,12 +269,14 @@ module Decidim
           end
         end
 
-        # An attested census pushes no roster: the election's signer vouches for each voter at
-        # booth time. The gem only holds an email per voter, so email is the only 2FA channel.
-        def prepare_attested_census!
-          raise Decidim::Elections::Vocdoni::ApiError.new("an attested census supports email 2FA only", transient: false) unless (two_fa_fields - ["email"]).empty?
+        # An attestation binds one contact, and Decidim attests emails only.
+        def check_two_fa_fields!
+          return if Process::TWO_FA_FIELDS.include?(two_fa_fields)
 
-          process.ensure_attestation_secrets!
+          raise Decidim::Elections::Vocdoni::ApiError.new(
+            "The one-time code can only go by email: change it on the Security tab",
+            transient: false
+          )
         end
 
         # The census as voting starts (when this job runs) plus 20%: room for participants who join
@@ -503,19 +286,10 @@ module Decidim
         end
 
         def census_payload
-          if process.attested?
-            return {
-              "attested" => { "signer" => process.signer_address, "maxCensusSize" => attested_census_size },
-              "twoFaFields" => two_fa_fields
-            }
-          end
-
-          payload = {
-            "authFields" => auth_fields,
-            "groupId" => process.census_group_id
+          {
+            "attested" => { "signer" => process.signer_address, "maxCensusSize" => attested_census_size },
+            "twoFaFields" => two_fa_fields
           }
-          payload["twoFaFields"] = two_fa_fields if two_fa_fields.any?
-          payload
         end
 
         # Upstream Decidim uses `single_option` / `multiple_option`; the SaaS
@@ -569,31 +343,10 @@ module Decidim
           election.results_availability.to_s != "real_time"
         end
 
-        # Fixed to `memberNumber`: the {VoterCredential} every member we push
-        # carries and the booth hands the CSP. Voters never type it, so the
-        # census needs no other identifier, whatever its type.
-        def auth_fields
-          ["memberNumber"]
-        end
-
-        # Second-factor selection lives on the sidecar's settings, populated by
-        # {Admin::UpdateElectionSecurity} from the Security-tab form. Verbatim
-        # SaaS shape (`["email"]`, `["phone"]`, `["email","phone"]` or `[]`).
-        def two_fa_fields
-          Array(process.metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
-        end
+        def two_fa_fields = process.two_fa_fields
 
         def org_address
           Decidim::Elections::Vocdoni.org_address
-        end
-
-        def group_title
-          title = localize(election.title).to_h["default"].presence || "Decidim election"
-          "#{title.truncate(180)} (##{election.id})"
-        end
-
-        def group_description
-          "Census of Decidim election ##{election.id}. Managed by Decidim; do not edit by hand."
         end
 
         def default_locale

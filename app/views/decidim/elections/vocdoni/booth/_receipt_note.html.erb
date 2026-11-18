@@ -7,10 +7,8 @@
   <%= t("decidim.elections.vocdoni.booth.receipt.final") %>
   <%= t("decidim.elections.vocdoni.votes.page.receipt.body") %>
 </p>
-<% if election.vocdoni_process&.attested? %>
-  <p class="mt-2 text-center">
-    <%= t("decidim.elections.vocdoni.booth.receipt.check_attestation") %>
-    <%= link_to t("decidim.elections.vocdoni.booth.receipt.check_attestation_link"),
-                Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_attestation_path(election) %>
-  </p>
-<% end %>
+<p class="mt-2 text-center">
+  <%= t("decidim.elections.vocdoni.booth.receipt.check_attestation") %>
+  <%= link_to t("decidim.elections.vocdoni.booth.receipt.check_attestation_link"),
+              Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_attestation_path(election) %>
+</p>

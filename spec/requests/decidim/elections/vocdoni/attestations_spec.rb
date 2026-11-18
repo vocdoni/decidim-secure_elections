@@ -15,7 +15,7 @@ module Decidim
         let(:contract) { "0x#{"cd" * 20}" }
         let(:settings) { { "twofa_fields" => ["email"] } }
         let!(:process) do
-          create(:vocdoni_process, :published, election:, census_mode: "attested",
+          create(:vocdoni_process, :published, election:,
                                                metadata: { "settings" => settings, "attestation_verifying_contract" => contract }).tap(&:ensure_attestation_secrets!)
         end
         let(:path) { Decidim::EngineRouter.main_proxy(component).election_vocdoni_attestation_path(election) }
@@ -119,8 +119,8 @@ module Decidim
           end
         end
 
-        context "when the election does not use an attested census" do
-          before { process.update!(census_mode: "memberbase") }
+        context "when the election is not on the SaaS yet" do
+          before { process.update!(state: "pending", vocdoni_process_id: nil) }
 
           it "answers not found" do
             post(path, headers:)

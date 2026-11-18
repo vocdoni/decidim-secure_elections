@@ -13,12 +13,12 @@ All notable changes to this module are documented here. The format follows
   second-factor challenge — email OTP, SMS OTP, both, or none.
 - **`Decidim::Elections::Vocdoni::Process` sidecar** (`decidim_vocdoni_processes`
   table) keyed to `Decidim::Elections::Election`. Its presence is the opt-in
-  signal; it carries the Vocdoni process id, chain id, member-group id and a
-  per-question metadata bag.
+  signal; it carries the Vocdoni process id, chain id, the attestation signer
+  and voterId secret, and a per-question metadata bag.
 - **`PublishElectionJob`** — subscribes to upstream's
-  `publish_election`/`update_election_status` events, pushes the roster to the
-  Vocdoni memberbase, builds a member group, validates the census, creates and
-  publishes the process on chain. Manual-start elections push at Start-time;
+  `publish_election`/`update_election_status` events and creates and publishes
+  the process on chain with an attested census (signer + maxCensusSize, no
+  roster). Manual-start elections push at Start-time;
   scheduled elections push at `start_at`. Reschedules itself when the admin
   moves `start_at`.
 - **`SyncProcessJob`** — mirrors the on-chain state of a published process into

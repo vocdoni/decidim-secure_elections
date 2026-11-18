@@ -14,7 +14,7 @@ module Decidim
         let(:voter) { Decidim::Elections::Voter.create!(election:, data: { "email" => "voter@example.org", "token" => "t0k3n" }) }
         let(:voter_uid) { voter.to_global_id.to_s }
         let!(:process) do
-          create(:vocdoni_process, :published, election:, census_mode: "attested",
+          create(:vocdoni_process, :published, election:,
                                                metadata: { "questions" => [{ "decidim_question_id" => question.id, "vocdoni_question_id" => "q1" }] })
             .tap(&:ensure_attestation_secrets!)
         end

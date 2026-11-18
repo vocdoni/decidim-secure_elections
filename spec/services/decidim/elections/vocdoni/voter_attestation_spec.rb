@@ -9,7 +9,7 @@ module Decidim
         let(:organization) { create(:organization) }
         let(:component) { create(:elections_component, organization:) }
         let(:election) { create(:election, :ongoing, component:) }
-        let!(:process) { create(:vocdoni_process, :published, election:, census_mode: "attested").tap(&:ensure_attestation_secrets!) }
+        let!(:process) { create(:vocdoni_process, :published, election:).tap(&:ensure_attestation_secrets!) }
         let(:user) { create(:user, :confirmed, organization:) }
         let(:row) { Decidim::Elections::Voter.create!(election:, data: { "email" => "row@example.org", "token" => "t" }) }
 
@@ -31,7 +31,7 @@ module Decidim
 
           expect(config[:credentials]).to be_nil
           expect(config[:attestationUrl]).to end_with("/elections/#{election.id}/vocdoni_attestation")
-          expect(config[:contact]).to eq(email: "row@example.org", masked: "r•••@example.org")
+          expect(config[:contact]).to eq(masked: "r•••@example.org")
         end
       end
     end

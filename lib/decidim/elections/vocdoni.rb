@@ -33,9 +33,8 @@ module Decidim
       # settles it.
       #
       # They stay because `vocdoni` in a column or a table is not this module's
-      # name, it is the network the data belongs to: `vocdoni_process_id`,
-      # `vocdoni_upstream_id` and `vocdoni_member_id` are identifiers minted by
-      # Vocdoni, and renaming the tables around them would buy consistency with
+      # name, it is the network the data belongs to: `vocdoni_process_id` and
+      # `vocdoni_upstream_id` are identifiers minted by Vocdoni, and renaming the tables around them would buy consistency with
       # the gem's name at the cost of a migration that reads as if the data had
       # changed meaning. The same reasoning keeps the `VOCDONI_*` environment
       # variables and the `:vocdoni` component manifest.
@@ -133,13 +132,6 @@ module Decidim
         # change, vote relay) before giving up.
         def job_timeout
           @job_timeout ||= ENV.fetch("VOCDONI_JOB_TIMEOUT", "120").to_i
-        end
-
-        # How a newly published election tells the SaaS who may vote: "memberbase" pushes the roster
-        # as organization members, "attested" signs an attestation per voter at booth time. An
-        # election keeps the mode it was created with.
-        def census_mode
-          @census_mode ||= ENV.fetch("VOCDONI_CENSUS_MODE", "memberbase")
         end
 
         private

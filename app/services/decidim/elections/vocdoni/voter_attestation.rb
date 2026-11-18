@@ -3,10 +3,9 @@
 module Decidim
   module Elections
     module Vocdoni
-      # Signs the EIP-712 attestation a voter of an attested census hands to the SaaS CSP in place
-      # of a member credential. The voter is whoever Decidim's census access let into the booth; the
-      # SaaS only learns an opaque voterId and, with email 2FA, a salted hash of the address the
-      # code goes to.
+      # Signs the EIP-712 attestation a voter hands to the SaaS CSP's auth/0. The voter is whoever
+      # Decidim's census access let into the booth; the SaaS only learns an opaque voterId and, with
+      # 2FA, a salted hash of the contact the code goes to.
       class VoterAttestation
         # Long enough to finish the OTP step, well inside the CSP's one-hour ceiling.
         TTL = 10.minutes
@@ -19,7 +18,7 @@ module Decidim
         # attested contact and the one the booth shows match. A voter_uid outside the election's
         # census (another organization's user, another election's row) has no contact.
         def self.contact_email(election, voter_uid)
-          CensusMember.email(VoterCredential.subject_for(election, voter_uid))
+          CensusMember.email(CensusMember.subject_for(election, voter_uid))
         end
 
         # Raised when the voter already holds `cap` attestations for the election.
@@ -58,7 +57,7 @@ module Decidim
         attr_reader :process, :voter_uid, :cap
 
         def contact_and_salt
-          return [nil, nil] unless Array(process.metadata.to_h.dig("settings", "twofa_fields")).include?("email")
+          return [nil, nil] unless process.two_fa_fields.include?("email")
 
           email = self.class.contact_email(process.election, voter_uid)
           raise NoContact if email.blank?

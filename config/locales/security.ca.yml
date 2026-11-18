@@ -12,24 +12,17 @@ ca:
               title: "La teva configuració de seguretat"
             census_snapshot:
               title: "Cens per al vot secret"
-              count:
-                one: "Quan comenci la votació, es registraran per al vot secret els participants que hi hagi al cens en aquell moment. Ara mateix n'hi ha 1."
-                other: "Quan comenci la votació, es registraran per al vot secret els participants que hi hagi al cens en aquell moment. Ara mateix n'hi ha %{count}."
               empty: "El cens és buit: el vot secret no podrà començar fins que hi hagi almenys un participant."
-              limitations: "Per les limitacions actuals de com està implementat el vot secret:"
-              late_joiners: "Els participants que entrin al cens després que comenci la votació (per exemple, perquè es verifiquen més tard) no podran votar en aquesta votació."
-              verify_before_start: "Els participants necessiten un compte i les verificacions que demana aquest cens (com el cens de l'organització) abans que comenci la votació."
-              attested:
-                count:
-                  one: "Ara mateix hi ha 1 participant al cens."
-                  other: "Ara mateix hi ha %{count} participants al cens."
-                late_joiners: "Decidim avala cada participant quan obre la cabina de votació, així que els qui entrin al cens després que comenci la votació (per exemple, perquè es verifiquen més tard) també podran votar, mentre no s'arribi al màxim de votants declarat."
-                declared:
-                  one: "Màxim declarat: 1 votant."
-                  other: "Màxim declarat: %{count} votants."
-                projected:
-                  one: "Quan comenci la votació, el màxim declarat serà la mida del cens en aquell moment més un 20 %, arrodonida cap amunt: amb el cens actual, 1 votant."
-                  other: "Quan comenci la votació, el màxim declarat serà la mida del cens en aquell moment més un 20 %, arrodonida cap amunt: amb el cens actual, %{count} votants."
+              count:
+                one: "Ara mateix hi ha 1 participant al cens."
+                other: "Ara mateix hi ha %{count} participants al cens."
+              late_joiners: "Decidim avala cada participant quan obre la cabina de votació, així que els qui entrin al cens després que comenci la votació (per exemple, perquè es verifiquen més tard) també podran votar, mentre no s'arribi al màxim de votants declarat."
+              declared:
+                one: "Màxim declarat: 1 votant."
+                other: "Màxim declarat: %{count} votants."
+              projected:
+                one: "Quan comenci la votació, el màxim declarat serà la mida del cens en aquell moment més un 20 %, arrodonida cap amunt: amb el cens actual, 1 votant."
+                other: "Quan comenci la votació, el màxim declarat serà la mida del cens en aquell moment més un 20 %, arrodonida cap amunt: amb el cens actual, %{count} votants."
             attestations:
               title: "Atestacions"
               issued:

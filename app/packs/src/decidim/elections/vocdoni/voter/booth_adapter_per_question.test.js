@@ -19,6 +19,10 @@ const mockFlow = {
   verified: false
 };
 
+jest.mock("src/decidim/elections/vocdoni/voter/attestation", () => ({
+  fetchAttestation: jest.fn(() => Promise.resolve({ attestation: { voterId: "ab" }, signature: "ef" }))
+}));
+
 jest.mock("src/decidim/elections/vocdoni/voter/flow", () => ({
   createVoterFlow: jest.fn(() => mockFlow)
 }));
@@ -49,8 +53,7 @@ const makeCtx = () => ({
     apiUrl: "https://api.test",
     chainId: "vocdoni/test/1",
     explorerUrl: "https://explorer.test",
-    credentials: { memberNumber: "1" },
-    contact: { email: "alice@example.org" },
+    attestationUrl: "/attestation",
     questions: [
       {
         questionId: "1",

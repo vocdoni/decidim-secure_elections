@@ -3,7 +3,7 @@
 require "spec_helper"
 
 describe Decidim::Elections::Vocdoni::Process do
-  subject(:process) { create(:vocdoni_process, :published, census_mode: "attested") }
+  subject(:process) { create(:vocdoni_process, :published) }
 
   let(:user) { create(:user, organization: process.election.organization) }
 
@@ -23,7 +23,7 @@ describe Decidim::Elections::Vocdoni::Process do
   end
 
   it "derives a stable voterId per voter, distinct per election" do
-    other = create(:vocdoni_process, :published, census_mode: "attested", vocdoni_process_id: "6885f0c2c1a4e2f0b1d33a02")
+    other = create(:vocdoni_process, :published, vocdoni_process_id: "6885f0c2c1a4e2f0b1d33a02")
     other.ensure_attestation_secrets!
     uid = user.to_global_id.to_s
 
@@ -99,28 +99,20 @@ describe Decidim::Elections::Vocdoni::Process do
     expect(process.issued_attestations.find_by(voter_id: "0xaa").issued_count).to eq(2)
   end
 
-  it "refuses an unknown census mode" do
-    process.census_mode = "other"
-    expect(process).not_to be_valid
-  end
-
   describe ".attested_census_size" do
     it "declares ceil(eligible × 1.2), at least 1" do
       expect([0, 1, 3, 10, 11].map { |eligible| described_class.attested_census_size(eligible) }).to eq([1, 2, 4, 12, 14])
     end
   end
 
-  describe "#attested_census?" do
-    let(:pending_process) { create(:vocdoni_process, census_mode: "memberbase") }
+  describe "#two_fa_fields" do
+    it "reads the Security tab's choice" do
+      process.update!(metadata: { "settings" => { "twofa_fields" => ["email"] } })
+      expect(process.two_fa_fields).to eq(["email"])
+    end
 
-    it "follows the deployment's mode until the SaaS process exists" do
-      allow(Decidim::Elections::Vocdoni).to receive(:census_mode).and_return("attested")
-      expect(pending_process).to be_attested_census
-      expect(process).to be_attested_census
-
-      allow(Decidim::Elections::Vocdoni).to receive(:census_mode).and_return("memberbase")
-      expect(pending_process).not_to be_attested_census
-      expect(process).to be_attested_census
+    it "is empty without a choice" do
+      expect(process.two_fa_fields).to eq([])
     end
   end
 end

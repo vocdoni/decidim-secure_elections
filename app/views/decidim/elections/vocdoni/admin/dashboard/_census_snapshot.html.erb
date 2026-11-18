@@ -3,21 +3,17 @@
   opted-in election whose voting has not started: after the Census card while
   unpublished, after the security card once published.
 
-  `PublishElectionJob` registers the census as it is when voting starts (at
-  `start_at`, or when the admin clicks Start); anyone who joins it afterwards
-  (e.g. a participant verified later) cannot vote, so the admin sees the
-  current count and that limitation beforehand.
-
-  An attested census registers no roster: Decidim attests each eligible voter
-  at booth time, up to the maxCensusSize declared when voting starts, so late
-  joiners can vote while that maximum has room.
+  No roster is registered: Decidim attests each eligible voter at booth time,
+  up to the maxCensusSize declared when voting starts, so late joiners can vote
+  while that maximum has room.
 %>
 <% process = election.vocdoni_process %>
 <% if process.present? && !process.published? && !election.started? %>
   <% count = census_count(election) %>
   <% scope = "decidim.elections.vocdoni.admin.dashboard.census_snapshot" %>
-  <% attested = process.attested_census? %>
-  <div class="card vocdoni-census-snapshot" data-census-count="<%= count %>" data-census-mode="<%= attested ? "attested" : "memberbase" %>">
+  <% declared = process.census_size if process.vocdoni_process_id.present? %>
+  <% maximum = declared || Decidim::Elections::Vocdoni::Process.attested_census_size(count) %>
+  <div class="card vocdoni-census-snapshot" data-census-count="<%= count %>">
     <div class="card-divider">
       <h2 class="card-title">
         <span class="text-black font-bold"><%= t("title", scope:) %></span>
@@ -31,22 +27,10 @@
             <p><%= t("empty", scope:) %></p>
           </div>
         <% else %>
-          <p class="mb-2"><%= t(attested ? "attested.count" : "count", scope:, count:) %></p>
+          <p class="mb-2"><%= t("count", scope:, count:) %></p>
         <% end %>
-        <% if attested %>
-          <% declared = process.census_size if process.vocdoni_process_id.present? %>
-          <% maximum = declared || Decidim::Elections::Vocdoni::Process.attested_census_size(count) %>
-          <p class="mb-2" data-attested-late-joiners><%= t("attested.late_joiners", scope:) %></p>
-          <p class="mb-2" data-attested-maximum="<%= maximum %>"><%= t(declared ? "attested.declared" : "attested.projected", scope:, count: maximum) %></p>
-        <% else %>
-          <p class="mb-2"><%= t("limitations", scope:) %></p>
-          <ul class="list-disc ml-6">
-            <li><%= t("late_joiners", scope:) %></li>
-            <% if election.census&.name.to_s == "internal_users" %>
-              <li><%= t("verify_before_start", scope:) %></li>
-            <% end %>
-          </ul>
-        <% end %>
+        <p class="mb-2" data-late-joiners><%= t("late_joiners", scope:) %></p>
+        <p class="mb-2" data-census-maximum="<%= maximum %>"><%= t(declared ? "declared" : "projected", scope:, count: maximum) %></p>
       </div>
     </div>
   </div>

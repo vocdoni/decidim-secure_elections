@@ -15,6 +15,10 @@ const mockFlow = {
 };
 const mockNotify = jest.fn();
 
+jest.mock("src/decidim/elections/vocdoni/voter/attestation", () => ({
+  fetchAttestation: jest.fn(() => Promise.resolve({ attestation: { voterId: "ab" }, signature: "ef" }))
+}));
+
 jest.mock("src/decidim/elections/vocdoni/voter/flow", () => ({
   createVoterFlow: jest.fn(() => mockFlow)
 }));
@@ -32,7 +36,7 @@ const makeCtx = () => ({
     apiUrl: "https://api.test",
     chainId: "vocdoni/test/1",
     castNotificationUrl: NOTIFY_URL,
-    credentials: { memberNumber: "1" },
+    attestationUrl: "/attestation",
     contact: {},
     questions: [{ questionId: "1", vocdoniQuestionId: "q1", upstreamId: "u1", title: "Q1", choices: { "10": 0 } }],
     i18n: { status: {}, errors: { unknown: "Unknown" }, blocked: { "not_in_census": { body: "" }, "not_open": { body: "" } } }

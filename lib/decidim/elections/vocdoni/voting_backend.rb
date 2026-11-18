@@ -58,26 +58,13 @@ module Decidim
           end
         end
 
-        # `voter_uid` is what the election's census minted for this session:
-        # a signed-in participant for `internal_users`, a CSV row for
-        # `token_csv` (whose voters need not have a Decidim account).
+        # `voter_uid` is what the election's census minted for this session: a participant for
+        # `internal_users`, a CSV row for `token_csv`. The booth authenticates them with the
+        # attestation it fetches from attestationUrl; the one-time code goes to their contact.
         def self.booth_config(election, voter_uid:)
           process = election.vocdoni_process
-          config = base_booth_config(election, process, voter_uid)
-          return config unless process.attested?
-
-          # An attested voter authenticates with an attestation fetched from attestationUrl in place
-          # of a member credential; the code still goes to the email of their census entry.
-          config.merge(
-            credentials: nil,
-            attestationUrl: Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_attestation_path(election)
-          )
-        end
-
-        def self.base_booth_config(election, process, voter_uid)
-          subject = VoterCredential.subject_for(election, voter_uid)
-          email = CensusMember.email(subject)
-          phone = CensusMember.phone(subject) if process.metadata.to_h.dig("settings", "twofa_fields").to_a.include?("phone")
+          router = Decidim::EngineRouter.main_proxy(election.component)
+          email = CensusMember.email(CensusMember.subject_for(election, voter_uid))
           meta = process.questions_metadata.index_by { |row| row["decidim_question_id"].to_i }
           ready = process.published? && process.vocdoni_process_id.present?
 
@@ -86,9 +73,9 @@ module Decidim
             processId: ready ? process.vocdoni_process_id : nil,
             chainId: process.chain_id,
             explorerUrl: Vocdoni.explorer_url,
-            castNotificationUrl: Decidim::EngineRouter.main_proxy(election.component).election_vocdoni_cast_notification_path(election),
-            credentials: { memberNumber: VoterCredential.for(election, subject) },
-            contact: { email:, phone:, masked: mask(email) }.compact,
+            castNotificationUrl: router.election_vocdoni_cast_notification_path(election),
+            attestationUrl: router.election_vocdoni_attestation_path(election),
+            contact: { masked: mask(email) }.compact,
             questions: booth_questions(election).map do |question|
               row = meta[question.id] || {}
               {

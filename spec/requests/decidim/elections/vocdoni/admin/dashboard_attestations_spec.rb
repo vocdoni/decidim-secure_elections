@@ -12,9 +12,8 @@ module Decidim
         let(:headers) { { "HOST" => organization.host } }
         let!(:election) { create(:election, :published, :finished, :with_token_csv_census, component:) }
         let!(:question) { create(:election_question, :with_response_options, election:) }
-        let(:census_mode) { "attested" }
         let!(:process) do
-          create(:vocdoni_process, :published, election:, census_mode:,
+          create(:vocdoni_process, :published, election:,
                                                metadata: { "questions" => [{ "decidim_question_id" => question.id, "vocdoni_question_id" => "q1" }] })
         end
         let(:dashboard_path) { Decidim::EngineRouter.admin_proxy(component).dashboard_election_path(election) }
@@ -67,8 +66,8 @@ module Decidim
           end
         end
 
-        context "when the election does not use an attested census" do
-          let(:census_mode) { "memberbase" }
+        context "when the election is not on the SaaS yet" do
+          let!(:process) { create(:vocdoni_process, election:) }
 
           it "shows no audit" do
             expect(response).to have_http_status(:ok)

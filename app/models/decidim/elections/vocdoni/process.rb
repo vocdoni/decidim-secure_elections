@@ -13,7 +13,8 @@ module Decidim
         self.table_name = "decidim_vocdoni_processes"
 
         STATES = %w(pending publishing published failed).freeze
-        CENSUS_MODES = %w(memberbase attested).freeze
+        # The `twoFaFields` an attested census accepts: an attestation binds at most one contact.
+        TWO_FA_FIELDS = [[], ["email"]].freeze
         # Metadata entry holding the encrypted signer key a rotation is registering with the SaaS.
         PENDING_SIGNER_KEY = "pending_attestation_signer_key"
 
@@ -29,7 +30,6 @@ module Decidim
                  dependent: :delete_all
 
         validates :state, inclusion: { in: STATES }
-        validates :census_mode, inclusion: { in: CENSUS_MODES }
         validates :vocdoni_process_id, uniqueness: true, allow_nil: true
 
         # Once the election on chain is anchored the draft is gone from SaaS
@@ -61,14 +61,8 @@ module Decidim
 
         def failed? = state == "failed"
 
-        def attested? = census_mode == "attested"
-
-        # Whether the election votes on an attested census: its own mode once the SaaS process exists
-        # (PublishElectionJob#adopt_census_mode! fixes it then), the deployment's until then.
-        def attested_census?
-          mode = vocdoni_process_id.present? ? census_mode : Decidim::Elections::Vocdoni.census_mode
-          mode == "attested"
-        end
+        # The second factor chosen on the Security tab, in the SaaS `twoFaFields` shape.
+        def two_fa_fields = Array(metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
 
         # The maxCensusSize an attested census declares for `eligible` voters: ceil(eligible × 1.2),
         # at least 1. Integer arithmetic, so 10 voters declare 12 and not 13.

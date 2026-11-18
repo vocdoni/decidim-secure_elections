@@ -9,7 +9,7 @@ module Decidim
         subject(:audit) { described_class.new(process).call }
 
         let(:election) { create(:election, :published, :finished) }
-        let(:process) { create(:vocdoni_process, :published, election:, census_mode: "attested") }
+        let(:process) { create(:vocdoni_process, :published, election:) }
         let(:url) { "https://saas-api.example.org/processes/#{process.vocdoni_process_id}/attestations" }
         let(:json_headers) { { "Content-Type" => "application/json" } }
 

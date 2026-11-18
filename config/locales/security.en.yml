@@ -17,24 +17,17 @@ en:
               title: "Your security configuration"
             census_snapshot:
               title: "Census for the secret vote"
-              count:
-                one: "When voting starts, the participants in the census at that moment will be registered for the secret vote. Right now there is 1."
-                other: "When voting starts, the participants in the census at that moment will be registered for the secret vote. Right now there are %{count}."
               empty: "The census is empty right now: the secret vote cannot start until at least one participant is in it."
-              limitations: "Due to current limitations on how the secret vote is implemented:"
-              late_joiners: "Participants who join the census after voting starts (for example, by getting verified later) will not be able to vote in this election."
-              verify_before_start: "Participants need an account and the verifications this census requires (such as the organization's census) before voting starts."
-              attested:
-                count:
-                  one: "Right now there is 1 participant in the census."
-                  other: "Right now there are %{count} participants in the census."
-                late_joiners: "Decidim vouches for each participant when they open the voting booth, so participants who join the census after voting starts (for example, by getting verified later) can vote too, as long as the declared maximum of voters has not been reached."
-                declared:
-                  one: "The declared maximum is 1 voter."
-                  other: "The declared maximum is %{count} voters."
-                projected:
-                  one: "When voting starts, the declared maximum is set to the census size at that moment plus 20%, rounded up: 1 voter with the current census."
-                  other: "When voting starts, the declared maximum is set to the census size at that moment plus 20%, rounded up: %{count} voters with the current census."
+              count:
+                one: "Right now there is 1 participant in the census."
+                other: "Right now there are %{count} participants in the census."
+              late_joiners: "Decidim vouches for each participant when they open the voting booth, so participants who join the census after voting starts (for example, by getting verified later) can vote too, as long as the declared maximum of voters has not been reached."
+              declared:
+                one: "The declared maximum is 1 voter."
+                other: "The declared maximum is %{count} voters."
+              projected:
+                one: "When voting starts, the declared maximum is set to the census size at that moment plus 20%, rounded up: 1 voter with the current census."
+                other: "When voting starts, the declared maximum is set to the census size at that moment plus 20%, rounded up: %{count} voters with the current census."
             attestations:
               title: "Attestations"
               issued:

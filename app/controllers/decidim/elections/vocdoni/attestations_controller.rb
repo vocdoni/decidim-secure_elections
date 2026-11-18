@@ -3,7 +3,7 @@
 module Decidim
   module Elections
     module Vocdoni
-      # The booth of an attested election fetches its voter's attestation here and forwards it to
+      # The booth of a Vocdoni election fetches its voter's attestation here and forwards it to
       # the SaaS CSP's auth/0. Each call signs a fresh one with a fresh salt; the voter is the one
       # Decidim's census access let into the booth.
       #
@@ -49,7 +49,7 @@ module Decidim
 
         def attested_process
           process = election.vocdoni_process
-          process if process&.attested? && process.vocdoni_process_id.present?
+          process if process&.vocdoni_process_id.present?
         end
 
         # :signed with @signed_questions set, :none when the SaaS signed nothing for the voter.

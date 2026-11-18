@@ -67,7 +67,7 @@ module Decidim
           end
         end
 
-        # The booth of an attested election fetches its voter's attestation from
+        # The booth of a Vocdoni election fetches its voter's attestation from
         #   POST <component>/elections/:election_id/vocdoni_attestation
         # and, after the end, the voter reads what the SaaS signed for them at
         #   GET <component>/elections/:election_id/vocdoni_attestation

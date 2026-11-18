@@ -44,6 +44,7 @@ beforeEach(() => {
   mockFlow.twoFaChannels.mockReturnValue([]);
   mockFlow.authenticate.mockResolvedValue({ needsOtp: false });
   mockFlow.loadProcess.mockResolvedValue({});
+  window.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ attestation: {}, signature: "00" }) });
 
   // Re-import to get a fresh adapter instance.
   jest.isolateModules(() => {
@@ -59,8 +60,7 @@ const makeCtx = () => ({
     apiUrl: "https://api.test",
     chainId: "vocdoni/test/1",
     explorerUrl: "https://explorer.test",
-    credentials: { memberNumber: "1" },
-    contact: { email: "alice@example.org" },
+    attestationUrl: "/attestation",
     questions: [
       {
         questionId: "1",
@@ -245,7 +245,7 @@ describe("recheck()", () => {
   });
 });
 
-describe("prepare() — attested census", () => {
+describe("prepare() — attestation", () => {
   const attestation = { attestation: { voterId: "ab" }, signature: "ef", contact: "alice@example.org", salt: "01" };
 
   beforeEach(() => {
@@ -260,10 +260,9 @@ describe("prepare() — attested census", () => {
     Reflect.deleteProperty(window, "fetch");
   });
 
-  it("authenticates with the attestation Decidim signs instead of credentials", async () => {
+  it("authenticates with the attestation Decidim signs", async () => {
     window.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(attestation) });
     const ctx = makeCtx();
-    ctx.config.credentials = null;
     ctx.config.attestationUrl = "/processes/p/f/1/elections/7/vocdoni_attestation";
 
     await expect(adapter.prepare(ctx)).resolves.toEqual({ canVote: true, alreadyVoted: false });

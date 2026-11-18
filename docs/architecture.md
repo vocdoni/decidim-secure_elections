@@ -60,18 +60,17 @@ Methods actually called from this module (snake_case Ruby, hash returns with str
 
 ```ruby
 client.organizations.create_managed(name:, type:, ...)  # POST /integrator/organizations -> { "address" => "0x…" }
-client.organizations.add_members(org_address, members)  # POST /organizations/{addr}/members
-client.organizations.members(org_address, page:)        # GET  /organizations/{addr}/members (paginated)
-client.organizations.create_group(org_address, title:, description:, member_ids:)
-                                                        # POST /organizations/{addr}/groups
-client.organizations.groups(org_address)                # GET  /organizations/{addr}/groups
 
 client.elections.create(payload)                        # POST /processes            -> { "processId" => … }
 client.elections.get(process_id)                        # GET  /processes/{id}       (PUBLIC once published)
-client.elections.validate_census(org_address, census)   # POST /processes/census/validation
 client.elections.publish(process_id)                    # POST /processes/{id}/publish -> { "jobId" => … }
 client.elections.delete(process_id)                     # DELETE /processes/{id}     (drafts only)
 client.elections.results(process_id)                    # GET  /processes/{id}/results (PUBLIC)
+client.elections.attested_participant(process_id, voter_id)
+                                                        # GET  /processes/{id}/participants?field=voterId
+client.elections.attestations(process_id, page:)        # GET  /processes/{id}/attestations (PUBLIC, after the end)
+client.elections.rotate_attestation_signer(process_id, signer)
+                                                        # PUT  /processes/{id}/attestation-signer
 
 client.jobs.wait_for(job_id, timeout: …)                # poll GET /jobs/{id} until terminal
 ```
@@ -83,18 +82,16 @@ client.jobs.wait_for(job_id, timeout: …)                # poll GET /jobs/{id} 
   The JS SDK normalizes plain strings client-side; **Ruby must do the same**.
   `ApiClient#localize` turns `"Hi"` into `{ "default" => "Hi" }` and passes a Decidim
   translated hash through as `{ "default" => <default-locale value>, "en" => …, "ca" => … }`.
-* **The process census is inline**, not a reference:
-  `census: { authFields: ["memberNumber"], groupId: "<org group id>", weighted: false }`.
-  The standalone `POST /census` flow is a *different*, org-level concept — this gem does
-  not use it.
+* **The process census is inline and attested**:
+  `census: { attested: { signer: "0x…", maxCensusSize: N }, twoFaFields: [] | ["email"] }`.
+  No member, group or org-level census is created; the standalone `POST /census` flow is
+  not used.
 * **Question type strings are lowercase**: `"singlechoice"`, `"multichoice"`. camelCase is
   rejected (code 40037). `multichoice` additionally requires
   `typeSetup: { maxChoices:, minChoices: }`. Upstream `decidim-elections` uses
   `single_option` / `multiple_option`; `PublishElectionJob` maps them.
 * **`ballotProtocol` comes back `null`** for singlechoice questions. Never assume it is
   present.
-* **`weight` on a member must be a JSON string, not a number.** Passing `{"weight": 1}`
-  fails with `40004 "missing members"` — the error names the wrong field. `"1"` works.
 
 ### 2.2 Async jobs
 
@@ -116,7 +113,7 @@ A successful publish looks like:
   "title":       { "default": "…" },
   "description": { "default": "…" },
   "endDate":     "2026-07-29T14:51:08Z",
-  "census":      { "authFields": ["memberNumber"], "groupId": "000000000000000000000001", "weighted": false },
+  "census":      { "attested": { "signer": "0x…", "maxCensusSize": 12 }, "twoFaFields": ["email"] },
   "questions":   [{
     "title":   { "default": "…" },
     "type":    "singlechoice",
@@ -134,7 +131,8 @@ The sequence implemented in `app/packs/src/decidim/elections/vocdoni/voter/`:
 
 ```
 1. client.elections.get(processId)              → chainId  (PUBLIC; never use client.info())
-2. client.processes.authStep0(processId, {...}) → authToken
+2. client.processes.authStep0(processId, attestation) → authToken
+     the body is what Decidim's attestation endpoint returned: { attestation, signature, contact?, salt? }
      census.twoFaFields null/empty ⇒ auth-only: token is already verified, SKIP authStep1
      otherwise                     ⇒ authStep1(processId, { authToken, authData: [otp] })
 3. client.processes.check(processId, { authToken })
@@ -165,15 +163,15 @@ fallback.
 | Explorer | derived: `explorer.vote`, `stg.explorer.vote`, `dev.explorer.vote` |
 | `orgAddress` | `0x…` — one per integrator, from `organizations.create_managed` |
 | `chainId` | e.g. `vocdoni/LTS/1.2` (read from the process, not `/info`) |
-| Auto member group | every organization gets an "All members" group on creation |
 
 The whole voter flow was walked end to end against staging, including a real vote whose
 nullifier was returned.
 
 ## 4b. Database schema
 
-Exactly one table, kept small on purpose: `decidim_vocdoni_processes`, one row per
-Vocdoni-backed Decidim election (see the migration for the full column list and reasoning).
+Two tables, kept small on purpose: `decidim_vocdoni_processes`, one row per
+Vocdoni-backed Decidim election, and `decidim_vocdoni_attestations`, one row per voterId
+an election attested with its `issued_count` (see the migrations for the full column lists).
 
 | column                  | type      | notes                                                                              |
 |-------------------------|-----------|------------------------------------------------------------------------------------|
@@ -183,7 +181,8 @@ Vocdoni-backed Decidim election (see the migration for the full column list and 
 | `chain_id`              | string    | cached from the process read                                                       |
 | `state`                 | string, default `"pending"` | `pending` / `publishing` / `published` / `failed`                |
 | `last_error`            | string    | last non-transient failure message, surfaced on the dashboard                      |
-| `census_group_id`       | string    | Vocdoni org member-group id built for this election                                |
+| `attestation_signer_key`| text      | the election's EIP-712 signer key, encrypted; never leaves Decidim                  |
+| `voter_id_secret`       | text      | HMAC key of the voterIds, encrypted; never leaves Decidim                          |
 | `census_size`           | integer   | turnout denominator                                                                |
 | `metadata`              | jsonb     | per-question upstream ids + statuses; `settings.twofa_fields`; `last_error` bag    |
 
@@ -196,120 +195,42 @@ Decidim election does not eat one of the org's draft slots. `404` and `40012`
 ("already on chain") are treated as success; anything else raises and rolls the destroy
 back.
 
-## 4c. Census creation — Decidim owns it
+## 4c. Census — attested by Decidim
 
-The admin never sees or types a Vocdoni id. `PublishElectionJob` collects voters from
-the Decidim side and builds the whole upstream chain itself, when voting starts (at
-`start_at`, or when the admin clicks Start), not when the election is published. The
-roster is a snapshot taken at that moment: a participant who joins the census later
-(e.g. verified afterwards) is not in the Vocdoni census and cannot vote, although
-Decidim's own census check lets them into the booth. The Dashboard's "Census for the
-secret vote" card tells the admin so until voting starts.
+No roster leaves Decidim. When voting starts (at `start_at`, or when the admin clicks
+Start), `PublishElectionJob` re-checks `election.census_ready?`, draws the election's
+signer key and voterId secret once, and creates the process with an attested census:
+the signer's address, `maxCensusSize` = ceil(eligible × 1.2) and the `twoFaFields` of the
+Security tab. An attestation binds at most one contact, so the job refuses a census that
+asks for more than one channel.
 
-The roster is the election's upstream census (`election.census`), read through the
-census manifest's own query, so it follows Decidim's census rules:
+The booth then asks `POST <component>/elections/:id/vocdoni_attestation` for an EIP-712
+attestation. Decidim answers only for a voter its census access let into the booth (the
+election's upstream census, `internal_users` or `token_csv`, under Decidim's own rules),
+so a participant who joins the census after the start can still vote while
+`maxCensusSize` has room. The attestation carries:
 
-- `internal_users`: the participants the manifest's query returns, kept only when
-  `census.valid_user?` admits them (the authorization handlers' options, such as
-  allowed postal codes, are checked there, not in the query).
-- `token_csv`: the imported `Decidim::Elections::Voter` rows. Their access `token`
-  never leaves Decidim.
+- `voterId` = HMAC-SHA256(voter_id_secret, voter key ‖ processId): stable within the
+  election, unlinkable across elections, meaningless to the SaaS.
+- `contactHash` = keccak256(salt ‖ "email:" ‖ canonical email) with email 2FA, zero
+  otherwise. The contact and salt travel only in the auth/0 and resend bodies.
+- `expiresAt` = now + 10 minutes.
 
-The push re-checks `election.census_ready?`, the same gate upstream puts on the
-publish button, because the census can change between Publish and the start.
+`decidim_vocdoni_attestations` counts what each voterId was issued (capped per voter), and
+the Security tab compares that count with the records the SaaS publishes after the end.
 
-Each member carries `memberNumber` = `VoterCredential.for(election, subject)`: the hex
-HMAC-SHA256 of `"<election id>:<user id>"` (CSV rows: `"<election id>:voter:<row id>"`),
-keyed by a key derived from `secret_key_base` (or `VOCDONI_CREDENTIAL_SECRET`). It is
-the census's only `authField`, so it must not be guessable: the booth receives it in
-`booth_config` once Decidim has let the voter into its census, and nobody types it.
-Being per election, the same person is a different member in every election; members
-are therefore matched by `memberNumber` only, never by email or phone. Members also
-carry `name`, `email`, and `phone` when SMS is a second factor (from a CSV row, or from
-the metadata of a participant's granted authorization).
+Each publish step is **conditional and idempotent by design**, so a retry is safe:
 
-Consequences of the credential:
-
-- Only the integrated booth can authenticate voters. `VOCDONI_INTEGRATED_BOOTH=false`
-  falls back to the static voting page (`public/vocdoni/vote.html`), where voters type
-  their `memberNumber`; nobody knows their credential, so nobody can log in there.
-- An election published under an earlier credential scheme has members whose
-  `memberNumber` the booth no longer hands out. Republish it to push the current
-  credentials.
-- Credentials never reach admin-visible errors or logs: error messages and the stored
-  SaaS error `data` replace every 64-hex-character token with `[CREDENTIAL]`, so any
-  other value of that shape (an on-chain id or hash) is masked there too.
-
-Endpoints, in order:
-
-```
-1. POST /organizations/{orgAddress}/members
-     { members: [{ memberNumber, name, email, phone? }] }
-     → { added, errors[], jobId? }   ← poll jobId when present
-     sent in batches of VOCDONI_MEMBER_BATCH_SIZE (200): phones are Argon2-hashed
-     one by one, and each batch has to finish within VOCDONI_JOB_TIMEOUT.
-2. GET  /organizations/{orgAddress}/members?page=N&limit=100
-     paginated read-back to map each credential to the upstream `memberId` — the
-     import does not return them. Capped at 600 pages (the SaaS's 50,000-member
-     memberbase cap). A voter missing after the push fails the job.
-3. POST /organizations/{orgAddress}/groups
-     { title, description?, memberIds: [...] }        → { id }
-4. POST /processes/census/validation
-     { orgAddress, census: { authFields, twoFaFields, groupId, weighted } }
-     → 200 on success; 400 with `data.{duplicates, missingData, notFound}` on failure
-5. POST /processes ... census: { authFields, twoFaFields, groupId, weighted }
-6. POST /processes/{id}/publish
-```
-
-Step 4 is what catches "you asked to authenticate on `email` but 12 members have none"
-*before* anything is written on chain. Its 400 body carries actionable member ids that
-`PublishElectionJob` records on the sidecar so the admin dashboard can name them.
-
-Each step is **conditional and idempotent by design**, so a retry after a mid-way
-failure is safe rather than duplicative:
-
-- `POST /members` is skipped when there is nothing fresh to push; `add_members` is
-  deduped against the upstream index by `memberNumber` because the endpoint is not
-  upsert-by-`memberNumber`.
-- `POST /groups` is skipped once `census_group_id` is set.
 - `POST /processes` is skipped once `vocdoni_process_id` is set.
 - `POST /processes/{id}/publish` is skipped once the read-back reports the process
   is already `READY`/`ONGOING`/`ENDED`/`RESULTS`/`PAUSED`.
 
-The whole census phase is skipped once `vocdoni_process_id` is set: a published process
-carries a frozen census, so there is nothing left to build.
-
-### Member field roles
-
-| field           | 2FA-capable | usable as credential |
-|-----------------|-------------|----------------------|
-| `memberNumber`  |             | ✓                    |
-| `nationalId`    |             | ✓                    |
-| `name`          |             | ✓                    |
-| `surname`       |             | ✓                    |
-| `birthDate`     |             | ✓                    |
-| `email`         | ✓           |                      |
-| `phone`         | ✓           |                      |
-| `weight`        |             | never                |
-
-`authFields` (credentials) are chosen from the ✓ column, **max 3**.
-`twoFaFields` derive from a single choice:
-`email → ["email"]`, `sms → ["phone"]`, `voter_choice → ["email","phone"]`.
-
-A census with no `authFields` and no `twoFaFields` identifies nobody and must stay
-refused.
-
 ## 4c-bis. Two-factor voter flow
 
-Observed against a 2FA election (`twoFaFields: ["email"]`). These override any
-assumption drawn from the SDK documentation.
+These override any assumption drawn from the SDK documentation.
 
-1. **`authStep0` needs the contact value as well as the credentials.** Credentials
-   alone fail with `400 / 40005` — *"no contact information provided (email or
-   phone)"*. So the voting page's auth form must also collect the channel value:
-   `authStep0(pid, { memberNumber: "2001", email: "carol@example.org" })`.
-   `["email"]` → ask email; `["phone"]` → ask phone; `["email","phone"]` → let the
-   voter choose a channel, then ask for that one value.
+1. `authStep0` takes the attestation body as is. With 2FA the SaaS checks `contact` and
+   `salt` against `contactHash` and sends the code to `contact`.
 2. **`check()` succeeds *before* the OTP.** A pending token still returns
    `belongsToProcess: true` and `canVote: true`. `check()` is therefore **not** an
    authentication gate — branch on `census.twoFaFields` from the public process
@@ -318,11 +239,7 @@ assumption drawn from the SDK documentation.
    from a verified one by shape.
 4. Wrong OTP → `400 / 40001` *"challenge code do not match"*. The token survives,
    so the voter retries in place — never restart the flow or auto-resend.
-5. `resend` requires the contact value: `resend(pid, { authToken, email })`. With
-   only the token it fails `40001` *"invalid user email"*.
-6. A right-credential / wrong-contact pair is rejected at step 0 with `40029`
-   *"census participant not found"* — it does not disclose census membership, so
-   show a generic "we could not identify you" rather than echoing the API.
+5. `resend` takes `{ authToken, contact, salt }`, the same pair auth/0 received.
 
 ## 4d. Decisions taken, and why
 
