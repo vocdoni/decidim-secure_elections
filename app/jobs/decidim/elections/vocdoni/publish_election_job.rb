@@ -496,7 +496,8 @@ module Decidim
           process.ensure_attestation_secrets!
         end
 
-        # ceil(eligible × 1.2), at least 1: room for voters the census gains after publish.
+        # The census as voting starts (when this job runs) plus 20%: room for participants who join
+        # it while voting is open, since the booth attests any eligible voter.
         def attested_census_size
           Process.attested_census_size(election.census.count(election))
         end
