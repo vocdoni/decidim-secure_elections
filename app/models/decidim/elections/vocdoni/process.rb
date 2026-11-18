@@ -14,6 +14,8 @@ module Decidim
 
         STATES = %w(pending publishing published failed).freeze
         CENSUS_MODES = %w(memberbase attested).freeze
+        # Metadata entry holding the encrypted signer key a rotation is registering with the SaaS.
+        PENDING_SIGNER_KEY = "pending_attestation_signer_key"
 
         belongs_to :election,
                    class_name: "Decidim::Elections::Election",
@@ -103,14 +105,23 @@ module Decidim
         # The 0x address of the election's attestation signer.
         def signer_address = Attestation.bytes_to_hex(Attestation.address(signer_private_key))
 
-        # Draws a new signer key and yields its address, storing the key only when the block
-        # returns: the caller registers the address with the SaaS first, so a failed rotation keeps
-        # the key the SaaS still accepts.
+        # Yields the address of a candidate signer key for the caller to register with the SaaS, and
+        # signs with it only once the block returns. The candidate is stored (encrypted) before the
+        # yield, so a retry after a crash re-registers the same key, a no-op for the SaaS.
         def rotate_attestation_signer!
-          key_hex = new_signer_key_hex
+          key_hex = pending_signer_key_hex || stage_pending_signer_key!
           address = Attestation.bytes_to_hex(Attestation.address(Attestation.b2i(Attestation.hex_to_bytes(key_hex))))
-          yield address
-          update!(attestation_signer_key: encryptor.encrypt(key_hex))
+          begin
+            yield address
+          rescue ApiError => e
+            # A rejection means the SaaS never took the candidate; a transient error may hide that it did.
+            update_metadata! { |data| data.except(PENDING_SIGNER_KEY) } unless e.transient?
+            raise
+          end
+          with_lock do
+            self.metadata = metadata.except(PENDING_SIGNER_KEY)
+            update!(attestation_signer_key: encryptor.encrypt(key_hex))
+          end
           address
         end
 
@@ -252,6 +263,22 @@ module Decidim
         def encryptor = Decidim::AttributeEncryptor.new(secret: "vocdoni-attestation")
 
         def new_signer_key_hex = Attestation.i2b(SecureRandom.random_number(Attestation::N - 1) + 1).unpack1("H*")
+
+        def pending_signer_key_hex
+          encrypted = metadata.to_h[PENDING_SIGNER_KEY]
+          encryptor.decrypt(encrypted) if encrypted.present?
+        end
+
+        def stage_pending_signer_key!
+          key_hex = new_signer_key_hex
+          update_metadata! { |data| data.merge(PENDING_SIGNER_KEY => encryptor.encrypt(key_hex)) }
+          key_hex
+        end
+
+        # Rewrites metadata under a row lock, so a concurrent writer of another entry is not lost.
+        def update_metadata!
+          with_lock { update!(metadata: yield(metadata.to_h)) }
+        end
       end
     end
   end

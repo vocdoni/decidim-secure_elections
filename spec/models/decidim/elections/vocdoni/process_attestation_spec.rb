@@ -44,6 +44,45 @@ describe Decidim::Elections::Vocdoni::Process do
 
     rotated = process.rotate_attestation_signer! { |address| expect(address).not_to eq(before) }
     expect(process.reload.signer_address).to eq(rotated)
+    expect(process.metadata).not_to have_key(described_class::PENDING_SIGNER_KEY)
+  end
+
+  it "keeps the registered candidate across a crash and switches to it on the retry" do
+    before = process.signer_address
+    registered = []
+    crashing = described_class.find(process.id)
+    allow(crashing).to receive(:update!).and_call_original
+    allow(crashing).to receive(:update!).with(hash_including(:attestation_signer_key)).and_raise(Timeout::Error)
+    expect { crashing.rotate_attestation_signer! { |address| registered << address } }.to raise_error(Timeout::Error)
+
+    reloaded = described_class.find(process.id)
+    expect(reloaded.signer_address).to eq(before)
+    expect(reloaded.metadata[described_class::PENDING_SIGNER_KEY]).to be_present
+
+    rotated = reloaded.rotate_attestation_signer! { |address| registered << address }
+    expect(registered.uniq).to eq([rotated])
+    expect(process.reload.signer_address).to eq(rotated)
+    expect(process.metadata).not_to have_key(described_class::PENDING_SIGNER_KEY)
+  end
+
+  it "keeps signing with the old key while the SaaS is unreachable" do
+    before = process.signer_address
+    expect do
+      process.rotate_attestation_signer! { raise Decidim::Elections::Vocdoni::ApiError.new("timeout", status: 503) }
+    end.to raise_error(Decidim::Elections::Vocdoni::ApiError)
+
+    expect(process.reload.signer_address).to eq(before)
+    expect(process.metadata).to have_key(described_class::PENDING_SIGNER_KEY)
+  end
+
+  it "drops the candidate the SaaS rejects" do
+    before = process.signer_address
+    expect do
+      process.rotate_attestation_signer! { raise Decidim::Elections::Vocdoni::ApiError.new("bad signer", status: 400) }
+    end.to raise_error(Decidim::Elections::Vocdoni::ApiError)
+
+    expect(process.reload.signer_address).to eq(before)
+    expect(process.metadata).not_to have_key(described_class::PENDING_SIGNER_KEY)
   end
 
   it "counts one row per attested voterId" do
