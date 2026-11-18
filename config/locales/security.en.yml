@@ -15,6 +15,14 @@ en:
           dashboard:
             security:
               title: "Your security configuration"
+            census_snapshot:
+              title: "Census for the secret vote"
+              count:
+                one: "When you publish, the 1 participant in the census right now will be registered for the secret vote."
+                other: "When you publish, the %{count} participants in the census right now will be registered for the secret vote."
+              empty: "The census is empty: publishing will fail until at least one participant is in it."
+              late_joiners: "Participants who join the census after publishing (for example, by getting verified later) will not be able to vote in this election."
+              verify_before_publishing: "Participants need an account and the verifications this census requires (such as the organization's census) before you publish."
           # The Security tab. Written for the person running the vote, not for
           # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
           # vote types are "Simple vote" (any standard Decidim census) and

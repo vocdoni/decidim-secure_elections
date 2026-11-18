@@ -10,6 +10,14 @@ es:
           dashboard:
             security:
               title: "Tu configuración de seguridad"
+            census_snapshot:
+              title: "Censo para el voto secreto"
+              count:
+                one: "Al publicar, se registrará para el voto secreto el participante que hay ahora en el censo."
+                other: "Al publicar, se registrarán para el voto secreto los %{count} participantes que hay ahora en el censo."
+              empty: "El censo está vacío: la publicación fallará hasta que haya al menos un participante."
+              late_joiners: "Los participantes que entren en el censo después de publicar (por ejemplo, porque se verifican más tarde) no podrán votar en esta votación."
+              verify_before_publishing: "Antes de publicar, los participantes necesitan una cuenta y las verificaciones que pide este censo (como el censo de la organización)."
           security:
             show:
               title: "Seguridad"

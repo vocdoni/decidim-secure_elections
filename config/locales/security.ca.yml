@@ -10,6 +10,14 @@ ca:
           dashboard:
             security:
               title: "La teva configuració de seguretat"
+            census_snapshot:
+              title: "Cens per al vot secret"
+              count:
+                one: "En publicar, es registrarà per al vot secret el participant que hi ha ara al cens."
+                other: "En publicar, es registraran per al vot secret els %{count} participants que hi ha ara al cens."
+              empty: "El cens és buit: la publicació fallarà fins que hi hagi almenys un participant."
+              late_joiners: "Els participants que entrin al cens després de publicar (per exemple, perquè es verifiquen més tard) no podran votar en aquesta votació."
+              verify_before_publishing: "Abans de publicar, els participants necessiten un compte i les verificacions que demana aquest cens (com el cens de l'organització)."
           security:
             show:
               title: "Seguretat"
