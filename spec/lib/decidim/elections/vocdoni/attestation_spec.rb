@@ -79,6 +79,35 @@ describe Decidim::Elections::Vocdoni::Attestation do
     expect(attestation.canonical_email("  Voter@Example.ORG ")).to eq("voter@example.org")
   end
 
+  describe ".canonical_phone" do
+    it "writes an international number in E.164" do
+      {
+        "+34600123456" => "+34600123456",
+        " +34 600 12 34 56 " => "+34600123456",
+        "+34-600.123/456" => "+34600123456",
+        "0034 600 123 456" => "+34600123456",
+        "+44 (0)20 7946 0018" => "+442079460018",
+        "+1 (415) 555-0100" => "+14155550100",
+        "＋３４ ６００ １２３ ４５６" => "+34600123456",
+        "+34\u00a0600\u00a0123\u00a0456" => "+34600123456"
+      }.each { |raw, canonical| expect(attestation.canonical_phone(raw)).to eq(canonical), raw }
+    end
+
+    it "refuses a number without a country code or outside E.164" do
+      [nil, "", "600123456", "0600123456", "+0600123456", "+34 600 123 456 789 012", "+34", "+34 600 ABC 456", "tel:+34600123456"]
+        .each { |raw| expect(attestation.canonical_phone(raw)).to be_nil, raw.inspect }
+    end
+
+    # The SaaS vector's contactHash opens with the phone however the census wrote it.
+    it "matches the SaaS phone vector from a formatted number" do
+      vector = vectors["cases"].find { |entry| entry["kind"] == "phone" }
+      contact = attestation.canonical_phone("+34 600 12 34 56")
+
+      expect(contact).to eq(vector["contact"])
+      expect(attestation.contact_hash(bytes(vector["salt"]), "phone", contact)).to eq(bytes(vector["contactHash"]))
+    end
+  end
+
   it "refuses malformed input" do
     expect { attestation.contact_hash("short", "email", "a@b.org") }.to raise_error(ArgumentError)
     expect { attestation.contact_hash("\x00".b * 32, "sms", "a@b.org") }.to raise_error(ArgumentError)

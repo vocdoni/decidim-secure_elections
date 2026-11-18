@@ -14,7 +14,7 @@ module Decidim
 
         STATES = %w(pending publishing published failed).freeze
         # The `twoFaFields` an attested census accepts: an attestation binds at most one contact.
-        TWO_FA_FIELDS = [[], ["email"]].freeze
+        TWO_FA_FIELDS = [[], ["email"], ["phone"]].freeze
         # Metadata entry holding the encrypted signer key a rotation is registering with the SaaS.
         PENDING_SIGNER_KEY = "pending_attestation_signer_key"
 
@@ -63,6 +63,9 @@ module Decidim
 
         # The second factor chosen on the Security tab, in the SaaS `twoFaFields` shape.
         def two_fa_fields = Array(metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
+
+        # Where the one-time code goes, "email" or "phone"; nil without a code.
+        def contact_kind = two_fa_fields.first
 
         # The maxCensusSize an attested census declares for `eligible` voters: ceil(eligible × 1.2),
         # at least 1. Integer arithmetic, so 10 voters declare 12 and not 13.

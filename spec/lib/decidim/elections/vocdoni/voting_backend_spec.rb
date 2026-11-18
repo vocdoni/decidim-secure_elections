@@ -159,9 +159,9 @@ module Decidim
             expect(config.to_json).not_to include(user.email)
           end
 
-          it "includes a masked contact email" do
-            expect(config[:contact][:masked]).to be_a(String)
-            expect(config[:contact][:masked]).to include("•••@")
+          it "shows no contact without a one-time code" do
+            expect(config[:contact]).to eq({})
+            expect(config[:i18n][:errors]).not_to have_key(:no_contact)
           end
 
           it "has no per-question settings" do
@@ -222,12 +222,32 @@ module Decidim
           end
 
           it "masks the email of the voter's census entry" do
-            expect(config_for(user.to_global_id.to_s)[:contact]).to eq(masked: "a•••@example.org")
+            expect(config_for(user.to_global_id.to_s)[:contact]).to eq(channel: "email", masked: "a•••@example.org")
+          end
+
+          it "explains a missing email" do
+            expect(config_for(user.to_global_id.to_s)[:i18n][:errors][:no_contact]).to include("email")
           end
 
           it "has no contact without a census voter" do
-            expect(config_for(nil)[:contact]).to eq({})
-            expect(config_for(create(:user, :confirmed).to_global_id.to_s)[:contact]).to eq({})
+            expect(config_for(nil)[:contact]).to eq(channel: "email")
+            expect(config_for(create(:user, :confirmed).to_global_id.to_s)[:contact]).to eq(channel: "email")
+          end
+
+          context "with SMS codes" do
+            let!(:vocdoni_process) do
+              create(:vocdoni_process, :published, election:, metadata: { "settings" => { "twofa_fields" => ["phone"] } })
+            end
+            let(:census_manifest) { "token_csv" }
+
+            it "masks the E.164 phone of the voter's census entry" do
+              voter = create(:election_voter, election:, data: { "email" => "bob@example.org", "phone" => "+34 600 12 34 56" })
+              config = config_for(voter.to_global_id.to_s)
+
+              expect(config[:contact]).to eq(channel: "phone", masked: "+•••••••••56")
+              expect(config.to_json).not_to include("600123456")
+              expect(config[:i18n][:errors][:no_contact]).to include("phone")
+            end
           end
 
           context "with a token_csv census" do
@@ -239,7 +259,7 @@ module Decidim
             it "reads the CSV row and never exposes its token" do
               config = config_for(voter.to_global_id.to_s)
 
-              expect(config[:contact]).to eq(masked: "b•••@example.org")
+              expect(config[:contact]).to eq(channel: "email", masked: "b•••@example.org")
               expect(config.to_json).not_to include("S3CRET")
             end
           end

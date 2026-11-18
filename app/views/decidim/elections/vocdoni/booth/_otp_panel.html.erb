@@ -11,7 +11,7 @@
       <h1 class="title-decorator my-12" tabindex="-1"><%= otp[:title] %></h1>
     </div>
     <p>
-      <%= otp[:body_email] %>
+      <%= booth_config.dig(:contact, :channel) == "phone" ? otp[:body_phone] : otp[:body_email] %>
       <% if booth_config.dig(:contact, :masked).present? %>
         (<strong><%= booth_config.dig(:contact, :masked) %></strong>)
       <% end %>

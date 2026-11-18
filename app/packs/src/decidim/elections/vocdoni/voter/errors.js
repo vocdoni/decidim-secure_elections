@@ -9,6 +9,7 @@
  *
  * NETWORK            the browser could not reach the API (offline, DNS, CORS)
  * AUTH_REJECTED      the census rejected the supplied credentials
+ * NO_CONTACT         Decidim has no email or phone of the voter's to send the code to
  * AUTH_COOLDOWN      too many code requests too fast; the CSP says to wait
  * OTP_REJECTED       the 2FA code did not match — retryable, the token survives
  * OTP_EXPIRED        the 2FA session is over; the voter must identify again
@@ -25,6 +26,7 @@
 export const ErrorCode = {
   NETWORK: "network",
   AUTH_REJECTED: "auth_rejected",
+  NO_CONTACT: "no_contact",
   AUTH_COOLDOWN: "auth_cooldown",
   OTP_REJECTED: "otp_rejected",
   OTP_EXPIRED: "otp_expired",

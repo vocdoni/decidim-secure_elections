@@ -79,8 +79,9 @@ es:
                   help: "El código se envía a la dirección de correo electrónico con la que cada participante se ha registrado."
                 sms:
                   label: "Código por SMS"
-                  help: "El código se envía por mensaje de texto, por lo que cada votante necesita un número de teléfono registrado en el servicio de votación."
-                both_note: "Si ambas opciones están activadas, cada votante elige cómo recibir el código."
+                  help: "El código se envía por mensaje de texto al número de teléfono de la verificación o de la fila del censo de cada participante, escrito con su prefijo internacional (por ejemplo, +34 600 123 456). Quien no tenga uno no podrá votar."
+                one_channel_note: "Elige una opción: el código se envía por correo electrónico o por SMS."
+                one_channel: "Elige el código por correo electrónico o el código por SMS, no ambos."
               summary:
                 sentences:
                   basic: "Las papeletas se guardan en esta plataforma. Adecuado para consultas informales."

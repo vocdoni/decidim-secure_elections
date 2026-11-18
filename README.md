@@ -27,7 +27,9 @@ opt-in signal; upstream's own tables and models are not touched.
   census declares the election's signer and a maximum size of
   ceil(eligible × 1.2), and Decidim signs an EIP-712 attestation for each
   eligible voter when they open the booth, so participants who join the
-  census later can vote while that maximum has room.
+  census later can vote while that maximum has room. The one-time code goes
+  by email or by SMS, never both; SMS needs each voter's phone in
+  international format (`+34 600 123 456`), see `docs/architecture.md` §4c.
 - **On the voter side**, upstream's `Decidim::Elections::VotesController` is
   hijacked for Vocdoni-backed elections: the voter is handed to the static
   voting page served from `public/vocdoni/vote.html`, which does census

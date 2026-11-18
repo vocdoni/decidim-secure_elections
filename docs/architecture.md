@@ -83,7 +83,7 @@ client.jobs.wait_for(job_id, timeout: …)                # poll GET /jobs/{id} 
   `ApiClient#localize` turns `"Hi"` into `{ "default" => "Hi" }` and passes a Decidim
   translated hash through as `{ "default" => <default-locale value>, "en" => …, "ca" => … }`.
 * **The process census is inline and attested**:
-  `census: { attested: { signer: "0x…", maxCensusSize: N }, twoFaFields: [] | ["email"] }`.
+  `census: { attested: { signer: "0x…", maxCensusSize: N }, twoFaFields: [] | ["email"] | ["phone"] }`.
   No member, group or org-level census is created; the standalone `POST /census` flow is
   not used.
 * **Question type strings are lowercase**: `"singlechoice"`, `"multichoice"`. camelCase is
@@ -212,9 +212,23 @@ so a participant who joins the census after the start can still vote while
 
 - `voterId` = HMAC-SHA256(voter_id_secret, voter key ‖ processId): stable within the
   election, unlinkable across elections, meaningless to the SaaS.
-- `contactHash` = keccak256(salt ‖ "email:" ‖ canonical email) with email 2FA, zero
-  otherwise. The contact and salt travel only in the auth/0 and resend bodies.
+- `contactHash` = keccak256(salt ‖ kind ‖ ":" ‖ contact) with 2FA, zero otherwise. The kind
+  is the census's `twoFaFields[0]` (`email` or `phone`); the contact and salt travel only in
+  the auth/0 and resend bodies.
 - `expiresAt` = now + 10 minutes.
+
+The contact must already be canonical, because the SaaS hashes the bytes it receives:
+
+- email: trimmed, lowercased, NFC.
+- phone: E.164, read from a CSV row's `phone` column or from a granted authorization's
+  `phone`, `phone_number` or `mobile_phone_number` metadata (oldest first). NFKC folds
+  full-width characters; spaces, `-`, `.`, `/`, brackets and a `(0)` trunk marker are dropped;
+  a leading `00` becomes `+`; the result must be `+`, a non-zero digit, and 7–15 digits in
+  all. A number without a country code is refused (Decidim has no country to assume), and
+  the SaaS refuses at auth/0 any number libphonenumber does not call valid.
+
+A voter without such a contact gets 422 `{ error: "no_contact", kind }` and the booth says
+which contact is missing.
 
 `decidim_vocdoni_attestations` counts what each voterId was issued (capped per voter), and
 the Security tab compares that count with the records the SaaS publishes after the end.

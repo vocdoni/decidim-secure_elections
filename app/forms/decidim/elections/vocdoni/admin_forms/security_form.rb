@@ -10,15 +10,10 @@ module Decidim
         #      (`enable_vocdoni`). Opt-in is materialised as the presence of
         #      the {Process} sidecar row.
         #
-        #   2. The second-factor challenge for CSP authentication. Two
-        #      independent booleans — SMS and Email — that map onto the
-        #      Vocdoni SaaS `twoFaFields` array (`"phone"` and `"email"`
-        #      respectively). All four combinations are valid:
-        #
-        #        [] []  → no OTP (weakest, only CSP identity)
-        #        [x] [] → SMS OTP only
-        #        [] [x] → Email OTP only
-        #        [x] [x] → voter picks at auth time (SaaS OR)
+        #   2. The second-factor challenge for CSP authentication: SMS and
+        #      Email map onto the Vocdoni SaaS `twoFaFields` (`["phone"]`,
+        #      `["email"]`, or `[]` for no code). At most one: an attestation
+        #      binds a single contact.
         #
         # Persisted through {Admin::UpdateElectionSecurity} onto the sidecar's
         # `metadata["settings"]` hash. The engine's publish subscriber checks
@@ -30,6 +25,8 @@ module Decidim
           attribute :enable_vocdoni, Boolean, default: false
           attribute :sms, Boolean, default: false
           attribute :email, Boolean, default: false
+
+          validate :one_code_channel
 
           # Reconstructs a form from the sidecar. An election that has never
           # visited the Security tab has no sidecar; every checkbox defaults
@@ -76,6 +73,14 @@ module Decidim
             fields << "email" if email
             fields << "phone" if sms
             fields.sort
+          end
+
+          private
+
+          def one_code_channel
+            return unless enable_vocdoni && email && sms
+
+            errors.add(:sms, I18n.t("decidim.elections.vocdoni.admin.security.show.two_factor.one_channel"))
           end
         end
       end

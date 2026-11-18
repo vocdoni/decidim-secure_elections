@@ -93,6 +93,47 @@ module Decidim
             post(path, headers:)
 
             expect(response).to have_http_status(:unprocessable_content)
+            expect(body).to eq("error" => "no_contact", "kind" => "email")
+            expect(process.issued_attestations).to be_empty
+          end
+        end
+
+        context "with SMS 2FA" do
+          let(:settings) { { "twofa_fields" => ["phone"] } }
+          let(:voter) do
+            Decidim::Elections::Voter.create!(election:, data: { "email" => "voter@example.org", "phone" => "0034 600-12 34 56", "token" => "t0k3n" })
+          end
+
+          it "attests the phone in E.164 under the phone kind" do
+            post(path, headers:)
+
+            expect(response).to have_http_status(:ok)
+            expect(body["contact"]).to eq("+34600123456")
+            expect(body["attestation"]["contactHash"]).to eq(
+              Attestation.contact_hash(Attestation.hex_to_bytes(body["salt"]), "phone", "+34600123456").unpack1("H*")
+            )
+          end
+
+          context "when the phone is written without its country code" do
+            let(:voter) { Decidim::Elections::Voter.create!(election:, data: { "phone" => "600 12 34 56", "token" => "t0k3n" }) }
+
+            it "refuses it as no contact" do
+              post(path, headers:)
+
+              expect(response).to have_http_status(:unprocessable_content)
+              expect(body).to eq("error" => "no_contact", "kind" => "phone")
+              expect(process.issued_attestations).to be_empty
+            end
+          end
+
+          context "when the voter has an email but no phone" do
+            let(:voter) { Decidim::Elections::Voter.create!(election:, data: { "email" => "voter@example.org", "token" => "t0k3n" }) }
+
+            it "refuses as no contact" do
+              post(path, headers:)
+
+              expect(body).to eq("error" => "no_contact", "kind" => "phone")
+            end
           end
         end
 

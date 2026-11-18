@@ -14,24 +14,25 @@ module Decidim
         let(:row) { Decidim::Elections::Voter.create!(election:, data: { "email" => "row@example.org", "token" => "t" }) }
 
         it "reaches a user at the account email and a census row at its email column" do
-          expect(described_class.contact_email(election, user.to_global_id.to_s)).to eq(user.email)
-          expect(described_class.contact_email(election, row.to_global_id.to_s)).to eq("row@example.org")
+          expect(described_class.contact(election, user.to_global_id.to_s, "email")).to eq(user.email.downcase)
+          expect(described_class.contact(election, row.to_global_id.to_s, "email")).to eq("row@example.org")
+        end
+
+        it "reaches a voter at the E.164 form of their phone" do
+          phone_row = Decidim::Elections::Voter.create!(election:, data: { "phone" => "+34 600 12 34 56", "token" => "p" })
+          local_row = Decidim::Elections::Voter.create!(election:, data: { "phone" => "600123456", "token" => "l" })
+
+          expect(described_class.contact(election, phone_row.to_global_id.to_s, "phone")).to eq("+34600123456")
+          expect(described_class.contact(election, local_row.to_global_id.to_s, "phone")).to be_nil
+          expect(described_class.contact(election, row.to_global_id.to_s, "phone")).to be_nil
         end
 
         it "has no contact for a voter outside the election's census" do
           outsider = create(:user, :confirmed)
           other_row = Decidim::Elections::Voter.create!(election: create(:election, component:), data: { "email" => "other@example.org" })
 
-          expect(described_class.contact_email(election, outsider.to_global_id.to_s)).to be_nil
-          expect(described_class.contact_email(election, other_row.to_global_id.to_s)).to be_nil
-        end
-
-        it "hands the booth of an attested election the attestation URL and the row's contact" do
-          config = VotingBackend.booth_config(election, voter_uid: row.to_global_id.to_s)
-
-          expect(config[:credentials]).to be_nil
-          expect(config[:attestationUrl]).to end_with("/elections/#{election.id}/vocdoni_attestation")
-          expect(config[:contact]).to eq(masked: "r•••@example.org")
+          expect(described_class.contact(election, outsider.to_global_id.to_s, "email")).to be_nil
+          expect(described_class.contact(election, other_row.to_global_id.to_s, "email")).to be_nil
         end
       end
     end

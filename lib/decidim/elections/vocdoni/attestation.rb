@@ -20,6 +20,8 @@ module Decidim
         N = OpenSSL::BN.new("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16).to_i
         GROUP = OpenSSL::PKey::EC::Group.new("secp256k1")
         SALT_BYTES = 32
+        # "+", a country code that cannot start with 0, and at most 15 digits in all (ITU-T E.164).
+        PHONE_E164 = /\A\+[1-9]\d{6,14}\z/
 
         # OpenSSL serves KECCAK-256 from 3.2 on and only recent openssl gems look it up (older ones
         # raise RuntimeError, newer ones DigestError); otherwise the pure-Ruby Keccak does.
@@ -77,6 +79,15 @@ module Decidim
 
         # The canonical form of an email the SaaS accepts: trimmed, lowercase, NFC.
         def canonical_email(email) = email.to_s.strip.downcase.unicode_normalize(:nfc)
+
+        # The E.164 form of a phone written in international format, or nil. NFKC folds wide digits
+        # and spaces; spaces, `-`, `.`, `/`, brackets and a "(0)" trunk marker are dropped; a leading
+        # "00" becomes "+". Without a country code there is no country to assume, so it is refused.
+        def canonical_phone(phone)
+          value = phone.to_s.unicode_normalize(:nfkc).gsub("(0)", "").gsub(%r{[\s\-./()]}, "")
+          value = "+#{value.delete_prefix("00")}" if value.start_with?("00")
+          value if value.match?(PHONE_E164)
+        end
 
         # The 20-byte address of a private scalar.
         def address(priv)

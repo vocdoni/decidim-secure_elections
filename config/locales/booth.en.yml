@@ -8,6 +8,10 @@ en:
             not_open: This question is not open on the voting network yet. Please try again in a few moments.
             opening: Opening the question on the voting network…
             waiting: Waiting for the organisers to open the next question. This page will update by itself.
+          # Shown when Decidim cannot attest the voter: it has no contact of the kind the code goes to.
+          no_contact:
+            email: We do not have an email address for you, so we cannot send you the one-time code. Please contact the organisers.
+            phone: We do not have a valid mobile phone number for you, written with its country code (for example +34 600 123 456), so we cannot send you the one-time code by SMS. Please contact the organisers.
           receipt:
             final: This vote cannot be changed.
             check_attestation: After the election ends you can check on which questions a ballot was signed in your name.

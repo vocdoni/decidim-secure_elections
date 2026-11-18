@@ -11,14 +11,26 @@ module Decidim
         TTL = 10.minutes
         ZERO_HASH = ("\x00" * 32).b
 
-        # Raised when the election sends codes by email and the voter has no email on file.
-        class NoContact < StandardError; end
+        # Raised when the election sends codes to a `kind` of contact the voter has no valid one of.
+        class NoContact < StandardError
+          attr_reader :kind
 
-        # The email a census voter is reached at, read the way the booth config reads it so the
-        # attested contact and the one the booth shows match. A voter_uid outside the election's
-        # census (another organization's user, another election's row) has no contact.
-        def self.contact_email(election, voter_uid)
-          CensusMember.email(CensusMember.subject_for(election, voter_uid))
+          def initialize(kind)
+            @kind = kind
+            super("the voter has no #{kind} to send the one-time code to")
+          end
+        end
+
+        # The canonical `kind` contact ("email" or "phone") a census voter is reached at, or nil. The
+        # booth config reads it the same way, so the attested contact and the one it shows match. A
+        # voter_uid outside the election's census (another organization's user, another election's row)
+        # has no contact.
+        def self.contact(election, voter_uid, kind)
+          subject = CensusMember.subject_for(election, voter_uid)
+          case kind
+          when "email" then CensusMember.email(subject)&.then { |email| Attestation.canonical_email(email) }
+          when "phone" then Attestation.canonical_phone(CensusMember.phone(subject))
+          end
         end
 
         # Raised when the voter already holds `cap` attestations for the election.
@@ -33,15 +45,15 @@ module Decidim
         # Counts a fresh attestation as issued and signs it; the count comes first so the cap also
         # bounds the signing work.
         #
-        # @return [Hash] the auth/0 body: `attestation`, `signature` and, with email 2FA, the
-        #   `contact` and `salt` that open its contactHash.
+        # @return [Hash] the auth/0 body: `attestation`, `signature` and, with 2FA, the `contact`
+        #   and `salt` that open its contactHash.
         # @raise [NoContact, CapReached, Decidim::Elections::Vocdoni::ApiError]
         def call
           contact, salt = contact_and_salt
           message = {
             process_id: Attestation.hex_to_bytes(process.vocdoni_process_id),
             voter_id: process.voter_id_for(voter_uid),
-            contact_hash: contact ? Attestation.contact_hash(salt, "email", contact) : ZERO_HASH,
+            contact_hash: contact ? Attestation.contact_hash(salt, process.contact_kind, contact) : ZERO_HASH,
             expires_at: (Time.current + TTL).to_i
           }
           digest = Attestation.digest(verifying_contract, **message)
@@ -57,12 +69,13 @@ module Decidim
         attr_reader :process, :voter_uid, :cap
 
         def contact_and_salt
-          return [nil, nil] unless process.two_fa_fields.include?("email")
+          kind = process.contact_kind
+          return [nil, nil] if kind.nil?
 
-          email = self.class.contact_email(process.election, voter_uid)
-          raise NoContact if email.blank?
+          contact = self.class.contact(process.election, voter_uid, kind)
+          raise NoContact, kind if contact.blank?
 
-          [Attestation.canonical_email(email), SecureRandom.bytes(Attestation::SALT_BYTES)]
+          [contact, SecureRandom.bytes(Attestation::SALT_BYTES)]
         end
 
         # The verifyingContract of the SaaS environment's domain, read from the process once and

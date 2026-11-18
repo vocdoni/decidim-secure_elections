@@ -90,8 +90,9 @@ en:
                   help: "The code goes to the email address each participant registered with."
                 sms:
                   label: "SMS code"
-                  help: "The code goes by text message, so every voter needs a phone number registered with the voting service."
-                both_note: "If both are on, each voter chooses how to receive the code."
+                  help: "The code goes by text message to the phone number in each participant's verification or census row, written with its country code (for example +34 600 123 456). Participants without one cannot vote."
+                one_channel_note: "Choose one: the code goes either by email or by SMS."
+                one_channel: "Choose either the email code or the SMS code, not both."
               # One sentence per level (`SecurityForm::LEVELS`), shown on the
               # Dashboard card ("Your security configuration").
               summary:

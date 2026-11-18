@@ -8,6 +8,9 @@ ca:
             not_open: Aquesta pregunta encara no està oberta a la xarxa de votació. Torna-ho a provar d'aquí a uns moments.
             opening: Obrint la pregunta a la xarxa de votació…
             waiting: Esperant que l'organització obri la pregunta següent. Aquesta pàgina s'actualitzarà sola.
+          no_contact:
+            email: No tenim cap adreça de correu electrònic teva, així que no et podem enviar el codi d'un sol ús. Posa't en contacte amb l'organització.
+            phone: No tenim cap número de mòbil vàlid teu, escrit amb el seu prefix internacional (per exemple, +34 600 123 456), així que no et podem enviar el codi d'un sol ús per SMS. Posa't en contacte amb l'organització.
           receipt:
             final: Aquest vot no es pot modificar.
             check_attestation: Quan acabi la votació podràs comprovar en quines preguntes s'ha signat una papereta al teu nom.

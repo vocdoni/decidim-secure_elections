@@ -10,7 +10,7 @@ All notable changes to this module are documented here. The format follows
 
 - **Security tab** injected into the upstream `decidim-elections` admin (Main,
   Questions, Census, Security, Dashboard). Owns the Vocdoni opt-in and the
-  second-factor challenge — email OTP, SMS OTP, both, or none.
+  second-factor challenge — email OTP, SMS OTP, or none.
 - **`Decidim::Elections::Vocdoni::Process` sidecar** (`decidim_vocdoni_processes`
   table) keyed to `Decidim::Elections::Election`. Its presence is the opt-in
   signal; it carries the Vocdoni process id, chain id, the attestation signer

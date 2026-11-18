@@ -283,4 +283,13 @@ describe("prepare() — attestation", () => {
     await expect(adapter.prepare(ctx)).rejects.toThrow("Rejected");
     expect(mockFlow.authenticate).not.toHaveBeenCalled();
   });
+
+  it("tells the voter when Decidim has no contact to send the code to", async () => {
+    window.fetch = jest.fn().mockResolvedValue({ ok: false, status: 422 });
+    const ctx = makeCtx();
+    ctx.config.i18n.errors.no_contact = "No phone"; // eslint-disable-line camelcase
+
+    await expect(adapter.prepare(ctx)).rejects.toThrow("No phone");
+    expect(mockFlow.authenticate).not.toHaveBeenCalled();
+  });
 });

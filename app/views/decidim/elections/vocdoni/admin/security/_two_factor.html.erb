@@ -4,8 +4,8 @@
   Only meaningful for a secret vote, so the whole block is rendered `hidden`
   and its fieldset `disabled` (nothing in it is submitted) while the simple
   vote is selected; `security.js` flips both as the admin changes the vote
-  type, without saving. Email and SMS are independent; with both on, the
-  voter picks the channel when the code is requested.
+  type, without saving. Email and SMS exclude each other: an attestation binds
+  one contact.
 %>
 <% enabled = @form.enable_vocdoni %>
 <fieldset id="js-security-two-factor"
@@ -45,6 +45,6 @@
 
   <p class="vocdoni-security__note">
     <%= icon "information-line" %>
-    <span><%= t("both_note", scope: "decidim.elections.vocdoni.admin.security.show.two_factor") %></span>
+    <span><%= t("one_channel_note", scope: "decidim.elections.vocdoni.admin.security.show.two_factor") %></span>
   </p>
 </fieldset>

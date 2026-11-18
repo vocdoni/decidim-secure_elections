@@ -64,7 +64,7 @@ module Decidim
         def self.booth_config(election, voter_uid:)
           process = election.vocdoni_process
           router = Decidim::EngineRouter.main_proxy(election.component)
-          email = CensusMember.email(CensusMember.subject_for(election, voter_uid))
+          kind = process.contact_kind
           meta = process.questions_metadata.index_by { |row| row["decidim_question_id"].to_i }
           ready = process.published? && process.vocdoni_process_id.present?
 
@@ -75,7 +75,7 @@ module Decidim
             explorerUrl: Vocdoni.explorer_url,
             castNotificationUrl: router.election_vocdoni_cast_notification_path(election),
             attestationUrl: router.election_vocdoni_attestation_path(election),
-            contact: { masked: mask(email) }.compact,
+            contact: kind ? { channel: kind, masked: mask(kind, VoterAttestation.contact(election, voter_uid, kind)) }.compact : {},
             questions: booth_questions(election).map do |question|
               row = meta[question.id] || {}
               {
@@ -86,10 +86,7 @@ module Decidim
                 choices: question.response_options.order(:id).each_with_index.to_h { |option, idx| [option.id.to_s, idx] }
               }
             end,
-            i18n: I18n.t("decidim.elections.vocdoni.votes.page").slice(:status, :errors, :otp, :blocked, :receipt).merge(
-              not_ready: I18n.t("decidim.elections.vocdoni.booth.launcher.not_ready",
-                                default: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments.")
-            )
+            i18n: booth_i18n(kind)
           }
           config.merge!(per_question_config(election)) if election.per_question?
           config
@@ -112,10 +109,21 @@ module Decidim
           }
         end
 
-        def self.mask(email)
-          return nil if email.blank?
+        def self.booth_i18n(kind)
+          i18n = I18n.t("decidim.elections.vocdoni.votes.page").slice(:status, :errors, :otp, :blocked, :receipt)
+          i18n[:errors] = i18n[:errors].merge(no_contact: I18n.t("decidim.elections.vocdoni.booth.no_contact.#{kind}")) if kind
+          i18n.merge(
+            not_ready: I18n.t("decidim.elections.vocdoni.booth.launcher.not_ready",
+                              default: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments.")
+          )
+        end
 
-          local, domain = email.split("@", 2)
+        # What the one-time code panel shows of the contact: "a•••@example.org", "+•••••••••56".
+        def self.mask(kind, contact)
+          return nil if contact.blank?
+          return "+#{"•" * (contact.length - 3)}#{contact[-2..]}" if kind == "phone"
+
+          local, domain = contact.split("@", 2)
           "#{local[0]}•••@#{domain}"
         end
       end

@@ -79,8 +79,9 @@ ca:
                   help: "El codi s'envia a l'adreça de correu electrònic amb la qual cada participant s'ha registrat."
                 sms:
                   label: "Codi per SMS"
-                  help: "El codi s'envia per missatge de text, de manera que cada votant necessita un número de telèfon registrat al servei de votació."
-                both_note: "Si totes dues opcions estan activades, cada votant tria com rebre el codi."
+                  help: "El codi s'envia per missatge de text al número de telèfon de la verificació o de la fila del cens de cada participant, escrit amb el seu prefix internacional (per exemple, +34 600 123 456). Qui no en tingui cap no podrà votar."
+                one_channel_note: "Tria una opció: el codi s'envia per correu electrònic o per SMS."
+                one_channel: "Tria el codi per correu electrònic o el codi per SMS, no tots dos."
               summary:
                 sentences:
                   basic: "Les paperetes es guarden en aquesta plataforma. Adequat per a consultes informals."

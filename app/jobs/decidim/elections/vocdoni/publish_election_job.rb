@@ -269,12 +269,12 @@ module Decidim
           end
         end
 
-        # An attestation binds one contact, and Decidim attests emails only.
+        # An attestation binds one contact, so the code goes by email or by SMS, never both.
         def check_two_fa_fields!
           return if Process::TWO_FA_FIELDS.include?(two_fa_fields)
 
           raise Decidim::Elections::Vocdoni::ApiError.new(
-            "The one-time code can only go by email: change it on the Security tab",
+            "The one-time code goes either by email or by SMS, not both: change it on the Security tab",
             transient: false
           )
         end

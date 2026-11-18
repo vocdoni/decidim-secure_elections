@@ -115,4 +115,15 @@ describe Decidim::Elections::Vocdoni::Process do
       expect(process.two_fa_fields).to eq([])
     end
   end
+
+  describe "#contact_kind" do
+    it "is where the one-time code goes" do
+      process.update!(metadata: { "settings" => { "twofa_fields" => ["phone"] } })
+      expect(process.contact_kind).to eq("phone")
+    end
+
+    it "is nil without a code" do
+      expect(process.contact_kind).to be_nil
+    end
+  end
 end

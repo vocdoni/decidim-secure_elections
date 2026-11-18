@@ -26,6 +26,10 @@ export const fetchAttestation = async (url) => {
     throw new VoteError(ErrorCode.NETWORK);
   }
 
+  // 422: the one-time code has nowhere to go; the booth config words it for the channel.
+  if (response.status === 422) {
+    throw new VoteError(ErrorCode.NO_CONTACT);
+  }
   if (!response.ok) {
     throw new VoteError(ErrorCode.AUTH_REJECTED);
   }

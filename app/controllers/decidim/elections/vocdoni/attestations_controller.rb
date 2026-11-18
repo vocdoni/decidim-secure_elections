@@ -35,8 +35,9 @@ module Decidim
           render json: VoterAttestation.new(attested_process, voter_uid, cap: MAX_ATTESTATIONS_PER_VOTER).call
         rescue VoterAttestation::CapReached
           head :too_many_requests
-        rescue VoterAttestation::NoContact
-          head :unprocessable_content
+        rescue VoterAttestation::NoContact => e
+          # The booth tells the voter which contact is missing; the contact itself never appears.
+          render json: { error: "no_contact", kind: e.kind }, status: :unprocessable_content
         rescue Decidim::Elections::Vocdoni::ApiError
           head :bad_gateway
         end

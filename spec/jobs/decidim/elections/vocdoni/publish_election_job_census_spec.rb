@@ -46,11 +46,21 @@ module Decidim
           end
         end
 
-        context "with a 2FA channel Decidim cannot attest" do
+        context "with SMS 2FA" do
+          let(:two_fa_fields) { ["phone"] }
+
+          it "asks the SaaS for an SMS code" do
+            job.send(:prepare_census!)
+
+            expect(job.send(:census_payload)["twoFaFields"]).to eq(["phone"])
+          end
+        end
+
+        context "with both email and SMS 2FA" do
           let(:two_fa_fields) { %w(email phone) }
 
-          it "refuses it before anything reaches the SaaS" do
-            expect { job.send(:prepare_census!) }.to raise_error(ApiError) do |error|
+          it "refuses them before anything reaches the SaaS: an attestation binds one contact" do
+            expect { job.send(:prepare_census!) }.to raise_error(ApiError, /either by email or by SMS/) do |error|
               expect(error.transient?).to be(false)
             end
             expect(process.reload.attestation_signer_key).to be_nil
