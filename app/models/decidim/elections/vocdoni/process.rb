@@ -61,6 +61,17 @@ module Decidim
 
         def attested? = census_mode == "attested"
 
+        # Whether the election votes on an attested census: its own mode once the SaaS process exists
+        # (PublishElectionJob#adopt_census_mode! fixes it then), the deployment's until then.
+        def attested_census?
+          mode = vocdoni_process_id.present? ? census_mode : Decidim::Elections::Vocdoni.census_mode
+          mode == "attested"
+        end
+
+        # The maxCensusSize an attested census declares for `eligible` voters: ceil(eligible × 1.2),
+        # at least 1. Integer arithmetic, so 10 voters declare 12 and not 13.
+        def self.attested_census_size(eligible) = [((eligible * 6) + 4) / 5, 1].max
+
         # The key of a voter in the voterId preimage, from the GlobalID `voter_uid` Decidim's census
         # access gives the booth: "user:<id>" for an internal user, "row:<id>" for a census row.
         def self.voter_key(voter_uid)

@@ -496,10 +496,9 @@ module Decidim
           process.ensure_attestation_secrets!
         end
 
-        # ceil(eligible × 1.2), at least 1: room for voters the census gains after publish. Integer
-        # arithmetic, so 10 voters declare 12 and not 13.
+        # ceil(eligible × 1.2), at least 1: room for voters the census gains after publish.
         def attested_census_size
-          [((election.census.count(election) * 6) + 4) / 5, 1].max
+          Process.attested_census_size(election.census.count(election))
         end
 
         def census_payload

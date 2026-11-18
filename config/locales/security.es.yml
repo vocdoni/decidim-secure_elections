@@ -19,6 +19,17 @@ es:
               limitations: "Por las limitaciones actuales de cómo está implementado el voto secreto:"
               late_joiners: "Los participantes que entren en el censo después de que empiece la votación (por ejemplo, porque se verifican más tarde) no podrán votar en esta votación."
               verify_before_start: "Los participantes necesitan una cuenta y las verificaciones que pide este censo (como el censo de la organización) antes de que empiece la votación."
+              attested:
+                count:
+                  one: "Ahora mismo hay 1 participante en el censo."
+                  other: "Ahora mismo hay %{count} participantes en el censo."
+                late_joiners: "Decidim avala a cada participante cuando abre la cabina de votación, así que quienes entren en el censo después de que empiece la votación (por ejemplo, porque se verifican más tarde) también podrán votar, mientras no se alcance el máximo de votantes declarado."
+                declared:
+                  one: "El máximo declarado es de 1 votante."
+                  other: "El máximo declarado es de %{count} votantes."
+                projected:
+                  one: "Cuando empiece la votación, el máximo declarado será el tamaño del censo en ese momento más un 20 %, redondeado hacia arriba: con el censo actual, 1 votante."
+                  other: "Cuando empiece la votación, el máximo declarado será el tamaño del censo en ese momento más un 20 %, redondeado hacia arriba: con el censo actual, %{count} votantes."
             attestations:
               title: "Atestaciones"
               issued: "Emitidas: %{total} atestaciones a %{voters} votantes."

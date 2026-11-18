@@ -59,4 +59,24 @@ describe Decidim::Elections::Vocdoni::Process do
     process.census_mode = "other"
     expect(process).not_to be_valid
   end
+
+  describe ".attested_census_size" do
+    it "declares ceil(eligible × 1.2), at least 1" do
+      expect([0, 1, 3, 10, 11].map { |eligible| described_class.attested_census_size(eligible) }).to eq([1, 2, 4, 12, 14])
+    end
+  end
+
+  describe "#attested_census?" do
+    let(:pending_process) { create(:vocdoni_process, census_mode: "memberbase") }
+
+    it "follows the deployment's mode until the SaaS process exists" do
+      allow(Decidim::Elections::Vocdoni).to receive(:census_mode).and_return("attested")
+      expect(pending_process).to be_attested_census
+      expect(process).to be_attested_census
+
+      allow(Decidim::Elections::Vocdoni).to receive(:census_mode).and_return("memberbase")
+      expect(pending_process).not_to be_attested_census
+      expect(process).to be_attested_census
+    end
+  end
 end

@@ -133,8 +133,10 @@ module Decidim
         let(:html) { response.parsed_body }
         let(:snapshot) { html.at_css(".item__edit-form > .vocdoni-census-snapshot") }
         let(:scope) { "decidim.elections.vocdoni.admin.dashboard.census_snapshot" }
+        let(:deployment_census_mode) { "memberbase" }
 
         before do
+          allow(Decidim::Elections::Vocdoni).to receive(:census_mode).and_return(deployment_census_mode)
           login_as admin, scope: :user
           get dashboard_path, headers:
         end
@@ -189,6 +191,56 @@ module Decidim
             expect(snapshot["data-census-count"]).to eq("3")
             expect(snapshot.previous_element["class"]).to include("vocdoni-security-summary")
             expect(snapshot.text.squish).not_to include(I18n.t("#{scope}.verify_before_start"))
+          end
+        end
+
+        context "when the deployment publishes attested censuses" do
+          let(:deployment_census_mode) { "attested" }
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, election: record)
+            end
+          end
+
+          it "says late joiners can vote up to the projected maximum" do
+            expect(snapshot["data-census-mode"]).to eq("attested")
+            expect(snapshot.at_css("[data-attested-maximum]")["data-attested-maximum"]).to eq("4")
+
+            text = snapshot.text.squish
+            expect(text).to include(I18n.t("#{scope}.attested.count", count: 3))
+            expect(text).to include(I18n.t("#{scope}.attested.late_joiners"))
+            expect(text).to include(I18n.t("#{scope}.attested.projected", count: 4))
+            expect(text).not_to include(I18n.t("#{scope}.late_joiners"))
+            expect(text).not_to include(I18n.t("#{scope}.limitations"))
+          end
+        end
+
+        context "when the SaaS process was created with an attested census" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, election: record, state: "failed", census_mode: "attested",
+                                       vocdoni_process_id: "6885f0c2c1a4e2f0b1d33a01", census_size: 12)
+            end
+          end
+
+          it "gives the declared maximum, whatever the deployment's mode" do
+            expect(snapshot["data-census-mode"]).to eq("attested")
+            expect(snapshot.text.squish).to include(I18n.t("#{scope}.attested.declared", count: 12))
+          end
+        end
+
+        context "when the SaaS process was created with a memberbase census on an attested deployment" do
+          let(:deployment_census_mode) { "attested" }
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, election: record, state: "failed", vocdoni_process_id: "6885f0c2c1a4e2f0b1d33a01")
+            end
+          end
+
+          it "keeps the late joiners limitation" do
+            expect(snapshot["data-census-mode"]).to eq("memberbase")
+            expect(snapshot.text.squish).to include(I18n.t("#{scope}.late_joiners"))
+            expect(snapshot.at_css("[data-attested-late-joiners]")).to be_nil
           end
         end
 
