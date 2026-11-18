@@ -94,6 +94,11 @@ describe Decidim::Elections::Vocdoni::Process do
     expect(process.issued_attestations.find_by(voter_id: "0xaa").issued_count).to eq(2)
   end
 
+  it "counts up to the cap and no further" do
+    expect(Array.new(3) { process.record_issued_attestation!("0xaa", cap: 2) }).to eq([true, true, false])
+    expect(process.issued_attestations.find_by(voter_id: "0xaa").issued_count).to eq(2)
+  end
+
   it "refuses an unknown census mode" do
     process.census_mode = "other"
     expect(process).not_to be_valid

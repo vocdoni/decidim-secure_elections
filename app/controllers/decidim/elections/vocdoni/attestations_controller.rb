@@ -32,11 +32,9 @@ module Decidim
           return head(:unauthorized) unless session_authenticated? && voter_uid.present?
           return head(:not_found) unless attested_process&.published?
 
-          voter_id = Decidim::Elections::Vocdoni::Attestation.bytes_to_hex(attested_process.voter_id_for(voter_uid))
-          issued = attested_process.issued_attestations.where(voter_id:).pick(:issued_count).to_i
-          return head(:too_many_requests) if issued >= MAX_ATTESTATIONS_PER_VOTER
-
-          render json: VoterAttestation.new(attested_process, voter_uid).call
+          render json: VoterAttestation.new(attested_process, voter_uid, cap: MAX_ATTESTATIONS_PER_VOTER).call
+        rescue VoterAttestation::CapReached
+          head :too_many_requests
         rescue VoterAttestation::NoContact
           head :unprocessable_content
         rescue Decidim::Elections::Vocdoni::ApiError

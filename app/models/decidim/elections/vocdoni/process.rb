@@ -136,16 +136,22 @@ module Decidim
           OpenSSL::HMAC.digest("SHA256", secret, preimage)
         end
 
-        # Counts one more attestation issued to voter_id (0x hex), one row per voterId.
-        def record_issued_attestation!(voter_id)
+        # Counts one more attestation issued to voter_id (0x hex), one row per voterId. With a cap, the
+        # check and the increment are one statement, so concurrent requests cannot overshoot it.
+        #
+        # @return [Boolean] false when voter_id already reached the cap and nothing was counted.
+        def record_issued_attestation!(voter_id, cap: nil)
           now = Time.current
-          IssuedAttestation.upsert( # rubocop:disable Rails/SkipsModelValidations -- voter_id is always present here
-            { decidim_vocdoni_process_id: id, voter_id:, issued_count: 1, created_at: now, updated_at: now },
-            unique_by: :index_vocdoni_attestations_on_process_and_voter,
-            on_duplicate: Arel.sql(
-              "issued_count = decidim_vocdoni_attestations.issued_count + 1, updated_at = EXCLUDED.updated_at"
-            )
-          )
+          sql = <<~SQL.squish
+            INSERT INTO decidim_vocdoni_attestations (decidim_vocdoni_process_id, voter_id, issued_count, created_at, updated_at)
+            VALUES (?, ?, 1, ?, ?)
+            ON CONFLICT (decidim_vocdoni_process_id, voter_id) DO UPDATE
+            SET issued_count = decidim_vocdoni_attestations.issued_count + 1, updated_at = EXCLUDED.updated_at
+            #{"WHERE decidim_vocdoni_attestations.issued_count < ?" if cap}
+            RETURNING id
+          SQL
+          binds = [id, voter_id, now, now, cap].compact
+          IssuedAttestation.connection.exec_query(IssuedAttestation.sanitize_sql_array([sql, *binds])).any?
         end
 
         # Per-question upstream ids and chain-side statuses. Written by

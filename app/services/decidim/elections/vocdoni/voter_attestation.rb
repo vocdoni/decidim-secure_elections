@@ -22,16 +22,21 @@ module Decidim
           CensusMember.email(VoterCredential.subject_for(election, voter_uid))
         end
 
-        def initialize(process, voter_uid)
+        # Raised when the voter already holds `cap` attestations for the election.
+        class CapReached < StandardError; end
+
+        def initialize(process, voter_uid, cap: nil)
           @process = process
           @voter_uid = voter_uid
+          @cap = cap
         end
 
-        # Signs a fresh attestation and counts it as issued.
+        # Counts a fresh attestation as issued and signs it; the count comes first so the cap also
+        # bounds the signing work.
         #
         # @return [Hash] the auth/0 body: `attestation`, `signature` and, with email 2FA, the
         #   `contact` and `salt` that open its contactHash.
-        # @raise [NoContact, Decidim::Elections::Vocdoni::ApiError]
+        # @raise [NoContact, CapReached, Decidim::Elections::Vocdoni::ApiError]
         def call
           contact, salt = contact_and_salt
           message = {
@@ -40,15 +45,17 @@ module Decidim
             contact_hash: contact ? Attestation.contact_hash(salt, "email", contact) : ZERO_HASH,
             expires_at: (Time.current + TTL).to_i
           }
-          signature = Attestation.sign(process.signer_private_key, Attestation.digest(verifying_contract, **message))
-          process.record_issued_attestation!(Attestation.bytes_to_hex(message[:voter_id]))
+          digest = Attestation.digest(verifying_contract, **message)
+          raise CapReached unless process.record_issued_attestation!(Attestation.bytes_to_hex(message[:voter_id]), cap:)
+
+          signature = Attestation.sign(process.signer_private_key, digest)
 
           body(message, signature, contact, salt)
         end
 
         private
 
-        attr_reader :process, :voter_uid
+        attr_reader :process, :voter_uid, :cap
 
         def contact_and_salt
           return [nil, nil] unless Array(process.metadata.to_h.dig("settings", "twofa_fields")).include?("email")
