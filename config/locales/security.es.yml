@@ -10,6 +10,15 @@ es:
           dashboard:
             security:
               title: "Tu configuración de seguridad"
+            census_snapshot:
+              title: "Censo para el voto secreto"
+              count:
+                one: "Cuando empiece la votación, se registrarán para el voto secreto los participantes que haya en el censo en ese momento. Ahora mismo hay 1."
+                other: "Cuando empiece la votación, se registrarán para el voto secreto los participantes que haya en el censo en ese momento. Ahora mismo hay %{count}."
+              empty: "El censo está vacío: el voto secreto no podrá empezar hasta que haya al menos un participante."
+              limitations: "Por las limitaciones actuales de cómo está implementado el voto secreto:"
+              late_joiners: "Los participantes que entren en el censo después de que empiece la votación (por ejemplo, porque se verifican más tarde) no podrán votar en esta votación."
+              verify_before_start: "Los participantes necesitan una cuenta y las verificaciones que pide este censo (como el censo de la organización) antes de que empiece la votación."
           security:
             show:
               title: "Seguridad"
@@ -37,7 +46,7 @@ es:
                   powered_by: "Impulsado por el protocolo de votación Vocdoni."
                   guide_url: ""
                   guide_link: "Lee la guía completa"
-                good_to_know_html: "<strong>Bueno saber:</strong> puedes cambiar esta elección hasta que la votación esté publicada. Las personas votantes no notarán ninguna diferencia, excepto el código de un solo uso si lo activas."
+                good_to_know_html: "<strong>Bueno saber:</strong> puedes cambiar esta elección hasta que empiece la votación. Las personas votantes no notarán ninguna diferencia, excepto el código de un solo uso si lo activas."
               two_factor:
                 legend: "Confirma la identidad de los votantes con un código de un solo uso"
                 lead: "Cada votante recibe un código de un solo uso cuando abre la papeleta y debe introducirlo antes de votar. Evita que alguien vote en nombre de otra persona y hace el resultado más difícil de impugnar."

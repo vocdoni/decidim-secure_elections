@@ -15,6 +15,15 @@ en:
           dashboard:
             security:
               title: "Your security configuration"
+            census_snapshot:
+              title: "Census for the secret vote"
+              count:
+                one: "When voting starts, the participants in the census at that moment will be registered for the secret vote. Right now there is 1."
+                other: "When voting starts, the participants in the census at that moment will be registered for the secret vote. Right now there are %{count}."
+              empty: "The census is empty right now: the secret vote cannot start until at least one participant is in it."
+              limitations: "Due to current limitations on how the secret vote is implemented:"
+              late_joiners: "Participants who join the census after voting starts (for example, by getting verified later) will not be able to vote in this election."
+              verify_before_start: "Participants need an account and the verifications this census requires (such as the organization's census) before voting starts."
           # The Security tab. Written for the person running the vote, not for
           # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
           # vote types are "Simple vote" (any standard Decidim census) and
@@ -48,7 +57,7 @@ en:
                   # rendered when this has a value.
                   guide_url: ""
                   guide_link: "Read the full guide"
-                good_to_know_html: "<strong>Good to know:</strong> you can change this choice until the election is published. Voters won't notice any difference, except the one-time code if you enable it."
+                good_to_know_html: "<strong>Good to know:</strong> you can change this choice until voting starts. Voters won't notice any difference, except the one-time code if you enable it."
               two_factor:
                 legend: "Confirm voters' identity with a one-time code"
                 lead: "Each voter receives a one-time code when they open the ballot and types it in before voting. It stops someone voting on behalf of another person and makes the result harder to dispute."

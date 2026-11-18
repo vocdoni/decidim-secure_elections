@@ -121,6 +121,100 @@ module Decidim
           end
         end
       end
+
+      # The "Census for the secret vote" card: publishing registers the census
+      # as it is, so the admin sees how many voters that is beforehand.
+      describe "Admin Dashboard census snapshot card" do
+        let(:organization) { component.organization }
+        let(:component) { create(:elections_component) }
+        let(:admin) { create(:user, :admin, :confirmed, organization:) }
+        let(:headers) { { "HOST" => organization.host } }
+        let(:dashboard_path) { Decidim::EngineRouter.admin_proxy(component).dashboard_election_path(election) }
+        let(:html) { response.parsed_body }
+        let(:snapshot) { html.at_css(".item__edit-form > .vocdoni-census-snapshot") }
+        let(:scope) { "decidim.elections.vocdoni.admin.dashboard.census_snapshot" }
+
+        before do
+          login_as admin, scope: :user
+          get dashboard_path, headers:
+        end
+
+        context "when the election opted in and has voters" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, election: record)
+            end
+          end
+
+          it "renders after the Census card with the count and the late joiners note" do
+            expect(response).to have_http_status(:ok)
+            expect(snapshot["data-census-count"]).to eq("3")
+            expect(snapshot.previous_element.text).to include(I18n.t("decidim.elections.admin.dashboard.census.title"))
+
+            text = snapshot.text.squish
+            expect(text).to include(I18n.t("#{scope}.count", count: 3))
+            expect(text).to include(I18n.t("#{scope}.late_joiners"))
+            expect(snapshot.at_css(".callout.alert")).to be_nil
+          end
+        end
+
+        context "when the election opted in with an empty registered participants census" do
+          let!(:election) do
+            create(:election, component:, census_manifest: "internal_users",
+                              census_settings: { "authorization_handlers" => { "csv_census" => { "options" => {} } } }).tap do |record|
+              create(:vocdoni_process, election: record)
+            end
+          end
+
+          it "warns that the secret vote cannot start and asks for verifications first" do
+            expect(snapshot["data-census-count"]).to eq("0")
+            expect(snapshot.at_css(".callout.alert").text.squish).to eq(I18n.t("#{scope}.empty"))
+
+            text = snapshot.text.squish
+            expect(text).to include(I18n.t("#{scope}.limitations"))
+            expect(text).to include(I18n.t("#{scope}.verify_before_start"))
+          end
+        end
+
+        context "when the election is published but voting has not started" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, :published, :scheduled, component:).tap do |record|
+              create_list(:election_question, 1, :with_response_options, election: record)
+              create(:vocdoni_process, election: record)
+            end
+          end
+
+          it "renders after the security card, without the verifications item for a CSV census" do
+            expect(response).to have_http_status(:ok)
+            expect(snapshot["data-census-count"]).to eq("3")
+            expect(snapshot.previous_element["class"]).to include("vocdoni-security-summary")
+            expect(snapshot.text.squish).not_to include(I18n.t("#{scope}.verify_before_start"))
+          end
+        end
+
+        context "when voting has started" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, :published, :ongoing, component:).tap do |record|
+              create_list(:election_question, 1, :with_response_options, election: record)
+              create(:vocdoni_process, election: record)
+            end
+          end
+
+          it "does not render the card" do
+            expect(response).to have_http_status(:ok)
+            expect(snapshot).to be_nil
+          end
+        end
+
+        context "when the election did not opt in" do
+          let!(:election) { create(:election, :with_token_csv_census, component:) }
+
+          it "does not render the card" do
+            expect(response).to have_http_status(:ok)
+            expect(snapshot).to be_nil
+          end
+        end
+      end
     end
   end
 end

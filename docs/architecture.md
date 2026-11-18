@@ -199,7 +199,12 @@ back.
 ## 4c. Census creation — Decidim owns it
 
 The admin never sees or types a Vocdoni id. `PublishElectionJob` collects voters from
-the Decidim side and builds the whole upstream chain itself.
+the Decidim side and builds the whole upstream chain itself, when voting starts (at
+`start_at`, or when the admin clicks Start), not when the election is published. The
+roster is a snapshot taken at that moment: a participant who joins the census later
+(e.g. verified afterwards) is not in the Vocdoni census and cannot vote, although
+Decidim's own census check lets them into the booth. The Dashboard's "Census for the
+secret vote" card tells the admin so until voting starts.
 
 The roster is the election's upstream census (`election.census`), read through the
 census manifest's own query, so it follows Decidim's census rules:
@@ -210,8 +215,8 @@ census manifest's own query, so it follows Decidim's census rules:
 - `token_csv`: the imported `Decidim::Elections::Voter` rows. Their access `token`
   never leaves Decidim.
 
-Publishing waits for `election.census_ready?`, the same gate upstream puts on the
-publish button.
+The push re-checks `election.census_ready?`, the same gate upstream puts on the
+publish button, because the census can change between Publish and the start.
 
 Each member carries `memberNumber` = `VoterCredential.for(election, subject)`: the hex
 HMAC-SHA256 of `"<election id>:<user id>"` (CSV rows: `"<election id>:voter:<row id>"`),
@@ -246,7 +251,7 @@ Endpoints, in order:
 2. GET  /organizations/{orgAddress}/members?page=N&limit=100
      paginated read-back to map each credential to the upstream `memberId` — the
      import does not return them. Capped at 600 pages (the SaaS's 50,000-member
-     memberbase cap). A voter missing after the push fails the publish.
+     memberbase cap). A voter missing after the push fails the job.
 3. POST /organizations/{orgAddress}/groups
      { title, description?, memberIds: [...] }        → { id }
 4. POST /processes/census/validation
