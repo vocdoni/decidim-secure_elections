@@ -46,6 +46,14 @@ module Decidim
           expect(item).to include("no vote is recorded")
         end
 
+        it "renders the page inside main" do
+          stub_participant([])
+
+          get(path, headers:)
+
+          expect(html.at_css("main [data-attestation-check]")).to be_present
+        end
+
         it "says so when the SaaS signed nothing for the voter" do
           stub_participant([])
 

@@ -14,6 +14,9 @@ module Decidim
         MAX_ATTESTATIONS_PER_VOTER = 50
         include Decidim::Elections::UsesCensusAccess
 
+        # Like the booth and the census check: a voter page of the election, with its content in `<main>`.
+        layout "decidim/election_booth"
+
         helper_method :signed_questions, :check_state
 
         def show
