@@ -37,10 +37,21 @@ en:
                   other: "When voting starts, the declared maximum is set to the census size at that moment plus 20%, rounded up: %{count} voters with the current census."
             attestations:
               title: "Attestations"
-              issued: "Issued: %{total} attestations to %{voters} voters."
-              published: "Published by Vocdoni: %{records} signed voters, out of a declared maximum of %{max}."
-              unknown: "Signed voters Decidim never attested: %{voters}."
-              per_question: "%{question}: %{signed} signed voters."
+              issued:
+                one: "Issued: 1 attestation to %{voters}."
+                other: "Issued: %{count} attestations to %{voters}."
+              voters:
+                one: "1 voter"
+                other: "%{count} voters"
+              published:
+                one: "Published by Vocdoni: 1 signed voter, out of a declared maximum of %{max}."
+                other: "Published by Vocdoni: %{count} signed voters, out of a declared maximum of %{max}."
+              unknown:
+                one: "Signed voters Decidim never attested: 1."
+                other: "Signed voters Decidim never attested: %{count}."
+              per_question:
+                one: "%{question}: 1 signed voter."
+                other: "%{question}: %{count} signed voters."
               unavailable:
                 pending: "Vocdoni publishes the signed voters once every question has ended."
                 error: "The signed voters cannot be read from Vocdoni right now."

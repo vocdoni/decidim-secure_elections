@@ -32,10 +32,21 @@ ca:
                   other: "Quan comenci la votació, el màxim declarat serà la mida del cens en aquell moment més un 20 %, arrodonida cap amunt: amb el cens actual, %{count} votants."
             attestations:
               title: "Atestacions"
-              issued: "Emeses: %{total} atestacions a %{voters} votants."
-              published: "Publicats per Vocdoni: %{records} votants signats, d'un màxim declarat de %{max}."
-              unknown: "Votants signats que Decidim no ha atestat mai: %{voters}."
-              per_question: "%{question}: %{signed} votants signats."
+              issued:
+                one: "Emesa: 1 atestació a %{voters}."
+                other: "Emeses: %{count} atestacions a %{voters}."
+              voters:
+                one: "1 votant"
+                other: "%{count} votants"
+              published:
+                one: "Publicat per Vocdoni: 1 votant signat, d'un màxim declarat de %{max}."
+                other: "Publicats per Vocdoni: %{count} votants signats, d'un màxim declarat de %{max}."
+              unknown:
+                one: "Votants signats que Decidim no ha atestat mai: 1."
+                other: "Votants signats que Decidim no ha atestat mai: %{count}."
+              per_question:
+                one: "%{question}: 1 votant signat."
+                other: "%{question}: %{count} votants signats."
               unavailable:
                 pending: "Vocdoni publica els votants signats quan han acabat totes les preguntes."
                 error: "Ara mateix no es poden llegir els votants signats de Vocdoni."

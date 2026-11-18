@@ -32,10 +32,21 @@ es:
                   other: "Cuando empiece la votación, el máximo declarado será el tamaño del censo en ese momento más un 20 %, redondeado hacia arriba: con el censo actual, %{count} votantes."
             attestations:
               title: "Atestaciones"
-              issued: "Emitidas: %{total} atestaciones a %{voters} votantes."
-              published: "Publicados por Vocdoni: %{records} votantes firmados, de un máximo declarado de %{max}."
-              unknown: "Votantes firmados que Decidim nunca atestó: %{voters}."
-              per_question: "%{question}: %{signed} votantes firmados."
+              issued:
+                one: "Emitida: 1 atestación a %{voters}."
+                other: "Emitidas: %{count} atestaciones a %{voters}."
+              voters:
+                one: "1 votante"
+                other: "%{count} votantes"
+              published:
+                one: "Publicado por Vocdoni: 1 votante firmado, de un máximo declarado de %{max}."
+                other: "Publicados por Vocdoni: %{count} votantes firmados, de un máximo declarado de %{max}."
+              unknown:
+                one: "Votantes firmados que Decidim nunca atestó: 1."
+                other: "Votantes firmados que Decidim nunca atestó: %{count}."
+              per_question:
+                one: "%{question}: 1 votante firmado."
+                other: "%{question}: %{count} votantes firmados."
               unavailable:
                 pending: "Vocdoni publica los votantes firmados cuando han terminado todas las preguntas."
                 error: "Ahora mismo no se pueden leer los votantes firmados de Vocdoni."
