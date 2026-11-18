@@ -96,6 +96,29 @@ module Decidim
           end
         end
 
+        context "when the voter_uid belongs to another election's census" do
+          let(:voter) do
+            Decidim::Elections::Voter.create!(election: create(:election, component:), data: { "email" => "voter@example.org", "token" => "t0k3n" })
+          end
+
+          it "refuses with email 2FA" do
+            post(path, headers:)
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(process.issued_attestations).to be_empty
+          end
+        end
+
+        context "when the voter_uid is a user of another organization" do
+          let(:voter_uid) { create(:user, :confirmed).to_global_id.to_s }
+
+          it "refuses with email 2FA" do
+            post(path, headers:)
+
+            expect(response).to have_http_status(:unprocessable_content)
+          end
+        end
+
         context "when the election does not use an attested census" do
           before { process.update!(census_mode: "memberbase") }
 

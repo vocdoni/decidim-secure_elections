@@ -15,13 +15,11 @@ module Decidim
         # Raised when the election sends codes by email and the voter has no email on file.
         class NoContact < StandardError; end
 
-        # The email a census voter is reached at: the account email of a user, the `email` column
-        # of a census row.
-        def self.contact_email(voter_uid)
-          case (record = GlobalID::Locator.locate(voter_uid.to_s))
-          when Decidim::User then record.email
-          when Decidim::Elections::Voter then record.data.to_h["email"]
-          end
+        # The email a census voter is reached at, read the way the booth config reads it so the
+        # attested contact and the one the booth shows match. A voter_uid outside the election's
+        # census (another organization's user, another election's row) has no contact.
+        def self.contact_email(election, voter_uid)
+          CensusMember.email(VoterCredential.subject_for(election, voter_uid))
         end
 
         def initialize(process, voter_uid)
@@ -55,7 +53,7 @@ module Decidim
         def contact_and_salt
           return [nil, nil] unless Array(process.metadata.to_h.dig("settings", "twofa_fields")).include?("email")
 
-          email = self.class.contact_email(voter_uid)
+          email = self.class.contact_email(process.election, voter_uid)
           raise NoContact if email.blank?
 
           [Attestation.canonical_email(email), SecureRandom.bytes(Attestation::SALT_BYTES)]

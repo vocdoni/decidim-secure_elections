@@ -14,8 +14,16 @@ module Decidim
         let(:row) { Decidim::Elections::Voter.create!(election:, data: { "email" => "row@example.org", "token" => "t" }) }
 
         it "reaches a user at the account email and a census row at its email column" do
-          expect(described_class.contact_email(user.to_global_id.to_s)).to eq(user.email)
-          expect(described_class.contact_email(row.to_global_id.to_s)).to eq("row@example.org")
+          expect(described_class.contact_email(election, user.to_global_id.to_s)).to eq(user.email)
+          expect(described_class.contact_email(election, row.to_global_id.to_s)).to eq("row@example.org")
+        end
+
+        it "has no contact for a voter outside the election's census" do
+          outsider = create(:user, :confirmed)
+          other_row = Decidim::Elections::Voter.create!(election: create(:election, component:), data: { "email" => "other@example.org" })
+
+          expect(described_class.contact_email(election, outsider.to_global_id.to_s)).to be_nil
+          expect(described_class.contact_email(election, other_row.to_global_id.to_s)).to be_nil
         end
 
         it "hands the booth of an attested election the attestation URL and the row's contact" do
