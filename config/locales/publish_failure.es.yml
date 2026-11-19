@@ -5,6 +5,17 @@ es:
         admin:
           dashboard:
             publish_failure:
-              title: "No se ha podido publicar la votaci'on en la blockchain"
+              title: "No se ha podido publicar la votación en la blockchain"
               error: "Error de Vocdoni: %{message}"
-              hint: "Comprueba la configuraci'on de seguridad y vuelve a publicar, o contacta con el soporte de Vocdoni."
+              hint: "Comprueba la configuración de seguridad y vuelve a intentarlo, o contacta con el soporte de Vocdoni."
+              billing: "La integración con Vocdoni de esta plataforma no tiene crédito para publicar esta votación."
+              billing_with_amount: "La integración con Vocdoni de esta plataforma no tiene crédito para publicar esta votación (cuesta %{amount})."
+              billing_top_up_html: "Recarga el monedero del integrador en la %{link} y vuelve a intentarlo."
+              billing_platform: "plataforma de Vocdoni"
+              billing_top_up: "Recarga el monedero del integrador de Vocdoni que usa esta plataforma y vuelve a intentarlo."
+              billing_ask_admin: "Pide al administrador de tu organización que recargue el crédito de Vocdoni y vuelve a intentarlo."
+              retry: "Reintentar la publicación"
+          publish_retries:
+            create:
+              success: "Se ha reintentado la publicación. El panel se actualizará cuando Vocdoni la confirme."
+              not_failed: "Esta votación no tiene ninguna publicación fallida que reintentar."

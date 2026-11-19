@@ -51,6 +51,18 @@ module Decidim
 
         def failed? = state == "failed"
 
+        # SaaS 402 codes for a publish the integrator's wallet cannot pay:
+        # wallet short (40175), payment required (40178), spend cap (40183).
+        BILLING_ERROR_CODES = [40_175, 40_178, 40_183].freeze
+
+        def billing_failure? = BILLING_ERROR_CODES.include?(metadata.to_h.dig("last_error", "code").to_i)
+
+        # What the refused publish costs, in euros, when the SaaS said so.
+        def billing_required_eur
+          cents = metadata.to_h.dig("last_error", "data", "requiredCents")
+          cents.to_i / 100.0 if cents.to_i.positive?
+        end
+
         # Per-question upstream ids and chain-side statuses. Written by
         # PublishElectionJob after the process is on chain; read by the voter
         # booth and the results-sync job.

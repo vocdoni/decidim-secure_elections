@@ -224,11 +224,16 @@ module Decidim
         let(:dashboard_path) { Decidim::EngineRouter.admin_proxy(component).dashboard_election_path(election) }
         let(:html) { response.parsed_body }
         let(:failure_alert) { html.at_css(".vocdoni-publish-failure") }
+        let(:platform_url) { nil }
+        let(:scope) { "decidim.elections.vocdoni.admin.dashboard.publish_failure" }
 
         before do
+          Decidim::Elections::Vocdoni.platform_url = platform_url
           login_as admin, scope: :user
           get dashboard_path, headers:
         end
+
+        after { Decidim::Elections::Vocdoni.platform_url = nil }
 
         context "when the vocdoni process failed" do
           let!(:election) do
@@ -241,6 +246,58 @@ module Decidim
             expect(response).to have_http_status(:ok)
             expect(failure_alert).to be_present
             expect(failure_alert.text).to include("census size exceeds email allowance")
+          end
+
+          it "offers to retry the publication" do
+            retry_path = Decidim::EngineRouter.admin_proxy(component).election_publish_retry_path(election)
+            expect(failure_alert.at_css("form[action='#{retry_path}'] button").text).to include("Retry publication")
+          end
+        end
+
+        context "when the publish was refused for lack of credit" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, :failed,
+                     election: record,
+                     last_error: "insufficient integrator wallet balance",
+                     metadata: { "last_error" => { "code" => 40_175, "data" => { "requiredCents" => 10_341, "availableCents" => 0 } } })
+            end
+          end
+
+          let(:action) { failure_alert.at_css(".vocdoni-publish-failure__billing-action") }
+
+          it "explains the billing problem with the amount instead of the raw error" do
+            expect(failure_alert.at_css(".vocdoni-publish-failure__billing").text).to include("no credit left", "103.41")
+            expect(failure_alert.text).not_to include("insufficient integrator wallet balance")
+            expect(failure_alert.text).not_to include("support")
+          end
+
+          context "with a known Vocdoni platform" do
+            let(:platform_url) { "https://platform.vocdoni.io" }
+
+            it "sends the organization admin to top up the wallet there" do
+              link = action.at_css("a[href='https://platform.vocdoni.io']")
+              expect(link.text).to eq(I18n.t("#{scope}.billing_platform"))
+              expect(link["target"]).to eq("_blank")
+            end
+          end
+
+          context "without a known Vocdoni platform" do
+            it "asks the organization admin to top up the wallet" do
+              expect(action.text.squish).to eq(I18n.t("#{scope}.billing_top_up"))
+              expect(action.at_css("a")).to be_nil
+            end
+          end
+
+          context "when the viewer administers only the space" do
+            let(:platform_url) { "https://platform.vocdoni.io" }
+            let(:admin) { create(:process_admin, :confirmed, participatory_process: component.participatory_space) }
+
+            it "sends them to their organization admin, without the platform link" do
+              expect(response).to have_http_status(:ok)
+              expect(action.text.squish).to eq(I18n.t("#{scope}.billing_ask_admin"))
+              expect(action.at_css("a")).to be_nil
+            end
           end
         end
 
