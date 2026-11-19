@@ -328,7 +328,10 @@ module Decidim
         #
         # @param body [Object] the parsed response body
         # @return [Integer, nil]
+        # The SaaS sends its JSON errors as text/plain, which the JSON
+        # middleware leaves unparsed.
         def error_code(body)
+          body = parse_error_json(body) unless body.is_a?(Hash)
           return nil unless body.is_a?(Hash)
 
           code = body["code"]

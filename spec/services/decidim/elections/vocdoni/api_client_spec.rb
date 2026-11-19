@@ -227,6 +227,19 @@ module Decidim
             expect(error.message).to include("user not authorized")
           end
 
+          it "reads the code of a JSON error sent as text/plain, as the SaaS does" do
+            stub_request(:post, "#{api_url}/processes/#{process_id}/publish")
+              .to_return(status: 402,
+                         body: { error: "managed organization spend cap reached", code: 40_183,
+                                 data: { requiredCents: 1980 } }.to_json,
+                         headers: { "Content-Type" => "text/plain; charset=utf-8" })
+
+            error = captured_api_error { client.post("/processes/#{process_id}/publish", body: {}) }
+
+            expect(error.status).to eq(402)
+            expect(error.code).to eq(40_183)
+          end
+
           it "copes with an empty error body" do
             stub_request(:get, "#{api_url}/processes/#{process_id}/validation").to_return(status: 404, body: "")
 

@@ -113,12 +113,13 @@ module Decidim
         # its wallet, for each SaaS base that has one.
         PLATFORMS = {
           "https://saas-api.vocdoni.net" => "https://platform.vocdoni.io",
-          "https://saas-api-stg.vocdoni.net" => "https://platform-stg.vocdoni.io"
+          "https://saas-api-stg.vocdoni.net" => "https://platform-stg.vocdoni.io",
+          "https://saas-api-dev.vocdoni.net" => "https://app-dev.vocdoni.io/integrators"
         }.freeze
 
         # Where an organization admin tops up the integrator wallet. Derived
         # from `api_url` like `explorer_url`; nil for a base with no known
-        # platform (dev, self-hosted) unless `VOCDONI_PLATFORM_URL` is set.
+        # platform (self-hosted) unless `VOCDONI_PLATFORM_URL` is set.
         def platform_url
           @platform_url ||= ENV.fetch("VOCDONI_PLATFORM_URL", nil).presence ||
                             PLATFORMS[api_url.to_s.sub(%r{/+\z}, "")]
