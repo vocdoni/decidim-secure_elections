@@ -13,9 +13,10 @@ module Decidim
         # {SecurityController}.
         class PublishRetriesController < ::Decidim::Elections::Admin::ApplicationController
           def create
-            # Not :publish: upstream denies it once the election is published
-            # in Decidim, which is exactly when a Vocdoni push has failed.
-            enforce_permission_to(:dashboard, :election, election:)
+            # A write permission, since a retry spends integrator credit. Not
+            # :publish nor :update :census: upstream denies both once the
+            # election is published in Decidim, exactly when a push has failed.
+            enforce_permission_to(:update, :election, election:)
 
             process = election.vocdoni_process
             if process&.failed?
