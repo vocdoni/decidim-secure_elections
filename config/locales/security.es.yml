@@ -90,8 +90,3 @@ es:
             update:
               success: "Configuración de seguridad actualizada."
               invalid: "No se ha podido guardar la configuración de seguridad. Revisa los errores que aparecen a continuación."
-        booth:
-          launcher:
-            help_html: "Tu voto se emite mediante la tecnología segura de Vocdoni, que garantiza el anonimato y la verificabilidad."
-            enter: "Abrir la cabina de votación"
-            not_ready: "Esta elección todavía no está lista para aceptar votos en la red. Inténtalo de nuevo en unos momentos."

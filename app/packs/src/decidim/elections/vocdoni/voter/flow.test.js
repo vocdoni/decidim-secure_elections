@@ -30,6 +30,24 @@ import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
 const PROCESS_ID = "6a67ab45622d94e7c9a192a0";
 
 /**
+ * The body Decidim's attestation endpoint returns: with 2FA it also carries the
+ * contact the code goes to and the salt that opens its contactHash.
+ *
+ * @param {string|null} [contact] - the attested contact, none without 2FA.
+ * @returns {Object} the auth/0 body.
+ */
+const attested = (contact = null) => {
+  const body = {
+    attestation: { processId: PROCESS_ID, voterId: "ab".repeat(32), contactHash: "cd".repeat(32), expiresAt: 1762700000 },
+    signature: "ef".repeat(65)
+  };
+
+  return contact
+    ? { ...body, contact, salt: "01".repeat(32) }
+    : body;
+};
+
+/**
  * An error shaped like the ones `@vocdoni/api-client` throws, so the classifier
  * is exercised against the real body layout rather than a convenient one.
  *
@@ -54,13 +72,12 @@ const newFlow = () => createVoterFlow({ apiUrl: "https://api.test", processId: P
  * Loads a process whose census declares `twoFaFields`.
  *
  * @param {string[]} twoFaFields - the census `twoFaFields`.
- * @param {string[]} [authFields] - the census `authFields`.
  * @returns {Promise<Object>} the flow, with its process already read.
  */
-const startFlow = async (twoFaFields, authFields = ["memberNumber"]) => {
+const startFlow = async (twoFaFields) => {
   mockElections.get.mockResolvedValue({
     chainId: "vocdoni/LTS/1.2",
-    census: { authFields, twoFaFields }
+    census: { twoFaFields }
   });
 
   const flow = newFlow();
@@ -81,23 +98,14 @@ describe("an auth-only census", () => {
 
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
 
-    await expect(flow.authenticate({ memberNumber: "1001" })).resolves.toEqual({
+    await expect(flow.authenticate(attested())).resolves.toEqual({
       needsOtp: false,
       channel: null
     });
 
-    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, { memberNumber: "1001" });
+    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, attested());
     expect(mockProcesses.authStep1).not.toHaveBeenCalled();
     expect(flow.verified).toBe(true);
-  });
-
-  it("sends no contact field, which the CSP would only ignore", async () => {
-    const flow = await startFlow([]);
-
-    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
-    await flow.authenticate({ memberNumber: "1001" }, { channel: "email", contact: "carol@example.org" });
-
-    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, { memberNumber: "1001" });
   });
 
   it("can go straight to the ballot", async () => {
@@ -106,7 +114,7 @@ describe("an auth-only census", () => {
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
     mockProcesses.check.mockResolvedValue({ belongsToProcess: true, weight: "01", questions: [] });
 
-    await flow.authenticate({ memberNumber: "1001" });
+    await flow.authenticate(attested());
 
     await expect(flow.check()).resolves.toMatchObject({ belongsToProcess: true });
     expect(mockProcesses.check).toHaveBeenCalledWith(PROCESS_ID, { authToken: "tok" });
@@ -120,50 +128,38 @@ describe("an auth-only census", () => {
     await flow.loadProcess();
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
 
-    await expect(flow.authenticate({ memberNumber: "1001" })).resolves.toMatchObject({ needsOtp: false });
+    await expect(flow.authenticate(attested())).resolves.toMatchObject({ needsOtp: false });
     expect(flow.verified).toBe(true);
   });
 });
 
 describe("a two-factor census", () => {
-  it("reports the channels the census declares", async () => {
-    expect((await startFlow(["email"])).twoFaChannels()).toEqual(["email"]);
-    expect((await startFlow(["phone"])).twoFaChannels()).toEqual(["phone"]);
-    expect((await startFlow(["email", "phone"])).twoFaChannels()).toEqual(["email", "phone"]);
-    expect((await startFlow(["email", "phone"])).offersChannelChoice()).toBe(true);
-    expect((await startFlow(["email"])).offersChannelChoice()).toBe(false);
+  it("knows from the census whether a code is due", async () => {
+    expect((await startFlow(["email"])).requiresOtp()).toBe(true);
+    expect((await startFlow(["phone"])).requiresOtp()).toBe(true);
+    expect((await startFlow([])).requiresOtp()).toBe(false);
   });
 
-  it("sends the contact alongside the credentials, which authStep0 demands", async () => {
+  it("sends the attestation with the contact and salt that open it", async () => {
     const flow = await startFlow(["email"]);
 
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
 
-    await expect(flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" })).resolves.toEqual({
+    await expect(flow.authenticate(attested("carol@example.org"))).resolves.toEqual({
       needsOtp: true,
       channel: "email"
     });
 
-    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, {
-      memberNumber: "2001",
-      email: "carol@example.org"
-    });
+    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, attested("carol@example.org"));
   });
 
-  it("uses the channel the voter picked when the census offers both", async () => {
-    const flow = await startFlow(["email", "phone"]);
+  it("sends the code by SMS on a phone census", async () => {
+    const flow = await startFlow(["phone"]);
 
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
 
-    await expect(flow.authenticate({ memberNumber: "2001" }, {
-      channel: "phone",
-      contact: "+34600000000"
-    })).resolves.toEqual({ needsOtp: true, channel: "phone" });
-
-    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, {
-      memberNumber: "2001",
-      phone: "+34600000000"
-    });
+    await expect(flow.authenticate(attested("+34600000000"))).resolves.toEqual({ needsOtp: true, channel: "phone" });
+    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, attested("+34600000000"));
   });
 
   // The single most dangerous property of this API: `check` answers
@@ -174,7 +170,7 @@ describe("a two-factor census", () => {
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
     mockProcesses.check.mockResolvedValue({ belongsToProcess: true, weight: "01", questions: [] });
 
-    await flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" });
+    await flow.authenticate(attested("carol@example.org"));
 
     expect(flow.authenticated).toBe(true);
     expect(flow.verified).toBe(false);
@@ -196,7 +192,7 @@ describe("a two-factor census", () => {
     mockProcesses.authStep1.mockResolvedValue({ authToken: "tok" });
     mockProcesses.check.mockResolvedValue({ belongsToProcess: true, weight: "01", questions: [] });
 
-    await flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" });
+    await flow.authenticate(attested("carol@example.org"));
     await flow.confirmOtp("123456");
 
     expect(mockProcesses.authStep1).toHaveBeenCalledWith(PROCESS_ID, {
@@ -215,7 +211,7 @@ describe("a two-factor census", () => {
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
     mockProcesses.authStep1.mockResolvedValue({});
 
-    await flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" });
+    await flow.authenticate(attested("carol@example.org"));
     await expect(flow.confirmOtp("123456")).resolves.toBeUndefined();
     expect(flow.verified).toBe(true);
   });
@@ -227,7 +223,7 @@ describe("a two-factor census", () => {
     mockProcesses.authStep1.mockResolvedValue({ authToken: "tok2" });
     mockProcesses.check.mockResolvedValue({ belongsToProcess: true, questions: [] });
 
-    await flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" });
+    await flow.authenticate(attested("carol@example.org"));
     await flow.confirmOtp("123456");
     await flow.check();
 
@@ -241,8 +237,8 @@ describe("a two-factor census", () => {
       apiError({ status: 404, code: 40029, message: "census participant not found" })
     );
 
-    await flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" });
-    await expect(flow.authenticate({ memberNumber: "9999" }, { contact: "carol@example.org" })).rejects.toBeDefined();
+    await flow.authenticate(attested("carol@example.org"));
+    await expect(flow.authenticate(attested("carol@example.org"))).rejects.toBeDefined();
 
     expect(flow.authenticated).toBe(false);
     expect(flow.verified).toBe(false);
@@ -256,7 +252,7 @@ describe("reset", () => {
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
     mockProcesses.authStep1.mockResolvedValue({ authToken: "tok" });
 
-    await flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" });
+    await flow.authenticate(attested("carol@example.org"));
     await flow.confirmOtp("123456");
     expect(flow.verified).toBe(true);
 

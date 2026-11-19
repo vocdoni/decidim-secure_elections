@@ -20,25 +20,14 @@ module Decidim
       # upstream view, the Dashboard, is shadowed for its own controller by
       # a pinned copy (see `extend_upstream`).
       #
-      # The voter-facing "engine" surface is deliberately tiny: the voting
-      # page is a static SPA under `public/vocdoni/` served by middleware
-      # (see the `static_voting_page` initializer), so nothing at request
-      # time depends on Rails. The engine also prepends two concerns onto
-      # upstream controllers to route voters through that SPA and to move
-      # the admin from Census straight to Security.
+      # Voters vote in Decidim's own booth, which runs the `vocdoni` voting
+      # backend (see `VotingBackend`); its browser side is the booth adapter
+      # bundle under `public/vocdoni/`, served by middleware (see the
+      # `static_booth_adapter` initializer). The engine also prepends concerns
+      # onto upstream controllers to keep voters off the server-side wizard
+      # and to move the admin from Census straight to Security.
       class Engine < ::Rails::Engine
         isolate_namespace Decidim::Elections::Vocdoni
-
-        # Where the static voting page is served from, relative to the
-        # application root. The file itself lives at `public/vocdoni/vote.html`
-        # inside this gem.
-        VOTE_PATH = "/vocdoni/vote.html"
-
-        # The address the same page used to have. Links to it were sent to
-        # real voters, so `public/vocdoni/booth.html` is still shipped — as a
-        # redirect that forwards the query string to `VOTE_PATH`. Nothing new
-        # points here.
-        LEGACY_VOTE_PATH = "/vocdoni/booth.html"
 
         initializer "decidim_elections_vocdoni.add_cells_view_paths" do
           Cell::ViewModel.view_paths << File.expand_path(
@@ -83,29 +72,14 @@ module Decidim
           Decidim.register_assets_path File.expand_path("app/packs", root)
         end
 
-        # The voting page is a self-contained static page shipped inside this
-        # gem: one HTML file, one JavaScript bundle, one stylesheet and one
-        # JSON file per locale, all under `public/` here. Serving them from
-        # the engine rather than expecting the host application to copy them
-        # into its own `public/` is what makes voting work the moment the gem
-        # is installed — no rake task, no `assets:precompile`, no manifest
-        # lookup.
+        # Serves the booth adapter bundle (`VotingBackend::ADAPTER_PATH`) from
+        # this gem's `public/`, so voting works the moment the gem is
+        # installed: no copy into the host's `public/`, no `assets:precompile`.
         #
-        #   GET /vocdoni/vote.html?v=<packed>
-        #
-        # `ActionDispatch::Static` (rather than `Rack::Static`) because it
-        # passes a request for a file that does not exist straight through to
-        # the application instead of answering 404, so mounting it cannot
-        # shadow a route. It also handles conditional GETs, which is what
-        # keeps a page updated by a gem upgrade from being served from a
-        # stale cache.
-        #
-        # Nothing here is served through a controller, so Decidim's
-        # `Content-Security-Policy` after_action does not apply to it. That
-        # is deliberate and necessary: the page talks to the Vocdoni API
-        # from the browser, which Decidim's default `connect-src 'self'`
-        # would block.
-        initializer "decidim_elections_vocdoni.static_voting_page" do |app|
+        # `ActionDispatch::Static` passes a request for a missing file through
+        # to the application, so it cannot shadow a route, and it answers
+        # conditional GETs, so a gem upgrade is not served from a stale cache.
+        initializer "decidim_elections_vocdoni.static_booth_adapter" do |app|
           app.config.middleware.use(
             ::ActionDispatch::Static,
             File.expand_path("public", root),
@@ -148,12 +122,9 @@ module Decidim
               Decidim::Elections::Vocdoni::CensusRedirectsToSecurity
             )
 
-            # Voter-side: whichever action of the votes controller the
-            # voter lands on, hand them off to the Vocdoni booth SPA when
-            # the election opted in. Otherwise the upstream per-question
-            # wizard renders — for Vocdoni elections that would let a voter
-            # drive Decidim's own ballot without ever touching the SaaS,
-            # which is not the intent.
+            # Voter-side: a Vocdoni election is voted only through the booth's
+            # `vocdoni` backend; where that is not active, a notice renders
+            # instead of upstream's wizard, which would never reach the SaaS.
             Decidim::Elections::VotesController.include(
               Decidim::Elections::Vocdoni::RedirectsVoterToBooth
             )

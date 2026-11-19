@@ -50,10 +50,11 @@ All notable changes to this module are documented here. The format follows
   either the SaaS or the Vochain node layer, so polling is the only option.
 - **`ApiClient`** — Ruby client for the Vocdoni SaaS REST API, no Node.js
   runtime on the server. Elections, organizations and async jobs surfaces.
-- **Static in-browser voting page** under `public/vocdoni/vote.html`, served by
-  middleware. Census authentication, ephemeral key generation, ballot encoding
-  and vote relay all run in the voter's browser against the Vocdoni API. The
-  Decidim server never sees a ballot.
+- **`vocdoni` voting backend** for Decidim's booth. Its adapter,
+  `public/vocdoni/booth-adapter.js`, is served by middleware; census
+  authentication, ephemeral key generation, ballot encoding and vote relay all
+  run in the voter's browser against the Vocdoni API. The Decidim server never
+  sees a ballot.
 - **`decidim_elections_vocdoni:create_organization`**,
   **`decidim_elections_vocdoni:doctor`** and
   **`decidim_elections_vocdoni:purge_stale_drafts`** rake tasks.
@@ -102,10 +103,6 @@ All notable changes to this module are documented here. The format follows
   the voter path uses only public and CSP-token routes.
 - `Decidim::Elections::Vocdoni.validate_configuration!` raises on an incomplete
   configuration instead of falling back to a default (test) chain.
-- The voting page talks only to an API on an allowed origin (the Vocdoni SaaS
-  bases it ships with, its own origin, or loopback), so a hand-crafted link on
-  the installation's own domain cannot turn the census form into a credential
-  collector.
 - Nothing from a voting session is written to storage, a cookie, the URL or a
   session — no auth token, no one-time code, no ballot.
 - Closing a question of a `per_question` election fails closed:

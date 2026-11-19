@@ -127,7 +127,9 @@ A successful publish looks like:
 
 ## 3. Voter flow (browser only)
 
-The sequence implemented in `app/packs/src/decidim/elections/vocdoni/voter/`:
+Voters vote in Decidim's own booth, which runs the `vocdoni` voting backend. Its
+browser side, `booth_adapter.js` in `app/packs/src/decidim/elections/vocdoni/voter/`,
+is bundled into `public/vocdoni/booth-adapter.js` and runs this sequence:
 
 ```
 1. client.elections.get(processId)              → chainId  (PUBLIC; never use client.info())
@@ -262,7 +264,7 @@ These override any assumption drawn from the SDK documentation.
    election. Upstream migrations touch upstream's tables, this migration touches ours,
    and both can advance independently.
 2. **Question type is per question, not per process.** Each question is its own
-   Vochain election and the voting page encodes a ballot per question, so the type
+   Vochain election and the booth encodes a ballot per question, so the type
    belongs to the question.
 3. **A vote is never linked to a voter.** The census authenticates against the CSP,
    which returns a blind signature; the ballot is then cast with an ephemeral key

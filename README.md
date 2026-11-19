@@ -2,8 +2,8 @@
 
 An optional security layer for the upstream [`decidim-elections`](https://github.com/decidim/decidim/tree/develop/decidim-elections)
 module: sends ballots to the [Vocdoni](https://vocdoni.io) voting network
-instead of storing them in the Decidim database, and hands voters to a static
-in-browser voting page that talks to Vocdoni directly.
+instead of storing them in the Decidim database. Voters vote in Decidim's own
+booth, whose `vocdoni` voting backend talks to Vocdoni from the browser.
 
 The gem is hosted at
 [vocdoni/decidim-secure_elections](https://github.com/vocdoni/decidim-secure_elections);
@@ -30,18 +30,19 @@ opt-in signal; upstream's own tables and models are not touched.
   census later can vote while that maximum has room. The one-time code goes
   by email or by SMS, never both; SMS needs each voter's phone in
   international format (`+34 600 123 456`), see `docs/architecture.md` §4c.
-- **On the voter side**, upstream's `Decidim::Elections::VotesController` is
-  hijacked for Vocdoni-backed elections: the voter is handed to the static
-  voting page served from `public/vocdoni/vote.html`, which does census
-  authentication, ballot encoding and vote relay in the browser against the
-  Vocdoni API.
+- **On the voter side**, Decidim's booth runs the `vocdoni` voting backend for
+  Vocdoni-backed elections: the booth adapter served from
+  `public/vocdoni/booth-adapter.js` does census authentication, ballot encoding
+  and vote relay in the browser against the Vocdoni API. Upstream's server-side
+  voting wizard never takes a ballot for these elections.
 
 The Rails server holds an integrator API key and does only *organiser* work.
 No ballot, no voting key and no API key ever leaves it or reaches the browser.
 
 ## Requirements
 
-- Decidim `~> 0.33` (with `decidim-elections`)
+- Decidim `~> 0.33` (with `decidim-elections`) with client-side voting backends
+  (`Decidim::Elections.voting_backends`), as in [vocdoni/decidim](https://github.com/vocdoni/decidim)
 - Ruby `~> 3.4`
 - PostgreSQL
 - Redis and an ActiveJob backend with a **running worker** listening on the
@@ -141,13 +142,13 @@ falling back to a test chain.
 | Gem name | `decidim-elections-vocdoni` |
 | Repository | `vocdoni/decidim-secure_elections` |
 | Sidecar table | `decidim_vocdoni_processes` |
-| Static voting page | `public/vocdoni/vote.html` (served by middleware) |
+| Booth adapter | `public/vocdoni/booth-adapter.js` (served by middleware) |
 | Background jobs | `PublishElectionJob`, `SyncProcessJob` (queue `:vocdoni`) |
 
-The static voting page is a committed build artefact under `public/vocdoni/`.
-Rebuild it with `npm run build:vote` and commit the result whenever anything
-under `app/packs/src/decidim/elections/vocdoni/voter/` or the voting-page
-strings in `config/locales/` change.
+The booth adapter is a committed build artefact under `public/vocdoni/`.
+Rebuild it with `npm run build:booth` and commit the result whenever anything
+under `app/packs/src/decidim/elections/vocdoni/voter/` or the npm dependencies
+change.
 
 ## Architecture
 

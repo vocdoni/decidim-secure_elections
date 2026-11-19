@@ -4,20 +4,13 @@ module Decidim
   module Elections
     module Vocdoni
       # Prepended onto upstream's `Decidim::Elections::VotesController` (see
-      # `engine.rb` — the `extend_upstream` initializer).
+      # the `extend_upstream` initializer in `engine.rb`).
       #
-      # For a Vocdoni-backed election the whole voting flow lives in the
-      # Vocdoni booth SPA (`/vocdoni/vote.html`), not in Decidim's own
-      # per-question ballot pages. Upstream's votes controller would happily
-      # walk the user through `#new` → `#show` → `#confirm` → `#cast`, which
-      # for us is wrong: no Decidim vote record ever gets cast for a
-      # Vocdoni election, and letting the wizard render would let a voter
-      # ballot silently through the wrong path.
-      #
-      # Every action gets rewritten to render the standalone booth page —
-      # except the receipt action, which is what the SPA sends the voter
-      # back to on `exit`. Receipt-time skip keeps upstream's own receipt
-      # rendering intact so the browser back-nav from the booth works.
+      # A Vocdoni election is voted only through Decidim's booth running the
+      # `vocdoni` voting backend: no Decidim vote record is ever cast for it.
+      # Where that backend is not active (a Decidim without client-side voting
+      # backends), every action but the receipt renders a notice instead, so
+      # upstream's server-side wizard never takes a ballot for the election.
       module RedirectsVoterToBooth
         extend ActiveSupport::Concern
 
@@ -30,7 +23,6 @@ module Decidim
         def render_vocdoni_booth_if_backed
           return if election.vocdoni_process.blank?
           return if action_name == "receipt"
-          # Decidim's own booth runs the `vocdoni` voting backend instead.
           return if Decidim::Elections::Vocdoni::VotingBackend.active_for?(election)
 
           render template: "decidim/elections/vocdoni/booth/show",

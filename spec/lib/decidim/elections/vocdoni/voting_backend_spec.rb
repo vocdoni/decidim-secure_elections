@@ -13,38 +13,12 @@ module Decidim
           end
         end
 
-        describe ".enabled?" do
-          context "when VOCDONI_INTEGRATED_BOOTH is not set" do
-            it "returns true" do
-              with_env("VOCDONI_INTEGRATED_BOOTH" => nil) do
-                expect(described_class.enabled?).to be(true)
-              end
-            end
-          end
-
-          context "when VOCDONI_INTEGRATED_BOOTH=true" do
-            it "returns true" do
-              with_env("VOCDONI_INTEGRATED_BOOTH" => "true") do
-                expect(described_class.enabled?).to be(true)
-              end
-            end
-          end
-
-          context "when VOCDONI_INTEGRATED_BOOTH=false" do
-            it "returns false (rollback switch)" do
-              with_env("VOCDONI_INTEGRATED_BOOTH" => "false") do
-                expect(described_class.enabled?).to be(false)
-              end
-            end
-          end
-        end
-
         describe ".active_for?" do
           let(:election) { build(:election) }
 
-          context "when the integrated booth is enabled and the election uses the :vocdoni backend" do
+          context "when the registry is available and the election uses the :vocdoni backend" do
             before do
-              allow(described_class).to receive(:enabled?).and_return(true)
+              allow(described_class).to receive(:available?).and_return(true)
               vocdoni_manifest = instance_double(
                 Decidim::Elections::VotingBackendManifest,
                 name: :vocdoni
@@ -57,8 +31,8 @@ module Decidim
             end
           end
 
-          context "when the integrated booth is disabled" do
-            before { allow(described_class).to receive(:enabled?).and_return(false) }
+          context "when this Decidim has no voting backend registry" do
+            before { allow(described_class).to receive(:available?).and_return(false) }
 
             it "returns false regardless of backend" do
               expect(described_class.active_for?(election)).to be(false)
@@ -67,7 +41,7 @@ module Decidim
 
           context "when the election uses a different backend" do
             before do
-              allow(described_class).to receive(:enabled?).and_return(true)
+              allow(described_class).to receive(:available?).and_return(true)
               other_manifest = instance_double(
                 Decidim::Elections::VotingBackendManifest,
                 name: :decidim
@@ -267,13 +241,4 @@ module Decidim
       end
     end
   end
-end
-
-# Helper to set environment variables for the duration of a block.
-def with_env(vars)
-  old = vars.to_h { |k, _| [k, ENV.fetch(k, nil)] }
-  vars.each { |k, v| v.nil? ? ENV.delete(k) : (ENV[k] = v) }
-  yield
-ensure
-  old.each { |k, v| v.nil? ? ENV.delete(k) : (ENV[k] = v) }
 end

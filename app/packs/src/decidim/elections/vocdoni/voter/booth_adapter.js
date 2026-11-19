@@ -69,12 +69,9 @@ const createAdapter = () => {
     const loaded = await flow.loadProcess();
 
     ctx.progress(i18n.status.authenticating);
-    const channel = flow.twoFaChannels()[0] || null;
     const attestation = await fetchAttestation(config.attestationUrl);
     // The attestation carries the contact the code goes to.
-    const { needsOtp } = await flow.authenticate(attestation, channel
-      ? { channel }
-      : {});
+    const { needsOtp } = await flow.authenticate(attestation);
 
     if (needsOtp) {
       ctx.progress("");

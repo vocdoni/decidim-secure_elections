@@ -90,8 +90,3 @@ ca:
             update:
               success: "Configuració de seguretat actualitzada."
               invalid: "No s'ha pogut desar la configuració de seguretat. Revisa els errors que apareixen a continuació."
-        booth:
-          launcher:
-            help_html: "El teu vot s'emet mitjançant la tecnologia segura de Vocdoni, que garanteix l'anonimat i la verificabilitat."
-            enter: "Obrir la cabina de votació"
-            not_ready: "Aquesta elecció encara no està a punt per acceptar vots a la xarxa. Torna-ho a provar d'aquí a uns instants."

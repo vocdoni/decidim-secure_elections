@@ -7,7 +7,6 @@
 
 const mockFlow = {
   loadProcess: jest.fn(),
-  twoFaChannels: jest.fn(() => []),
   authenticate: jest.fn(),
   check: jest.fn(),
   castQuestion: jest.fn(),
@@ -51,7 +50,6 @@ beforeEach(async () => {
   jest.resetModules();
   Object.values(mockFlow).forEach((fn) => fn.mockReset());
   mockNotify.mockReset();
-  mockFlow.twoFaChannels.mockReturnValue([]);
   mockFlow.authenticate.mockResolvedValue({ needsOtp: false });
   mockFlow.loadProcess.mockResolvedValue({});
   mockFlow.check.mockResolvedValue({

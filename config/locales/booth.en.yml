@@ -3,6 +3,9 @@ en:
     elections:
       vocdoni:
         booth:
+          not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."
+          # Shown instead of the booth when this Decidim cannot run the `vocdoni` voting backend.
+          unavailable: "Voting on this election is not available on this platform. Please contact the organisers."
           per_question:
             closed: Voting on this question has closed.
             not_open: This question is not open on the voting network yet. Please try again in a few moments.

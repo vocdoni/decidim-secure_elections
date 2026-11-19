@@ -17,9 +17,9 @@
 - [ ] `bundle exec rspec` passes
 - [ ] `npm test` passes
 - [ ] `bundle exec rubocop`, `npm run lint` and `npm run stylelint` pass
-- [ ] If anything under `app/packs/src/decidim/secure_elections/voter/`, the fonts, or the
-      `votes.page` locale strings changed: `npm run build:vote` was run and
-      `public/vocdoni/` is committed
+- [ ] If anything under `app/packs/src/decidim/elections/vocdoni/voter/` or the npm
+      dependencies changed: `npm run build:booth` was run and `public/vocdoni/`
+      is committed
 - [ ] New or changed user-facing strings are in `config/locales/en.yml`
 - [ ] `CHANGELOG.md` has an entry under *Unreleased*, or this change needs none
 - [ ] No secret, ballot, auth token or one-time code can reach a browser, a log

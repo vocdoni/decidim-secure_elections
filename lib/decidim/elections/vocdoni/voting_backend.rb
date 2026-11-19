@@ -26,13 +26,8 @@ module Decidim
           Decidim::Elections.respond_to?(:voting_backends)
         end
 
-        # Rollback switch: VOCDONI_INTEGRATED_BOOTH=false restores the static booth.
-        def self.enabled?
-          available? && ENV.fetch("VOCDONI_INTEGRATED_BOOTH", "true") != "false"
-        end
-
         def self.active_for?(election)
-          enabled? && election.voting_backend.name == :vocdoni
+          available? && election.voting_backend.name == :vocdoni
         end
 
         def self.register!
@@ -50,7 +45,7 @@ module Decidim
             # Opt out of live tally; the fork adds this attribute conditionally.
             manifest.live_tally = false if manifest.respond_to?(:live_tally=)
 
-            manifest.applies_to { |election| enabled? && election.vocdoni_process.present? }
+            manifest.applies_to { |election| election.vocdoni_process.present? }
             manifest.booth_config { |election, voter_uid:, **| booth_config(election, voter_uid:) }
             # The CSP's `check` is authoritative, in the browser.
             manifest.voted { |_election, _voter_uid| false }
@@ -112,10 +107,7 @@ module Decidim
         def self.booth_i18n(kind)
           i18n = I18n.t("decidim.elections.vocdoni.votes.page").slice(:status, :errors, :otp, :blocked, :receipt)
           i18n[:errors] = i18n[:errors].merge(no_contact: I18n.t("decidim.elections.vocdoni.booth.no_contact.#{kind}")) if kind
-          i18n.merge(
-            not_ready: I18n.t("decidim.elections.vocdoni.booth.launcher.not_ready",
-                              default: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments.")
-          )
+          i18n.merge(not_ready: I18n.t("decidim.elections.vocdoni.booth.not_ready"))
         end
 
         # What the one-time code panel shows of the contact: "a•••@example.org", "+•••••••••56".

@@ -5,15 +5,9 @@ require "spec_helper"
 module Decidim
   module Elections
     module Vocdoni
-      # `RedirectsVoterToBooth` is included onto `Decidim::Elections::VotesController`
-      # (see engine.rb `extend_upstream`). Its `before_action :render_vocdoni_booth_if_backed`
-      # checks three conditions:
-      #   1. The election has a Vocdoni sidecar (vocdoni_process.present?)
-      #   2. The current action is not :receipt
-      #   3. VotingBackend.active_for?(election) is false (rollback: static booth)
-      #
-      # When all three hold, it renders the standalone SPA template. When
-      # VotingBackend.active_for? returns true (integrated booth), it steps aside.
+      # `RedirectsVoterToBooth` renders a notice instead of upstream's wizard for
+      # a Vocdoni election whose `vocdoni` voting backend is not active, and
+      # steps aside when it is.
       describe "RedirectsVoterToBooth" do
         let(:organization) { component.organization }
         let(:component) { create(:elections_component) }
@@ -44,29 +38,24 @@ module Decidim
             end
           end
 
-          context "when VOCDONI_INTEGRATED_BOOTH is disabled (static booth mode)" do
-            # active_for? returns false → before_action renders the standalone SPA.
+          context "when the vocdoni voting backend is not active" do
             before { allow(VotingBackend).to receive(:active_for?).and_return(false) }
 
-            it "renders the standalone Vocdoni SPA booth template" do
+            it "renders the unavailable notice instead of upstream's wizard" do
               get(new_vote_path, headers:)
               expect(response).to have_http_status(:ok)
-              # The SPA template is decidim/elections/vocdoni/booth/show.
-              # It is rendered as an inline response body, not a redirect.
-              expect(response.body).to include("vocdoni")
+              expect(response.body).to include("data-vocdoni-booth-unavailable")
             end
           end
 
-          context "when VOCDONI_INTEGRATED_BOOTH is enabled (integrated booth mode)" do
-            # active_for? returns true → before_action steps aside, letting
-            # UsesVotesBooth#new render the census form.
+          context "when the vocdoni voting backend is active" do
             before { allow(VotingBackend).to receive(:active_for?).and_return(true) }
 
-            it "does not render the standalone SPA booth (passes through to upstream)" do
+            it "passes through to upstream's booth" do
               get(new_vote_path, headers:)
               # Upstream renders its own new-vote template for an unauthenticated voter.
               expect(response).to have_http_status(:ok)
-              expect(response.body).not_to include("data-vocdoni-spa")
+              expect(response.body).not_to include("data-vocdoni-booth-unavailable")
             end
           end
         end

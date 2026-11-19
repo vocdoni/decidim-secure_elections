@@ -65,12 +65,12 @@ jobs:
       - name: Jest
         run: npm test
 
-  # The voting page is a committed build artefact: `public/vocdoni/` has to be
-  # what `npm run build:vote` produces from the current sources, or an operator
-  # installing the gem gets a page built from something else. The build is
+  # The booth adapter is a committed build artefact: `public/vocdoni/` has to be
+  # what `npm run build:booth` produces from the current sources, or an operator
+  # installing the gem gets a bundle built from something else. The build is
   # deterministic, so rebuilding and diffing is the whole check.
   build-artefact:
-    name: Built voting page is in step with its sources
+    name: Built booth adapter is in step with its sources
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -83,12 +83,12 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build:vote
+      - run: npm run build:booth
 
       - name: Fail if the committed build is stale
         run: |
           if ! git diff --quiet -- public/vocdoni; then
-            echo "::error::public/vocdoni is out of date. Run 'npm run build:vote' and commit the result."
+            echo "::error::public/vocdoni is out of date. Run 'npm run build:booth' and commit the result."
             git --no-pager diff --stat -- public/vocdoni
             exit 1
           fi

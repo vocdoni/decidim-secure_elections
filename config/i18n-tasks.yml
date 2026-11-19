@@ -3,10 +3,8 @@
 base_locale: en
 locales: [en, ca, es]
 
-# `data.read` names every English source file this gem ships. Two survive:
-# the Security tab / booth strings, and the strings the static voting page is
-# built from. `i18n-tasks` would otherwise see only the first and report the
-# second as unused everywhere it is referenced.
+# `data.read` names the English source files `i18n-tasks` checks: the Security
+# tab strings and the booth strings under `votes.page`, among others.
 data:
   read:
     - config/locales/security.%{locale}.yml
@@ -26,12 +24,9 @@ search:
     - app/views/overrides
 
 ignore_unused:
-  # The voting page is a static page built by `npm run build:vote`; the whole
-  # subtree is read by JavaScript, not by Ruby. `build/vote.mjs` also folds in
-  # the census field labels and the question number.
+  # Handed to the booth adapter whole by `VotingBackend.booth_i18n` and read by
+  # JavaScript, so most keys have no Ruby reference.
   - decidim.elections.vocdoni.votes.page.*
-  - decidim.elections.vocdoni.census.fields.*
-  - decidim.elections.vocdoni.elections.show.question_number
 
 ignore_missing:
   - decidim.participatory_processes.scopes.global

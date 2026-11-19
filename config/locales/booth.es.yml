@@ -3,6 +3,9 @@ es:
     elections:
       vocdoni:
         booth:
+          not_ready: "Esta elección todavía no está lista para aceptar votos en la red. Inténtalo de nuevo en unos momentos."
+          # Shown instead of the booth when this Decidim cannot run the `vocdoni` voting backend.
+          unavailable: "La votación de esta elección no está disponible en esta plataforma. Ponte en contacto con la organización."
           per_question:
             closed: La votación de esta pregunta se ha cerrado.
             not_open: Esta pregunta todavía no está abierta en la red de votación. Vuelve a intentarlo en unos momentos.

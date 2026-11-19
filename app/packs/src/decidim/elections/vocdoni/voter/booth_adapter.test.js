@@ -10,7 +10,6 @@
 
 const mockFlow = {
   loadProcess: jest.fn(),
-  twoFaChannels: jest.fn(() => []),
   authenticate: jest.fn(),
   confirmOtp: jest.fn(),
   resendOtp: jest.fn(),
@@ -41,7 +40,6 @@ const voteError = (code) => Object.assign(new Error(code), { code });
 beforeEach(() => {
   jest.resetModules();
   Object.values(mockFlow).forEach((fn) => fn.mockReset && fn.mockReset());
-  mockFlow.twoFaChannels.mockReturnValue([]);
   mockFlow.authenticate.mockResolvedValue({ needsOtp: false });
   mockFlow.loadProcess.mockResolvedValue({});
   window.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ attestation: {}, signature: "00" }) });
@@ -271,7 +269,7 @@ describe("prepare() — attestation", () => {
       credentials: "same-origin",
       headers: { Accept: "application/json", "X-CSRF-Token": "csrf-1" }
     });
-    expect(mockFlow.authenticate).toHaveBeenCalledWith(attestation, {});
+    expect(mockFlow.authenticate).toHaveBeenCalledWith(attestation);
   });
 
   it("stops before the CSP when Decidim refuses to sign", async () => {

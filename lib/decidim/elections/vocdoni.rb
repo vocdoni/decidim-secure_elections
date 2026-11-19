@@ -87,8 +87,7 @@ module Decidim
         end
 
         # The Vocdoni SaaS bases this module knows, and the explorer that goes
-        # with each. The static voting page under `public/vocdoni/` carries the
-        # same three bases in its own `API_HOSTS`; this table adds the explorer.
+        # with each.
         NETWORKS = {
           "https://saas-api.vocdoni.net" => "https://explorer.vote",
           "https://saas-api-stg.vocdoni.net" => "https://stg.explorer.vote",
