@@ -23,9 +23,8 @@ module Decidim
       # Voters vote in Decidim's own booth, which runs the `vocdoni` voting
       # backend (see `VotingBackend`); its browser side is the booth adapter
       # bundle under `public/vocdoni/`, served by middleware (see the
-      # `static_booth_adapter` initializer). The engine also prepends concerns
-      # onto upstream controllers to keep voters off the server-side wizard
-      # and to move the admin from Census straight to Security.
+      # `static_booth_adapter` initializer). The engine also prepends a concern
+      # onto the admin census controller to redirect to the Security tab.
       class Engine < ::Rails::Engine
         isolate_namespace Decidim::Elections::Vocdoni
 
@@ -122,18 +121,10 @@ module Decidim
               Decidim::Elections::Vocdoni::CensusRedirectsToSecurity
             )
 
-            # Voter-side: a Vocdoni election is voted only through the booth's
-            # `vocdoni` backend; where that is not active, a notice renders
-            # instead of upstream's wizard, which would never reach the SaaS.
-            Decidim::Elections::VotesController.include(
-              Decidim::Elections::Vocdoni::RedirectsVoterToBooth
-            )
-
-            # Same for a `per_question` election, whose voters upstream sends
-            # to its own controller. The integrated booth gets the open
-            # questions and a waiting room instead of the server-side wizard.
+            # Wire the `per_question` booth: upstream sends those voters to its
+            # own controller; prepend the concern so the integrated booth serves
+            # the open questions.
             per_question_votes = Decidim::Elections::PerQuestionVotesController
-            per_question_votes.include(Decidim::Elections::Vocdoni::RedirectsVoterToBooth)
             booth = Decidim::Elections::Vocdoni::PerQuestionClientBooth
             per_question_votes.prepend(booth) unless per_question_votes <= booth
 

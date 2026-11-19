@@ -4,8 +4,6 @@ ca:
       vocdoni:
         booth:
           not_ready: "Aquesta elecció encara no està a punt per acceptar vots a la xarxa. Torna-ho a provar d'aquí a uns instants."
-          # Shown instead of the booth when this Decidim cannot run the `vocdoni` voting backend.
-          unavailable: "La votació d'aquesta elecció no està disponible en aquesta plataforma. Posa't en contacte amb l'organització."
           per_question:
             closed: La votació d'aquesta pregunta s'ha tancat.
             not_open: Aquesta pregunta encara no està oberta a la xarxa de votació. Torna-ho a provar d'aquí a uns moments.
@@ -27,4 +25,4 @@ ca:
             voted: hi consta un vot
             not_voted: no hi consta cap vot
             explain: Si s'ha signat una papereta al teu nom en una pregunta on no has votat, avisa l'organització.
-            unavailable: Ara mateix no es poden comprovar les signatures. Torna-ho a provar més tard.
+  
