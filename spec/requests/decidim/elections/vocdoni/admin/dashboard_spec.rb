@@ -215,6 +215,49 @@ module Decidim
           end
         end
       end
+
+      describe "publish failure alert" do
+        let(:organization) { component.organization }
+        let(:component) { create(:elections_component) }
+        let(:admin) { create(:user, :admin, :confirmed, organization:) }
+        let(:headers) { { "HOST" => organization.host } }
+        let(:dashboard_path) { Decidim::EngineRouter.admin_proxy(component).dashboard_election_path(election) }
+        let(:html) { response.parsed_body }
+        let(:failure_alert) { html.at_css(".vocdoni-publish-failure") }
+
+        before do
+          login_as admin, scope: :user
+          get dashboard_path, headers:
+        end
+
+
+      context "when the vocdoni process failed" do
+        let!(:election) do
+          create(:election, :with_token_csv_census, component:).tap do |record|
+            create(:vocdoni_process, :failed, election: record)
+          end
+        end
+
+        it "renders a failure alert with the error message" do
+          expect(response).to have_http_status(:ok)
+          expect(failure_alert).to be_present
+          expect(failure_alert.text).to include("census size exceeds email allowance")
+        end
+      end
+
+      context "when the vocdoni process is pending" do
+        let!(:election) do
+          create(:election, :with_token_csv_census, component:).tap do |record|
+            create(:vocdoni_process, election: record)
+          end
+        end
+
+        it "does not render a failure alert" do
+          expect(response).to have_http_status(:ok)
+          expect(failure_alert).to be_nil
+        end
+      end
     end
   end
+end
 end

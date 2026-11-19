@@ -1,0 +1,10 @@
+ca:
+  decidim:
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            publish_failure:
+              title: "No s'ha pogut publicar la votaci'o a la blockchain"
+              error: "Error de Vocdoni: %{message}"
+              hint: "Comprova la configuraci'o de seguretat i torna a publicar, o contacta amb el suport de Vocdoni."

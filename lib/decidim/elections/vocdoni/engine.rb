@@ -16,9 +16,9 @@ module Decidim
       # Dashboard, where the admin opts in and picks the second-factor
       # challenge. Opt-in is materialised by the presence of a
       # {Decidim::Elections::Vocdoni::Process} sidecar row keyed to the
-      # upstream election. No upstream file is patched at runtime; one
-      # upstream view, the Dashboard, is shadowed for its own controller by
-      # a pinned copy (see `extend_upstream`).
+      # upstream election. No upstream source file is patched; several upstream
+      # models and controllers are extended at runtime (see extend_upstream),
+      # and one upstream view, the Dashboard, is shadowed by a pinned copy.
       #
       # The voter-facing "engine" surface is deliberately tiny: the voting
       # page is a static SPA under `public/vocdoni/` served by middleware
@@ -101,11 +101,10 @@ module Decidim
           )
         end
 
-        # Decorate upstream `Decidim::Elections::Election` with the sidecar
-        # association, the publish-locks-editing override, and wire up the
-        # two admin/voter controller concerns. Runs on every code reload in
-        # development (`to_prepare`) and once in production after Zeitwerk
-        # has loaded the upstream model. Idempotent.
+        # Extends upstream `Decidim::Elections::Election` with the sidecar
+        # association, and wires up the admin/voter controller concerns.
+        # Runs on every code reload in development (`to_prepare`) and once
+        # in production after Zeitwerk has loaded the upstream model. Idempotent.
         initializer "decidim_elections_vocdoni.extend_upstream" do |app|
           app.config.to_prepare do
             # `has_one :vocdoni_process` so `election.vocdoni_process` reads
@@ -117,16 +116,6 @@ module Decidim
                                                  foreign_key: "decidim_election_id",
                                                  dependent: :destroy,
                                                  inverse_of: :election
-
-            # Publish is the point-of-no-return for a Vocdoni-backed
-            # election. Upstream keeps the election editable until Start
-            # (see `Election#editable?`:
-            # `published? ? !started? : !votes.exists?`) — for us that is
-            # wrong: as soon as the census, the questions and the endDate
-            # are anchored on chain, they cannot change.
-            Decidim::Elections::Election.prepend(
-              Decidim::Elections::Vocdoni::PublishLocksEditing
-            )
 
             # Wire the Security tab into the wizard: after "Save and
             # continue" on Census, upstream would drop the admin on the
@@ -219,14 +208,6 @@ module Decidim
         #      menu is rendered. The item is always visible so the admin can
         #      discover the Vocdoni option without extra ceremony.
         initializer "decidim_elections_vocdoni.security_tab" do
-          # Decidim raises unless every icon referenced by name is
-          # pre-registered (`Decidim::IconRegistry#find`).
-          Decidim.icons.register(name: "shield-keyhole-line",
-                                 icon: "shield-keyhole-line",
-                                 category: "system",
-                                 description: "Security tab",
-                                 engine: :core)
-
           Decidim::Elections::AdminEngine.routes.append do
             resources :elections, only: [] do
               resource :security, only: [:show, :update],
