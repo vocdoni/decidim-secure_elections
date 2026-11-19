@@ -101,11 +101,10 @@ module Decidim
           )
         end
 
-        # Decorate upstream `Decidim::Elections::Election` with the sidecar
-        # association, the publish-locks-editing override, and wire up the
-        # two admin/voter controller concerns. Runs on every code reload in
-        # development (`to_prepare`) and once in production after Zeitwerk
-        # has loaded the upstream model. Idempotent.
+        # Extends upstream `Decidim::Elections::Election` with the sidecar
+        # association, and wires up the admin/voter controller concerns.
+        # Runs on every code reload in development (`to_prepare`) and once
+        # in production after Zeitwerk has loaded the upstream model. Idempotent.
         initializer "decidim_elections_vocdoni.extend_upstream" do |app|
           app.config.to_prepare do
             # `has_one :vocdoni_process` so `election.vocdoni_process` reads
@@ -118,15 +117,6 @@ module Decidim
                                                  dependent: :destroy,
                                                  inverse_of: :election
 
-            # Publish is the point-of-no-return for a Vocdoni-backed
-            # election. Upstream keeps the election editable until Start
-            # (see `Election#editable?`:
-            # `published? ? !started? : !votes.exists?`) — for us that is
-            # wrong: as soon as the census, the questions and the endDate
-            # are anchored on chain, they cannot change.
-            Decidim::Elections::Election.prepend(
-              Decidim::Elections::Vocdoni::PublishLocksEditing
-            )
 
             # Wire the Security tab into the wizard: after "Save and
             # continue" on Census, upstream would drop the admin on the
