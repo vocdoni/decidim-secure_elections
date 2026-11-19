@@ -16,9 +16,9 @@ module Decidim
       # Dashboard, where the admin opts in and picks the second-factor
       # challenge. Opt-in is materialised by the presence of a
       # {Decidim::Elections::Vocdoni::Process} sidecar row keyed to the
-      # upstream election. No upstream file is patched at runtime; one
-      # upstream view, the Dashboard, is shadowed for its own controller by
-      # a pinned copy (see `extend_upstream`).
+      # upstream election. No upstream source file is patched; several upstream
+      # models and controllers are extended at runtime (see extend_upstream),
+      # and one upstream view, the Dashboard, is shadowed by a pinned copy.
       #
       # The voter-facing "engine" surface is deliberately tiny: the voting
       # page is a static SPA under `public/vocdoni/` served by middleware
