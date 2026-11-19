@@ -13,11 +13,21 @@ module Decidim
         self.table_name = "decidim_vocdoni_processes"
 
         STATES = %w(pending publishing published failed).freeze
+        # The `twoFaFields` an attested census accepts: an attestation binds at most one contact.
+        TWO_FA_FIELDS = [[], ["email"], ["phone"]].freeze
+        # Metadata entry holding the encrypted signer key a rotation is registering with the SaaS.
+        PENDING_SIGNER_KEY = "pending_attestation_signer_key"
 
         belongs_to :election,
                    class_name: "Decidim::Elections::Election",
                    foreign_key: "decidim_election_id",
                    inverse_of: :vocdoni_process
+
+        has_many :issued_attestations,
+                 class_name: "Decidim::Elections::Vocdoni::IssuedAttestation",
+                 foreign_key: "decidim_vocdoni_process_id",
+                 inverse_of: :process,
+                 dependent: :delete_all
 
         validates :state, inclusion: { in: STATES }
         validates :vocdoni_process_id, uniqueness: true, allow_nil: true
@@ -50,6 +60,96 @@ module Decidim
         def published? = state == "published"
 
         def failed? = state == "failed"
+
+        # The second factor chosen on the Security tab, in the SaaS `twoFaFields` shape.
+        def two_fa_fields = Array(metadata.to_h.dig("settings", "twofa_fields")).map(&:to_s)
+
+        # Where the one-time code goes, "email" or "phone"; nil without a code.
+        def contact_kind = two_fa_fields.first
+
+        # The maxCensusSize an attested census declares for `eligible` voters: ceil(eligible × 1.2),
+        # at least 1. Integer arithmetic, so 10 voters declare 12 and not 13.
+        def self.attested_census_size(eligible) = [((eligible * 6) + 4) / 5, 1].max
+
+        # The key of a voter in the voterId preimage, from the GlobalID `voter_uid` Decidim's census
+        # access gives the booth: "user:<id>" for an internal user, "row:<id>" for a census row.
+        def self.voter_key(voter_uid)
+          gid = GlobalID.parse(voter_uid.to_s)
+          case gid&.model_name
+          when "Decidim::User" then "user:#{gid.model_id}"
+          when "Decidim::Elections::Voter" then "row:#{gid.model_id}"
+          else raise ArgumentError, "unknown voter_uid"
+          end
+        end
+
+        # Draws the per-election signer key and voterId secret, once. Both are stored encrypted.
+        def ensure_attestation_secrets!
+          return if attestation_signer_key.present? && voter_id_secret.present?
+
+          update!(
+            attestation_signer_key: attestation_signer_key.presence || encryptor.encrypt(new_signer_key_hex),
+            voter_id_secret: voter_id_secret.presence || encryptor.encrypt(SecureRandom.hex(32))
+          )
+        end
+
+        # The private scalar of the election's attestation signer.
+        def signer_private_key
+          raise ArgumentError, "no attestation signer" if attestation_signer_key.blank?
+
+          Attestation.b2i(Attestation.hex_to_bytes(encryptor.decrypt(attestation_signer_key)))
+        end
+
+        # The 0x address of the election's attestation signer.
+        def signer_address = Attestation.bytes_to_hex(Attestation.address(signer_private_key))
+
+        # Yields the address of a candidate signer key for the caller to register with the SaaS, and
+        # signs with it only once the block returns. The candidate is stored (encrypted) before the
+        # yield, so a retry after a crash re-registers the same key, a no-op for the SaaS.
+        def rotate_attestation_signer!
+          key_hex = pending_signer_key_hex || stage_pending_signer_key!
+          address = Attestation.bytes_to_hex(Attestation.address(Attestation.b2i(Attestation.hex_to_bytes(key_hex))))
+          begin
+            yield address
+          rescue ApiError => e
+            # A rejection means the SaaS never took the candidate; a transient error may hide that it did.
+            update_metadata! { |data| data.except(PENDING_SIGNER_KEY) } unless e.transient?
+            raise
+          end
+          with_lock do
+            self.metadata = metadata.except(PENDING_SIGNER_KEY)
+            update!(attestation_signer_key: encryptor.encrypt(key_hex))
+          end
+          address
+        end
+
+        # voterId = HMAC-SHA256(secret, voter_key ‖ processId): stable for a voter within the election,
+        # unlinkable across elections and meaningless to the SaaS.
+        def voter_id_for(voter_uid)
+          raise ArgumentError, "no voterId secret" if voter_id_secret.blank?
+          raise ArgumentError, "no SaaS process id" if vocdoni_process_id.blank?
+
+          secret = Attestation.hex_to_bytes(encryptor.decrypt(voter_id_secret))
+          preimage = self.class.voter_key(voter_uid).b + Attestation.hex_to_bytes(vocdoni_process_id)
+          OpenSSL::HMAC.digest("SHA256", secret, preimage)
+        end
+
+        # Counts one more attestation issued to voter_id (0x hex), one row per voterId. With a cap, the
+        # check and the increment are one statement, so concurrent requests cannot overshoot it.
+        #
+        # @return [Boolean] false when voter_id already reached the cap and nothing was counted.
+        def record_issued_attestation!(voter_id, cap: nil)
+          now = Time.current
+          sql = <<~SQL.squish
+            INSERT INTO decidim_vocdoni_attestations (decidim_vocdoni_process_id, voter_id, issued_count, created_at, updated_at)
+            VALUES (?, ?, 1, ?, ?)
+            ON CONFLICT (decidim_vocdoni_process_id, voter_id) DO UPDATE
+            SET issued_count = decidim_vocdoni_attestations.issued_count + 1, updated_at = EXCLUDED.updated_at
+            #{"WHERE decidim_vocdoni_attestations.issued_count < ?" if cap}
+            RETURNING id
+          SQL
+          binds = [id, voter_id, now, now, cap].compact
+          IssuedAttestation.connection.exec_query(IssuedAttestation.sanitize_sql_array([sql, *binds])).any?
+        end
 
         # Per-question upstream ids and chain-side statuses. Written by
         # PublishElectionJob after the process is on chain; read by the voter
@@ -107,10 +207,8 @@ module Decidim
         # Records the last non-transient publish failure. Used by the dashboard
         # to surface something actionable instead of a stuck wizard.
         #
-        # `data` keeps the SaaS's structured error payload — the `duplicates`,
-        # `missingData` and `notFound` lists from a census validation 400 —
-        # so the admin sees *which* voters are the problem, not just "invalid
-        # data provided".
+        # `data` keeps the SaaS structured error payload so the admin
+        # sees the raw error context, not just the message.
         #
         # `keep_state` records the error without marking the process failed,
         # for a step whose failure leaves the rest of the election usable.
@@ -159,6 +257,28 @@ module Decidim
             self.metadata = metadata.merge("question_failures" => question_failures.except(question_id.to_s))
             save!
           end
+        end
+
+        private
+
+        def encryptor = Decidim::AttributeEncryptor.new(secret: "vocdoni-attestation")
+
+        def new_signer_key_hex = Attestation.i2b(SecureRandom.random_number(Attestation::N - 1) + 1).unpack1("H*")
+
+        def pending_signer_key_hex
+          encrypted = metadata.to_h[PENDING_SIGNER_KEY]
+          encryptor.decrypt(encrypted) if encrypted.present?
+        end
+
+        def stage_pending_signer_key!
+          key_hex = new_signer_key_hex
+          update_metadata! { |data| data.merge(PENDING_SIGNER_KEY => encryptor.encrypt(key_hex)) }
+          key_hex
+        end
+
+        # Rewrites metadata under a row lock, so a concurrent writer of another entry is not lost.
+        def update_metadata!
+          with_lock { update!(metadata: yield(metadata.to_h)) }
         end
       end
     end

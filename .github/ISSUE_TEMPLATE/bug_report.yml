@@ -51,7 +51,7 @@ body:
       options:
         - Admin (setting up an election)
         - Public election page
-        - Voting page
+        - Voting booth
         - Background jobs / results sync
         - Installation or boot
         - Somewhere else

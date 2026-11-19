@@ -12,13 +12,37 @@ es:
               title: "Tu configuración de seguridad"
             census_snapshot:
               title: "Censo para el voto secreto"
-              count:
-                one: "Cuando empiece la votación, se registrarán para el voto secreto los participantes que haya en el censo en ese momento. Ahora mismo hay 1."
-                other: "Cuando empiece la votación, se registrarán para el voto secreto los participantes que haya en el censo en ese momento. Ahora mismo hay %{count}."
               empty: "El censo está vacío: el voto secreto no podrá empezar hasta que haya al menos un participante."
-              limitations: "Por las limitaciones actuales de cómo está implementado el voto secreto:"
-              late_joiners: "Los participantes que entren en el censo después de que empiece la votación (por ejemplo, porque se verifican más tarde) no podrán votar en esta votación."
-              verify_before_start: "Los participantes necesitan una cuenta y las verificaciones que pide este censo (como el censo de la organización) antes de que empiece la votación."
+              count:
+                one: "Ahora mismo hay 1 participante en el censo."
+                other: "Ahora mismo hay %{count} participantes en el censo."
+              late_joiners: "Decidim avala a cada participante cuando abre la cabina de votación, así que quienes entren en el censo después de que empiece la votación (por ejemplo, porque se verifican más tarde) también podrán votar, mientras no se alcance el máximo de votantes declarado."
+              declared:
+                one: "El máximo declarado es de 1 votante."
+                other: "El máximo declarado es de %{count} votantes."
+              projected:
+                one: "Cuando empiece la votación, el máximo declarado será el tamaño del censo en ese momento más un 20 %, redondeado hacia arriba: con el censo actual, 1 votante."
+                other: "Cuando empiece la votación, el máximo declarado será el tamaño del censo en ese momento más un 20 %, redondeado hacia arriba: con el censo actual, %{count} votantes."
+            attestations:
+              title: "Atestaciones"
+              issued:
+                one: "Emitida: 1 atestación a %{voters}."
+                other: "Emitidas: %{count} atestaciones a %{voters}."
+              voters:
+                one: "1 votante"
+                other: "%{count} votantes"
+              published:
+                one: "Publicado por Vocdoni: 1 votante firmado, de un máximo declarado de %{max}."
+                other: "Publicados por Vocdoni: %{count} votantes firmados, de un máximo declarado de %{max}."
+              unknown:
+                one: "Votantes firmados que Decidim nunca atestó: 1."
+                other: "Votantes firmados que Decidim nunca atestó: %{count}."
+              per_question:
+                one: "%{question}: 1 votante firmado."
+                other: "%{question}: %{count} votantes firmados."
+              unavailable:
+                pending: "Vocdoni publica los votantes firmados cuando han terminado todas las preguntas."
+                error: "Ahora mismo no se pueden leer los votantes firmados de Vocdoni."
           security:
             show:
               title: "Seguridad"
@@ -55,8 +79,9 @@ es:
                   help: "El código se envía a la dirección de correo electrónico con la que cada participante se ha registrado."
                 sms:
                   label: "Código por SMS"
-                  help: "El código se envía por mensaje de texto, por lo que cada votante necesita un número de teléfono registrado en el servicio de votación."
-                both_note: "Si ambas opciones están activadas, cada votante elige cómo recibir el código."
+                  help: "El código se envía por mensaje de texto al número de teléfono de la verificación o de la fila del censo de cada participante, escrito con su prefijo internacional (por ejemplo, +34 600 123 456). Quien no tenga uno no podrá votar."
+                one_channel_note: "Elige una opción: el código se envía por correo electrónico o por SMS."
+                one_channel: "Elige el código por correo electrónico o el código por SMS, no ambos."
               summary:
                 sentences:
                   basic: "Las papeletas se guardan en esta plataforma. Adecuado para consultas informales."
@@ -65,8 +90,3 @@ es:
             update:
               success: "Configuración de seguridad actualizada."
               invalid: "No se ha podido guardar la configuración de seguridad. Revisa los errores que aparecen a continuación."
-        booth:
-          launcher:
-            help_html: "Tu voto se emite mediante la tecnología segura de Vocdoni, que garantiza el anonimato y la verificabilidad."
-            enter: "Abrir la cabina de votación"
-            not_ready: "Esta elección todavía no está lista para aceptar votos en la red. Inténtalo de nuevo en unos momentos."

@@ -30,6 +30,24 @@ import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
 const PROCESS_ID = "6a67ab45622d94e7c9a192a0";
 
 /**
+ * The body Decidim's attestation endpoint returns: with 2FA it also carries the
+ * contact the code goes to and the salt that opens its contactHash.
+ *
+ * @param {string|null} [contact] - the attested contact, none without 2FA.
+ * @returns {Object} the auth/0 body.
+ */
+const attested = (contact = null) => {
+  const body = {
+    attestation: { processId: PROCESS_ID, voterId: "ab".repeat(32), contactHash: "cd".repeat(32), expiresAt: 1762700000 },
+    signature: "ef".repeat(65)
+  };
+
+  return contact
+    ? { ...body, contact, salt: "01".repeat(32) }
+    : body;
+};
+
+/**
  * An error shaped like the ones `@vocdoni/api-client` throws, so the classifier
  * is exercised against the real body layout rather than a convenient one.
  *
@@ -54,13 +72,12 @@ const newFlow = () => createVoterFlow({ apiUrl: "https://api.test", processId: P
  * Loads a process whose census declares `twoFaFields`.
  *
  * @param {string[]} twoFaFields - the census `twoFaFields`.
- * @param {string[]} [authFields] - the census `authFields`.
  * @returns {Promise<Object>} the flow, with its process already read.
  */
-const startFlow = async (twoFaFields, authFields = ["memberNumber"]) => {
+const startFlow = async (twoFaFields) => {
   mockElections.get.mockResolvedValue({
     chainId: "vocdoni/LTS/1.2",
-    census: { authFields, twoFaFields }
+    census: { twoFaFields }
   });
 
   const flow = newFlow();
@@ -81,7 +98,7 @@ describe("a wrong one-time code", () => {
 
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
     mockProcesses.authStep1.mockRejectedValue(error);
-    await flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" });
+    await flow.authenticate(attested("carol@example.org"));
 
     return flow;
   };
@@ -123,18 +140,17 @@ describe("a wrong one-time code", () => {
 });
 
 describe("resending the code", () => {
-  const pending = async (twoFaFields = ["email"], twoFa = { contact: "carol@example.org" }) => {
+  const pending = async (twoFaFields = ["email"], contact = "carol@example.org") => {
     const flow = await startFlow(twoFaFields);
 
     mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
-    await flow.authenticate({ memberNumber: "2001" }, twoFa);
+    await flow.authenticate(attested(contact));
 
     return flow;
   };
 
-  // `resend` with only the token fails 40001 "invalid user email", so the value
-  // collected at step 0 has to be replayed.
-  it("replays the contact the voter gave, which resend requires", async () => {
+  // The CSP checks the resent contact and salt against the contactHash it signed.
+  it("replays the contact and salt of the attestation", async () => {
     const flow = await pending();
 
     mockProcesses.resend.mockResolvedValue({ authToken: "tok" });
@@ -142,19 +158,31 @@ describe("resending the code", () => {
     await expect(flow.resendOtp()).resolves.toEqual({ channel: "email" });
     expect(mockProcesses.resend).toHaveBeenCalledWith(PROCESS_ID, {
       authToken: "tok",
-      email: "carol@example.org"
+      contact: "carol@example.org",
+      salt: "01".repeat(32)
     });
   });
 
-  it("uses the chosen channel when the census offers both", async () => {
-    const flow = await pending(["email", "phone"], { channel: "phone", contact: "+34600000000" });
+  it("resends by SMS on a phone census", async () => {
+    const flow = await pending(["phone"], "+34600000000");
 
     mockProcesses.resend.mockResolvedValue({});
     await expect(flow.resendOtp()).resolves.toEqual({ channel: "phone" });
     expect(mockProcesses.resend).toHaveBeenCalledWith(PROCESS_ID, {
       authToken: "tok",
-      phone: "+34600000000"
+      contact: "+34600000000",
+      salt: "01".repeat(32)
     });
+  });
+
+  it("is refused for an attestation that carries no contact", async () => {
+    const flow = await startFlow(["email"]);
+
+    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
+    await flow.authenticate(attested());
+
+    await expect(flow.resendOtp()).rejects.toMatchObject({ code: ErrorCode.OTP_RESEND_FAILED });
+    expect(mockProcesses.resend).not.toHaveBeenCalled();
   });
 
   it("reports a delivery failure as its own state, not as a bad code", async () => {
@@ -204,7 +232,7 @@ describe("authStep0 rate limiting", () => {
       apiError({ status: 401, code: 40103, message: "attempt cooldown time not reached", data: { coolDownTime: 24588 } })
     );
 
-    await expect(flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" })).
+    await expect(flow.authenticate(attested("carol@example.org"))).
       rejects.toMatchObject({ code: ErrorCode.AUTH_COOLDOWN, details: { seconds: 25 } });
   });
 
@@ -213,7 +241,53 @@ describe("authStep0 rate limiting", () => {
 
     mockProcesses.authStep0.mockRejectedValue(apiError({ status: 400, code: 40005, message: "no contact information provided (email or phone)" }));
 
-    await expect(flow.authenticate({ memberNumber: "2001" }, { contact: "" })).
+    await expect(flow.authenticate(attested("carol@example.org"))).
       rejects.toMatchObject({ code: ErrorCode.AUTH_REJECTED });
+  });
+});
+
+describe("an attested census", () => {
+  const body = {
+    attestation: { processId: PROCESS_ID, voterId: "ab".repeat(32), contactHash: "cd".repeat(32), expiresAt: 1762700000 },
+    signature: "ef".repeat(65),
+    contact: "dave@example.org",
+    salt: "01".repeat(32)
+  };
+
+  it("sends the attestation Decidim signed as it is, contact and salt included", async () => {
+    const flow = await startFlow(["email"]);
+
+    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
+
+    await expect(flow.authenticate(body)).
+      resolves.toEqual({ needsOtp: true, channel: "email" });
+    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, body);
+    expect(flow.verified).toBe(false);
+  });
+
+  it("replays the contact and salt of the attestation on resend", async () => {
+    const flow = await startFlow(["email"]);
+
+    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
+    await flow.authenticate(body);
+    mockProcesses.resend.mockResolvedValue({});
+
+    await expect(flow.resendOtp()).resolves.toEqual({ channel: "email" });
+    expect(mockProcesses.resend).toHaveBeenCalledWith(PROCESS_ID, {
+      authToken: "tok",
+      contact: "dave@example.org",
+      salt: "01".repeat(32)
+    });
+  });
+
+  it("is verified on arrival without 2FA", async () => {
+    const flow = await startFlow([]);
+    const bare = { attestation: body.attestation, signature: body.signature };
+
+    mockProcesses.authStep0.mockResolvedValue({ authToken: "tok" });
+
+    await expect(flow.authenticate(bare)).resolves.toEqual({ needsOtp: false, channel: null });
+    expect(mockProcesses.authStep0).toHaveBeenCalledWith(PROCESS_ID, bare);
+    expect(flow.verified).toBe(true);
   });
 });

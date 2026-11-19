@@ -29,6 +29,7 @@
       <p class="vocdoni-security-summary__sentence" data-security-level="<%= level %>">
         <%= t("sentences.#{level}", scope: "decidim.elections.vocdoni.admin.security.show.summary") %>
       </p>
+      <%= render partial: "decidim/elections/vocdoni/admin/dashboard/attestations" if election.vocdoni_process&.vocdoni_process_id.present? %>
     </div>
   </div>
 </div>

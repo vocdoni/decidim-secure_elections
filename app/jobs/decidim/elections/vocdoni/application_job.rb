@@ -77,17 +77,15 @@ module Decidim
           ActionView::Base.full_sanitizer.sanitize(value.to_s).to_s.squish
         end
 
-        # An error message rendered in the admin UI must never carry a
-        # credential (ARCHITECTURE §0.2): neither the integrator key nor a
-        # voter's {VoterCredential}. Called by the subclasses before they
-        # hand the message off to `Process#record_failure!`.
+        # An error message rendered in the admin UI must never carry the
+        # integrator key (ARCHITECTURE §0.2). Called by the subclasses before
+        # they hand the message off to `Process#record_failure!`.
         def redact(message)
           text = message.to_s
           key = Decidim::Elections::Vocdoni.api_key
           text = text.gsub(key, "[REDACTED]") if key.present?
-          text = text.gsub(/vsk_[A-Za-z0-9._-]+/, "[REDACTED]")
-                     .gsub(/\bBearer\s+\S+/i, "Bearer [REDACTED]")
-          VoterCredential.redact(text)
+          text.gsub(/vsk_[A-Za-z0-9._-]+/, "[REDACTED]")
+              .gsub(/\bBearer\s+\S+/i, "Bearer [REDACTED]")
         end
 
         # {#redact} over every string of a SaaS error payload (keys included),

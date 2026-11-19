@@ -12,13 +12,37 @@ ca:
               title: "La teva configuració de seguretat"
             census_snapshot:
               title: "Cens per al vot secret"
-              count:
-                one: "Quan comenci la votació, es registraran per al vot secret els participants que hi hagi al cens en aquell moment. Ara mateix n'hi ha 1."
-                other: "Quan comenci la votació, es registraran per al vot secret els participants que hi hagi al cens en aquell moment. Ara mateix n'hi ha %{count}."
               empty: "El cens és buit: el vot secret no podrà començar fins que hi hagi almenys un participant."
-              limitations: "Per les limitacions actuals de com està implementat el vot secret:"
-              late_joiners: "Els participants que entrin al cens després que comenci la votació (per exemple, perquè es verifiquen més tard) no podran votar en aquesta votació."
-              verify_before_start: "Els participants necessiten un compte i les verificacions que demana aquest cens (com el cens de l'organització) abans que comenci la votació."
+              count:
+                one: "Ara mateix hi ha 1 participant al cens."
+                other: "Ara mateix hi ha %{count} participants al cens."
+              late_joiners: "Decidim avala cada participant quan obre la cabina de votació, així que els qui entrin al cens després que comenci la votació (per exemple, perquè es verifiquen més tard) també podran votar, mentre no s'arribi al màxim de votants declarat."
+              declared:
+                one: "Màxim declarat: 1 votant."
+                other: "Màxim declarat: %{count} votants."
+              projected:
+                one: "Quan comenci la votació, el màxim declarat serà la mida del cens en aquell moment més un 20 %, arrodonida cap amunt: amb el cens actual, 1 votant."
+                other: "Quan comenci la votació, el màxim declarat serà la mida del cens en aquell moment més un 20 %, arrodonida cap amunt: amb el cens actual, %{count} votants."
+            attestations:
+              title: "Atestacions"
+              issued:
+                one: "Emesa: 1 atestació a %{voters}."
+                other: "Emeses: %{count} atestacions a %{voters}."
+              voters:
+                one: "1 votant"
+                other: "%{count} votants"
+              published:
+                one: "Publicat per Vocdoni: 1 votant signat, d'un màxim declarat de %{max}."
+                other: "Publicats per Vocdoni: %{count} votants signats, d'un màxim declarat de %{max}."
+              unknown:
+                one: "Votants signats que Decidim no ha atestat mai: 1."
+                other: "Votants signats que Decidim no ha atestat mai: %{count}."
+              per_question:
+                one: "%{question}: 1 votant signat."
+                other: "%{question}: %{count} votants signats."
+              unavailable:
+                pending: "Vocdoni publica els votants signats quan han acabat totes les preguntes."
+                error: "Ara mateix no es poden llegir els votants signats de Vocdoni."
           security:
             show:
               title: "Seguretat"
@@ -55,8 +79,9 @@ ca:
                   help: "El codi s'envia a l'adreça de correu electrònic amb la qual cada participant s'ha registrat."
                 sms:
                   label: "Codi per SMS"
-                  help: "El codi s'envia per missatge de text, de manera que cada votant necessita un número de telèfon registrat al servei de votació."
-                both_note: "Si totes dues opcions estan activades, cada votant tria com rebre el codi."
+                  help: "El codi s'envia per missatge de text al número de telèfon de la verificació o de la fila del cens de cada participant, escrit amb el seu prefix internacional (per exemple, +34 600 123 456). Qui no en tingui cap no podrà votar."
+                one_channel_note: "Tria una opció: el codi s'envia per correu electrònic o per SMS."
+                one_channel: "Tria el codi per correu electrònic o el codi per SMS, no tots dos."
               summary:
                 sentences:
                   basic: "Les paperetes es guarden en aquesta plataforma. Adequat per a consultes informals."
@@ -65,8 +90,3 @@ ca:
             update:
               success: "Configuració de seguretat actualitzada."
               invalid: "No s'ha pogut desar la configuració de seguretat. Revisa els errors que apareixen a continuació."
-        booth:
-          launcher:
-            help_html: "El teu vot s'emet mitjançant la tecnologia segura de Vocdoni, que garanteix l'anonimat i la verificabilitat."
-            enter: "Obrir la cabina de votació"
-            not_ready: "Aquesta elecció encara no està a punt per acceptar vots a la xarxa. Torna-ho a provar d'aquí a uns instants."

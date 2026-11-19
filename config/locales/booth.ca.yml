@@ -3,10 +3,68 @@ ca:
     elections:
       vocdoni:
         booth:
+          not_ready: "Aquesta elecció encara no està a punt per acceptar vots a la xarxa. Torna-ho a provar d'aquí a uns instants."
           per_question:
             closed: La votació d'aquesta pregunta s'ha tancat.
             not_open: Aquesta pregunta encara no està oberta a la xarxa de votació. Torna-ho a provar d'aquí a uns moments.
             opening: Obrint la pregunta a la xarxa de votació…
             waiting: Esperant que l'organització obri la pregunta següent. Aquesta pàgina s'actualitzarà sola.
+          no_contact:
+            email: No tenim cap adreça de correu electrònic teva, així que no et podem enviar el codi d'un sol ús. Posa't en contacte amb l'organització.
+            phone: No tenim cap número de mòbil vàlid teu, escrit amb el seu prefix internacional (per exemple, +34 600 123 456), així que no et podem enviar el codi d'un sol ús per SMS. Posa't en contacte amb l'organització.
           receipt:
             final: Aquest vot no es pot modificar.
+            check_attestation: Quan acabi la votació podràs comprovar en quines preguntes s'ha signat una papereta al teu nom.
+            check_attestation_link: Comprova les meves signatures
+            body: Cada rebut aquí sota prova que un vot ha quedat registrat a la xarxa de votació. No revela el que has votat.
+          blocked:
+            not_in_census:
+              body: Les dades que has introduït no figuren al cens d'aquesta elecció. Comprova-les i torna a intentar-ho, o contacta els organitzadors si creus que hauries de poder votar.
+            not_open:
+              body: En aquest moment no hi ha cap pregunta oberta per votar. Pot ser que la votació encara no hagi començat o que ja hagi tancat.
+          errors:
+            auth_cooldown: "Massa intents. Espera %{seconds} segons i torna-ho a provar."
+            auth_rejected: No hem pogut verificar les teves dades. Comprova-les i torna a intentar-ho.
+            ballot_unsupported: Aquesta pregunta utilitza un format de papereta que aquesta pàgina no entén. Contacta els organitzadors.
+            keys_unavailable: Aquesta pregunta es manté xifrada fins al final i les claus de xifratge encara no s'han publicat. El teu vot no s'ha emès — torna-ho a provar d'aquí a uns minuts.
+            network: No hem pogut connectar amb la xarxa de votació. Comprova la connexió i torna a intentar-ho.
+            otp_expired: Aquest codi ja no és vàlid. Torna a identificar-te per obtenir-ne un de nou.
+            otp_rejected: El codi no coincideix. Comprova'l i torna a introduir-lo, o demana'n un de nou.
+            otp_resend_failed: No hem pogut enviar-te un codi nou. Espera un moment i torna a intentar-ho.
+            process_unavailable: En aquest moment no s'ha pogut carregar aquesta elecció des de la xarxa de votació.
+            relay_rejected: La xarxa de votació ha rebutjat aquest vot. No s'ha comptat.
+            relay_unconfirmed: Hem perdut la connexió mentre s'enviava el teu vot. Pot ser que s'hagi comptat igualment — no votes de nou fins que ho hagis comprovat.
+            sign_rejected: El cens no ha autoritzat aquest vot. Pot ser que ja s'hagi emès des d'un altre dispositiu.
+            unknown: Ha passat alguna cosa inesperada. El teu vot no s'ha emès.
+          otp:
+            body_email: T'hem enviat un codi d'un sol ús per correu electrònic. Introdueix-lo a continuació per confirmar la teva identitat.
+            body_phone: T'hem enviat un codi d'un sol ús per missatge de text. Introdueix-lo a continuació per confirmar la teva identitat.
+            hint: Pots enganxar el codi directament des del missatge.
+            label: Codi d'un sol ús
+            required: Introdueix el codi que t'hem enviat.
+            resend: Envia'm un codi nou
+            resend_wait: "Podràs demanar un codi nou en %{seconds} segons."
+            resent: Un codi nou està en camí.
+            submit: Confirmar
+            title: Confirma el codi que t'hem enviat
+          status:
+            authenticating: Verificant les teves dades…
+            checking: Comprovant les votacions disponibles…
+            confirming: Esperant la confirmació de la xarxa de votació…
+            loading: Carregant l'elecció…
+            preparing: Preparant la papereta…
+            relaying: Enviant el teu vot…
+            sending_code: Enviant-te un codi nou…
+            signing: Signant el teu vot…
+            waiting_keys: Esperant que es publiquin les claus de xifratge…
+        attestations:
+          show:
+            title: Signatures emeses al teu nom
+            pending: La votació encara no ha acabat. Torna quan acabi per comprovar en quines preguntes s'ha signat una papereta al teu nom.
+            none: No s'ha signat cap papereta al teu nom.
+            signed: "S'ha signat una papereta al teu nom en aquestes preguntes:"
+            voted: hi consta un vot
+            not_voted: no hi consta cap vot
+            explain: Si s'ha signat una papereta al teu nom en una pregunta on no has votat, avisa l'organització.
+            unavailable: Ara mateix no es poden comprovar les signatures. Torna-ho a provar més tard.
+  

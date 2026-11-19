@@ -3,7 +3,7 @@ import { VotingClient } from "@vocdoni/api-voting";
 import { castQuestion, loadQuestion } from "src/decidim/elections/vocdoni/voter/cast";
 import { ErrorCode, toVoteError } from "src/decidim/elections/vocdoni/voter/errors";
 import { createAuthSession } from "src/decidim/elections/vocdoni/voter/auth_session";
-import { channelsFor, offersChannelChoice, requiresOtp } from "src/decidim/elections/vocdoni/voter/two_fa";
+import { requiresOtp } from "src/decidim/elections/vocdoni/voter/two_fa";
 
 /**
  * The voter flow, exactly as ARCHITECTURE §3 specifies it and as it was verified
@@ -21,7 +21,7 @@ import { channelsFor, offersChannelChoice, requiresOtp } from "src/decidim/elect
  *   jobs.waitFor            - job.result.voteID, the nullifier
  *
  * This module is deliberately DOM-free and returns plain data, so the flow can
- * be reasoned about (and tested) without a voting page around it.
+ * be reasoned about (and tested) without a booth around it.
  *
  * Secrets — the auth token, the one-time code and every ephemeral key — live in
  * closure variables that nothing outside this factory can reach. They are never
@@ -93,28 +93,6 @@ export const createVoterFlow = ({ apiUrl, processId, chainId: cachedChainId = nu
       ? fields
       : [];
   };
-
-  /**
-   * The credentials this census asks for, as the process itself declares them.
-   * Empty when the process read carried no census, in which case the caller
-   * falls back to what the server rendered.
-   *
-   * @returns {string[]} the declared `authFields`.
-   */
-  const authFields = () => {
-    const fields = currentProcess && currentProcess.census && currentProcess.census.authFields;
-
-    return Array.isArray(fields) && fields.length > 0
-      ? fields
-      : null;
-  };
-
-  /**
-   * The delivery channels this census offers, `[]` for an auth-only one.
-   *
-   * @returns {string[]} `email` and/or `phone`.
-   */
-  const twoFaChannels = () => channelsFor(twoFaFields());
 
   // The CSP session. It owns the token, the `verified` bit and the two-factor
   // calls; the flow only forwards to it, so there is exactly one place where a
@@ -189,11 +167,8 @@ export const createVoterFlow = ({ apiUrl, processId, chainId: cachedChainId = nu
 
   return {
     loadProcess,
-    authFields,
     twoFaFields,
-    twoFaChannels,
     requiresOtp: () => requiresOtp(twoFaFields()),
-    offersChannelChoice: () => offersChannelChoice(twoFaFields()),
     // The CSP session, forwarded verbatim.
     reset: session.reset,
     authenticate: session.authenticate,

@@ -165,10 +165,10 @@ module Decidim
         describe "query parameters" do
           it "stringifies and appends them" do
             request = stub_request(:get, "#{api_url}/processes/#{process_id}/participants")
-                      .with(query: { "field" => "memberNumber", "value" => "1001" })
+                      .with(query: { "field" => "voterId", "value" => "1001" })
                       .to_return(status: 200, body: vocdoni_fixture("process_participants"), headers: json_headers)
 
-            client.get("/processes/#{process_id}/participants", params: { field: "memberNumber", value: "1001" })
+            client.get("/processes/#{process_id}/participants", params: { field: "voterId", value: "1001" })
 
             expect(request).to have_been_requested
           end
@@ -200,20 +200,6 @@ module Decidim
             expect(error.message).to include("code 40004")
             expect(error.message).to include("invalid JSON request body")
             expect(error.message).to include("POST")
-          end
-
-          it "masks a voter credential the SaaS echoes in its error, keeping the URL" do
-            credential = "ab" * 32
-            url_id = "cd" * 32
-            stub_request(:post, "#{api_url}/processes/#{url_id}/members")
-              .to_return(status: 400, body: { error: "duplicated memberNumber #{credential}", code: 40_004 }.to_json,
-                         headers: json_headers)
-
-            error = captured_api_error { client.post("/processes/#{url_id}/members", body: {}) }
-
-            expect(error.message).to include("duplicated memberNumber [CREDENTIAL]")
-            expect(error.message).not_to include(credential)
-            expect(error.message).to include(url_id)
           end
 
           it "maps a 401" do

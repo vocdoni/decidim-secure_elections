@@ -28,7 +28,8 @@ const render = (saved) => {
       </div>
     </fieldset>
     <fieldset id="js-security-two-factor" ${state.block}>
-      <input type="checkbox" name="security[email]" data-security-code>
+      <input type="checkbox" name="security[email]" id="security_email" data-security-code>
+      <input type="checkbox" name="security[sms]" id="security_sms" data-security-code>
     </fieldset>
   `;
   setupSecurity();
@@ -71,6 +72,23 @@ describe("Security tab", () => {
 
     expect(twoFactor().hidden).toBe(false);
     expect(card("secure").classList.contains("is-selected")).toBe(true);
+  });
+
+  it("keeps at most one code channel checked", () => {
+    render("secure");
+    const email = document.getElementById("security_email");
+    const sms = document.getElementById("security_sms");
+
+    email.click();
+    sms.click();
+
+    expect(sms.checked).toBe(true);
+    expect(email.checked).toBe(false);
+
+    sms.click();
+
+    expect(sms.checked).toBe(false);
+    expect(email.checked).toBe(false);
   });
 
   it("does nothing on a page without the Security form", () => {

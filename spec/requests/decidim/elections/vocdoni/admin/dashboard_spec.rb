@@ -122,8 +122,8 @@ module Decidim
         end
       end
 
-      # The "Census for the secret vote" card: publishing registers the census
-      # as it is, so the admin sees how many voters that is beforehand.
+      # The "Census for the secret vote" card: the admin sees how many voters the census has and
+      # the maximum the election declares when voting starts.
       describe "Admin Dashboard census snapshot card" do
         let(:organization) { component.organization }
         let(:component) { create(:elections_component) }
@@ -146,14 +146,16 @@ module Decidim
             end
           end
 
-          it "renders after the Census card with the count and the late joiners note" do
+          it "renders after the Census card with the count, the late joiners note and the projected maximum" do
             expect(response).to have_http_status(:ok)
             expect(snapshot["data-census-count"]).to eq("3")
             expect(snapshot.previous_element.text).to include(I18n.t("decidim.elections.admin.dashboard.census.title"))
+            expect(snapshot.at_css("[data-census-maximum]")["data-census-maximum"]).to eq("4")
 
             text = snapshot.text.squish
             expect(text).to include(I18n.t("#{scope}.count", count: 3))
             expect(text).to include(I18n.t("#{scope}.late_joiners"))
+            expect(text).to include(I18n.t("#{scope}.projected", count: 4))
             expect(snapshot.at_css(".callout.alert")).to be_nil
           end
         end
@@ -166,13 +168,9 @@ module Decidim
             end
           end
 
-          it "warns that the secret vote cannot start and asks for verifications first" do
+          it "warns that the secret vote cannot start" do
             expect(snapshot["data-census-count"]).to eq("0")
             expect(snapshot.at_css(".callout.alert").text.squish).to eq(I18n.t("#{scope}.empty"))
-
-            text = snapshot.text.squish
-            expect(text).to include(I18n.t("#{scope}.limitations"))
-            expect(text).to include(I18n.t("#{scope}.verify_before_start"))
           end
         end
 
@@ -184,11 +182,24 @@ module Decidim
             end
           end
 
-          it "renders after the security card, without the verifications item for a CSV census" do
+          it "renders after the security card" do
             expect(response).to have_http_status(:ok)
             expect(snapshot["data-census-count"]).to eq("3")
             expect(snapshot.previous_element["class"]).to include("vocdoni-security-summary")
-            expect(snapshot.text.squish).not_to include(I18n.t("#{scope}.verify_before_start"))
+          end
+        end
+
+        context "when the SaaS process exists but is not published" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, election: record, state: "failed",
+                                       vocdoni_process_id: "6885f0c2c1a4e2f0b1d33a01", census_size: 12)
+            end
+          end
+
+          it "gives the declared maximum" do
+            expect(snapshot.at_css("[data-census-maximum]")["data-census-maximum"]).to eq("12")
+            expect(snapshot.text.squish).to include(I18n.t("#{scope}.declared", count: 12))
           end
         end
 

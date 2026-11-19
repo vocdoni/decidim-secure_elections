@@ -5,7 +5,7 @@ module Decidim
     module Vocdoni
       class ApiClient
         # Common ground for the sub-clients (`#elections`, `#organizations`,
-        # `#census`, `#jobs`). Each one is a thin, stateless mapping of a group of
+        # `#jobs`). Each one is a thin, stateless mapping of a group of
         # API routes onto snake_case Ruby methods; all the HTTP work, the error
         # mapping and the language-map normalization live in the parent client.
         class Base

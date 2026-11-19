@@ -8,8 +8,8 @@ module Decidim
       describe PublishElectionJob do
         subject(:job) { described_class.new }
 
-        let(:election) { create(:election, results_availability:) }
-        let!(:vocdoni_process) { create(:vocdoni_process, election:) }
+        let(:election) { create(:election, :with_token_csv_census, results_availability:) }
+        let!(:vocdoni_process) { create(:vocdoni_process, election:).tap(&:ensure_attestation_secrets!) }
 
         before { job.send(:bootstrap!, election.id) }
 

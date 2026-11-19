@@ -1,5 +1,5 @@
 import { ApiErrorCode, VoteError, ErrorCode, apiErrorCode, toVoteError, toCooldownError } from "src/decidim/elections/vocdoni/voter/errors";
-import { contactBody, defaultChannel, requiresOtp } from "src/decidim/elections/vocdoni/voter/two_fa";
+import { channelsFor, requiresOtp } from "src/decidim/elections/vocdoni/voter/two_fa";
 
 /**
  * The voter's CSP session: the auth token and everything that can change it.
@@ -13,7 +13,7 @@ import { contactBody, defaultChannel, requiresOtp } from "src/decidim/elections/
  * itself, from the one source that is authoritative before any call is made:
  * `census.twoFaFields` on the public process read.
  *
- * The token, the contact and the one-time code live in closure variables that
+ * The token, the attested contact and the one-time code live in closure variables that
  * nothing outside this factory can reach. They are never returned, never
  * stringified and never stored (ARCHITECTURE §0.2 and §0.4).
  */
@@ -34,11 +34,11 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
   // False for a token from `authStep0` on a 2FA census: it exists, it even
   // passes `check`, but it may not vote until `authStep1` accepts a code.
   let verified = false;
-  // The channel the voter chose and the contact value they gave, kept only so
-  // that `resend` can be replayed — it refuses a body without the value. In
-  // memory for the life of the page, like every other credential here.
+  // The channel the code goes to, and the contact and salt of the attestation:
+  // `resend` replays them, and the CSP checks them against the contactHash it
+  // signed. In memory for the life of the page, like every other credential here.
   let channel = null;
-  let contact = null;
+  let attestedContact = null;
 
   /**
    * A token exists at all — enough to confirm a one-time code, nothing more.
@@ -77,35 +77,28 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     authToken = null;
     verified = false;
     channel = null;
-    contact = null;
+    attestedContact = null;
   };
 
   /**
-   * Step 2 — identify the participant.
+   * Step 2 — identify the participant with the body Decidim signed:
+   * `attestation`, `signature` and, with 2FA, the `contact` and `salt` that
+   * open its contactHash. It goes to `authStep0` as it is.
    *
-   * On a 2FA census the body must carry the contact value as well as the
-   * credentials: staging rejects a credentials-only body with HTTP 400 code
-   * 40005, "no contact information provided (email or phone)". The caller
-   * therefore passes the channel it collected, and it is remembered for
-   * {@link resendOtp}.
-   *
-   * @param {Object} fields - the census `authFields`, e.g. `{ memberNumber }`.
-   * @param {Object} [twoFa] - `{ channel, contact }` for a 2FA census.
+   * @param {Object} attested - the attestation body from Decidim.
    * @returns {Promise<{needsOtp: boolean, channel: string|null}>} where the
    *   voter goes next.
    */
-  const authenticate = async (fields, twoFa = {}) => {
+  const authenticate = async (attested) => {
     // A stale token from an abandoned attempt must never survive a new one.
     reset();
 
     const fields2Fa = twoFaFields();
     const needsOtp = requiresOtp(fields2Fa);
     const chosen = needsOtp
-      ? twoFa.channel || defaultChannel(fields2Fa)
+      ? channelsFor(fields2Fa)[0]
       : null;
-    const body = needsOtp
-      ? { ...fields, ...contactBody(chosen, twoFa.contact) }
-      : { ...fields };
+    const body = { ...attested };
 
     let response = null;
 
@@ -125,8 +118,8 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     // change that.
     verified = !needsOtp;
     channel = chosen;
-    contact = needsOtp
-      ? twoFa.contact
+    attestedContact = needsOtp && attested.contact && attested.salt
+      ? { contact: attested.contact, salt: attested.salt }
       : null;
 
     return { needsOtp, channel: chosen };
@@ -171,10 +164,9 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
   /**
    * Sends another one-time code down the same channel.
    *
-   * `resend` needs the contact value spelled out — with only the token it fails
-   * with "invalid user email" — so it is replayed from what {@link authenticate}
-   * kept. The token is unchanged, which means an in-flight older code stays
-   * typable if the voter finds it first.
+   * `resend` needs the attested contact and salt spelled out, so they are
+   * replayed from what {@link authenticate} kept. The token is unchanged, which
+   * means an in-flight older code stays typable if the voter finds it first.
    *
    * @returns {Promise<{channel: string}>} the channel the code went to.
    */
@@ -186,9 +178,9 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
       throw new VoteError(ErrorCode.OTP_RESEND_FAILED);
     }
 
-    const body = contactBody(channel, contact);
+    const body = attestedContact;
 
-    if (Object.keys(body).length === 0) {
+    if (!body) {
       throw new VoteError(ErrorCode.OTP_RESEND_FAILED);
     }
 

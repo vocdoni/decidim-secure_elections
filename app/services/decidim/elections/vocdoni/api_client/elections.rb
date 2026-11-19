@@ -33,7 +33,7 @@ module Decidim
           # chain until {#publish}. `orgAddress` defaults to the configured
           # `Decidim::Elections::Vocdoni.org_address`, `startDate` may be omitted (the
           # process then starts as soon as it is published) and the census is
-          # inline: `{authFields: [...], groupId: "…", weighted: false}`.
+          # inline: `{attested: {signer:, maxCensusSize:}, twoFaFields: [...]}`.
           #
           # @param payload [Hash] the process draft. Titles, descriptions and
           #   choice titles may be plain strings or Decidim translated hashes.
@@ -44,39 +44,12 @@ module Decidim
           #   client.elections.create(
           #     title: { "en" => "Board election" },
           #     endDate: 2.days.from_now,
-          #     census: { authFields: ["memberNumber"], groupId: group_id, weighted: false },
+          #     census: { attested: { signer: "0x…", maxCensusSize: 12 }, twoFaFields: ["email"] },
           #     questions: [{ title: "Chair?", type: "singlechoice",
           #                   choices: [{ title: "Yes", value: 0 }, { title: "No", value: 1 }] }]
           #   )
           def create(payload)
             client.post("/processes", body: normalize_process(payload))
-          end
-
-          # Pre-flight uniqueness check on a process census —
-          # `POST /processes/census/validation`.
-          #
-          # Verifies the chosen `authFields` (+ optional `twoFaFields`) produce
-          # unique, complete credentials over the target members: a group
-          # (`groupId`), an explicit `memberIds` list, or the whole organization
-          # when neither is set. Success is HTTP 200; failure is HTTP 400 with
-          # the offending member ids under `body.data.{duplicates,missingData}`
-          # — the same shape the deprecated `POST /organizations/{addr}/groups/
-          # {id}/validate` used.
-          #
-          # @param org_address [String, nil] `0x…` organization address. Defaults
-          #   to the configured `Decidim::Elections::Vocdoni.org_address`.
-          # @param census [Hash] a census spec: `{authFields:, twoFaFields:,
-          #   groupId:, weighted:}` — the very payload that {#create} would
-          #   embed inline in the process.
-          # @return [Hash]
-          # @raise [Decidim::Elections::Vocdoni::ApiError] 400 with member ids
-          #   when the census is not usable.
-          def validate_census(org_address, census)
-            body = {
-              "orgAddress" => org_address.presence || Decidim::Elections::Vocdoni.org_address,
-              "census" => census
-            }
-            client.post("/processes/census/validation", body:)
           end
 
           # Reads a process — `GET /processes/{id}`.
@@ -173,19 +146,59 @@ module Decidim
           # Looks up census participants —
           # `GET /processes/{id}/participants?field=&value=`.
           #
-          # Manager/admin only. Returns the org members matching the lookup that
-          # belong to the process census, each with its per-question voted
-          # status. An empty list means "no match", not an error.
+          # Manager/admin only. Returns the census participants matching the
+          # lookup, each with its per-question signed and voted status. An empty
+          # list means "no match", not an error.
           #
           # @param process_id [String] SaaS process id.
-          # @param field [String, Symbol] one of `email`, `phone`,
-          #   `memberNumber`, `nationalId`. Name/surname/birthDate are not
-          #   queryable.
+          # @param field [String, Symbol] `voterId` for an attested census.
           # @param value [String] the value to match.
           # @return [Hash] `{"participants" => [{"memberId" => …, "questions" => [...]}]}`.
           # @raise [Decidim::Elections::Vocdoni::ApiError]
           def participants(process_id, field:, value:)
             client.get("/processes/#{process_id}/participants", params: { "field" => field.to_s, "value" => value.to_s })
+          end
+
+          # Makes signer the only address whose attestations the SaaS accepts for the process —
+          # `PUT /processes/{id}/attestation-signer`. Tokens issued under the previous signer stop
+          # signing.
+          #
+          # @param process_id [String] SaaS process id.
+          # @param signer [String] 0x address.
+          # @return [Hash] the attested census: `signer`, `signerHistory`, `maxCensusSize`, `verifyingContract`.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def rotate_attestation_signer(process_id, signer)
+            client.put("/processes/#{process_id}/attestation-signer", body: { "signer" => signer })
+          end
+
+          # Grows the declared size of a published attested census — `PUT /processes/{id}/census/size`.
+          #
+          # @return [Hash] `{"size" => …}`, with `"jobId"` when open questions are resized on chain.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def grow_census_size(process_id, size)
+            client.put("/processes/#{process_id}/census/size", body: { "size" => size })
+          end
+
+          # One attested voter, with their per-question signed and voted status —
+          # `GET /processes/{id}/participants?field=voterId`.
+          #
+          # @param process_id [String] SaaS process id.
+          # @param voter_id [String] 0x hex voterId.
+          # @return [Hash, nil] the participant entry, nil when the SaaS signed nothing for them.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def attested_participant(process_id, voter_id)
+            participants(process_id, field: "voterId", value: voter_id.delete_prefix("0x"))
+              .to_h.fetch("participants", []).first
+          end
+
+          # The published attestation records of an ended attested census —
+          # `GET /processes/{id}/attestations`. Public; 409 until every question has ended.
+          #
+          # @return [Hash] `domain`, `signerHistory`, `maxCensusSize`, `attestations`, `pagination`.
+          # @raise [Decidim::Elections::Vocdoni::ApiError]
+          def attestations(process_id, page: 1, limit: 100)
+            client.get("/processes/#{process_id}/attestations",
+                       params: { "page" => page, "limit" => limit }, auth: read_auth(false))
           end
 
           private

@@ -3,10 +3,68 @@ es:
     elections:
       vocdoni:
         booth:
+          not_ready: "Esta elección todavía no está lista para aceptar votos en la red. Inténtalo de nuevo en unos momentos."
           per_question:
             closed: La votación de esta pregunta se ha cerrado.
             not_open: Esta pregunta todavía no está abierta en la red de votación. Vuelve a intentarlo en unos momentos.
             opening: Abriendo la pregunta en la red de votación…
             waiting: Esperando a que la organización abra la siguiente pregunta. Esta página se actualizará sola.
+          no_contact:
+            email: No tenemos ninguna dirección de correo electrónico tuya, así que no podemos enviarte el código de un solo uso. Ponte en contacto con la organización.
+            phone: No tenemos ningún número de móvil válido tuyo, escrito con su prefijo internacional (por ejemplo, +34 600 123 456), así que no podemos enviarte el código de un solo uso por SMS. Ponte en contacto con la organización.
           receipt:
             final: Este voto no se puede modificar.
+            check_attestation: Cuando termine la votación podrás comprobar en qué preguntas se firmó una papeleta a tu nombre.
+            check_attestation_link: Comprobar mis firmas
+            body: Cada justificante aquí abajo demuestra que un voto ha quedado registrado en la red de votación. No revela lo que has votado.
+          blocked:
+            not_in_census:
+              body: Los datos que has introducido no figuran en el censo de esta elección. Compruébalos e inténtalo de nuevo, o contacta con los organizadores si crees que deberías poder votar.
+            not_open:
+              body: En este momento no hay ninguna pregunta abierta para votar. Es posible que la votación no haya comenzado todavía o que ya haya cerrado.
+          errors:
+            auth_cooldown: "Demasiados intentos. Espera %{seconds} segundos e inténtalo de nuevo."
+            auth_rejected: No hemos podido verificar tus datos. Compruébalos e inténtalo de nuevo.
+            ballot_unsupported: Esta pregunta utiliza un formato de papeleta que esta página no entiende. Contacta con los organizadores.
+            keys_unavailable: Esta pregunta permanece cifrada hasta el final y las claves de cifrado aún no se han publicado. Tu voto no se ha emitido — inténtalo de nuevo en unos minutos.
+            network: No hemos podido conectar con la red de votación. Comprueba tu conexión e inténtalo de nuevo.
+            otp_expired: Este código ya no es válido. Vuelve a identificarte para obtener uno nuevo.
+            otp_rejected: El código no coincide. Compruébalo e introdúcelo de nuevo, o solicita uno nuevo.
+            otp_resend_failed: No hemos podido enviarte un código nuevo. Espera un momento e inténtalo de nuevo.
+            process_unavailable: En este momento no se ha podido cargar esta elección desde la red de votación.
+            relay_rejected: La red de votación ha rechazado este voto. No se ha contabilizado.
+            relay_unconfirmed: Hemos perdido la conexión mientras se enviaba tu voto. Es posible que se haya contabilizado igualmente — no votes de nuevo hasta que lo hayas comprobado.
+            sign_rejected: El censo no ha autorizado este voto. Es posible que ya se haya emitido desde otro dispositivo.
+            unknown: Ha ocurrido algo inesperado. Tu voto no se ha emitido.
+          otp:
+            body_email: Te hemos enviado un código de un solo uso por correo electrónico. Introdúcelo a continuación para confirmar tu identidad.
+            body_phone: Te hemos enviado un código de un solo uso por mensaje de texto. Introdúcelo a continuación para confirmar tu identidad.
+            hint: Puedes pegar el código directamente desde el mensaje.
+            label: Código de un solo uso
+            required: Introduce el código que te hemos enviado.
+            resend: Envíame un código nuevo
+            resend_wait: "Podrás solicitar un código nuevo en %{seconds} segundos."
+            resent: Un código nuevo está en camino.
+            submit: Confirmar
+            title: Confirma el código que te hemos enviado
+          status:
+            authenticating: Verificando tus datos…
+            checking: Comprobando las votaciones disponibles…
+            confirming: Esperando la confirmación de la red de votación…
+            loading: Cargando la elección…
+            preparing: Preparando la papeleta…
+            relaying: Enviando tu voto…
+            sending_code: Enviándote un código nuevo…
+            signing: Firmando tu voto…
+            waiting_keys: Esperando que se publiquen las claves de cifrado…
+        attestations:
+          show:
+            title: Firmas emitidas a tu nombre
+            pending: La votación aún no ha terminado. Vuelve cuando termine para comprobar en qué preguntas se firmó una papeleta a tu nombre.
+            none: No se firmó ninguna papeleta a tu nombre.
+            signed: "Se firmó una papeleta a tu nombre en estas preguntas:"
+            voted: consta un voto
+            not_voted: no consta ningún voto
+            explain: Si se firmó una papeleta a tu nombre en una pregunta en la que no votaste, avisa a la organización.
+            unavailable: Ahora mismo no se pueden comprobar las firmas. Vuelve a intentarlo más tarde.
+  

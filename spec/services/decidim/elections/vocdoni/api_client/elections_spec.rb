@@ -12,7 +12,7 @@ module Decidim
         let(:api_url) { "https://saas-api-stg.vocdoni.net" }
         let(:api_key) { "vsk_0123456789abcdef" }
         let(:org_address) { "0x0000000000000000000000000000000000000001" }
-        let(:group_id) { "000000000000000000000001" }
+        let(:signer) { "0x#{"ab" * 20}" }
         let(:process_id) { "6885f0c2c1a4e2f0b1d33a01" }
         let(:question_id) { "6885f0c2c1a4e2f0b1d33a02" }
         let(:json_headers) { { "Content-Type" => "application/json" } }
@@ -31,7 +31,7 @@ module Decidim
               title: { "en" => "Board election", "ca" => "Eleccions" },
               description: "Pick the next chair.",
               endDate: Time.utc(2026, 7, 29, 14, 51, 8),
-              census: { authFields: ["memberNumber"], groupId: group_id, weighted: false },
+              census: { attested: { signer:, maxCensusSize: 12 }, twoFaFields: ["email"] },
               questions: [
                 {
                   title: "Who should chair the board?",
@@ -51,7 +51,7 @@ module Decidim
               "title" => { "default" => "Board election", "en" => "Board election", "ca" => "Eleccions" },
               "description" => { "default" => "Pick the next chair." },
               "endDate" => "2026-07-29T14:51:08Z",
-              "census" => { "authFields" => ["memberNumber"], "groupId" => group_id, "weighted" => false },
+              "census" => { "attested" => { "signer" => signer, "maxCensusSize" => 12 }, "twoFaFields" => ["email"] },
               "questions" => [
                 {
                   "title" => { "default" => "Who should chair the board?" },
@@ -185,37 +185,6 @@ module Decidim
           end
         end
 
-        describe "#validate_census" do
-          let(:census_spec) do
-            {
-              "authFields" => ["memberNumber"],
-              "twoFaFields" => ["email"],
-              "groupId" => "6a677022622d94e7c9a1929a",
-              "weighted" => false
-            }
-          end
-
-          it "posts the census spec under a process draft body" do
-            request = stub_request(:post, "#{api_url}/processes/census/validation")
-                      .with(body: { "orgAddress" => org_address, "census" => census_spec })
-                      .to_return(status: 200, body: "")
-
-            elections.validate_census(org_address, census_spec)
-
-            expect(request).to have_been_requested
-          end
-
-          it "falls back to the configured org address when none is given" do
-            request = stub_request(:post, "#{api_url}/processes/census/validation")
-                      .with(body: { "orgAddress" => Decidim::Elections::Vocdoni.org_address, "census" => census_spec })
-                      .to_return(status: 200, body: "")
-
-            elections.validate_census(nil, census_spec)
-
-            expect(request).to have_been_requested
-          end
-        end
-
         describe "#publish" do
           it "enqueues the on-chain publication" do
             request = stub_request(:post, "#{api_url}/processes/#{process_id}/publish")
@@ -274,10 +243,10 @@ module Decidim
         describe "#participants" do
           it "looks members up by census field" do
             request = stub_request(:get, "#{api_url}/processes/#{process_id}/participants")
-                      .with(query: { "field" => "memberNumber", "value" => "1001" })
+                      .with(query: { "field" => "voterId", "value" => "1001" })
                       .to_return(status: 200, body: vocdoni_fixture("process_participants"), headers: json_headers)
 
-            participants = elections.participants(process_id, field: :memberNumber, value: "1001")
+            participants = elections.participants(process_id, field: :voterId, value: "1001")
 
             expect(participants["participants"].first["questions"].first["hasVoted"]).to be(true)
             expect(request).to have_been_requested

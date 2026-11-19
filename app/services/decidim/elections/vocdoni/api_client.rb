@@ -119,7 +119,7 @@ module Decidim
           @elections ||= Elections.new(self)
         end
 
-        # Organizations, their memberbase and their member groups.
+        # The managed organization that owns the processes.
         #
         # @return [Decidim::Elections::Vocdoni::ApiClient::Organizations]
         def organizations
@@ -350,9 +350,7 @@ module Decidim
 
           message = "Vocdoni API #{response.env.method.to_s.upcase} #{response.env.url} failed with HTTP #{response.status}"
           message << " (code #{code})" if code
-          # The detail is the SaaS's own text and may echo a voter credential;
-          # the URL is ours and keeps its ids for debugging.
-          message << ": #{VoterCredential.redact(detail)}" if detail.present?
+          message << ": #{detail}" if detail.present?
           message
         end
 

@@ -5,16 +5,18 @@ import { message } from "src/decidim/elections/vocdoni/voter/booth_text";
 import { runOtp } from "src/decidim/elections/vocdoni/voter/booth_otp";
 import { closedMessage, splitClosed } from "src/decidim/elections/vocdoni/voter/closed_gate";
 import { createNextQuestionWatcher, holdUntilOpen } from "src/decidim/elections/vocdoni/voter/per_question";
+import { fetchAttestation } from "src/decidim/elections/vocdoni/voter/attestation";
 
 /**
  * The `vocdoni` voting backend for Decidim's client-side booth. Authenticates
- * the voter against the Vocdoni CSP with the credentials the server put in the
- * booth config, runs the email OTP when the census asks for it, and casts each
- * question from the browser with `cast.js`.
+ * the voter against the Vocdoni CSP with the attestation Decidim signs for
+ * them, runs the OTP when the census asks for it, and casts each question from
+ * the browser with `cast.js`.
  *
  * Config (from the gem's `booth_config`): apiUrl, processId, chainId,
- * explorerUrl, credentials, contact, questions, i18n; and for a per-question
- * election perQuestion, waitingUrl, perQuestionI18n (see `per_question.js`).
+ * explorerUrl, attestationUrl, contact, questions, i18n; and for a
+ * per-question election perQuestion, waitingUrl, perQuestionI18n (see
+ * `per_question.js`).
  *
  * Adapter contract (all async):
  *   prepare(ctx)  -> { canVote, alreadyVoted, receipts?, priorReceipts?,
@@ -67,10 +69,9 @@ const createAdapter = () => {
     const loaded = await flow.loadProcess();
 
     ctx.progress(i18n.status.authenticating);
-    const channel = flow.twoFaChannels()[0] || null;
-    const { needsOtp } = await flow.authenticate(config.credentials, channel
-      ? { channel, contact: (config.contact || {})[channel] }
-      : {});
+    const attestation = await fetchAttestation(config.attestationUrl);
+    // The attestation carries the contact the code goes to.
+    const { needsOtp } = await flow.authenticate(attestation);
 
     if (needsOtp) {
       ctx.progress("");

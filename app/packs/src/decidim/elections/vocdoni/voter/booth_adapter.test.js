@@ -10,7 +10,6 @@
 
 const mockFlow = {
   loadProcess: jest.fn(),
-  twoFaChannels: jest.fn(() => []),
   authenticate: jest.fn(),
   confirmOtp: jest.fn(),
   resendOtp: jest.fn(),
@@ -41,9 +40,9 @@ const voteError = (code) => Object.assign(new Error(code), { code });
 beforeEach(() => {
   jest.resetModules();
   Object.values(mockFlow).forEach((fn) => fn.mockReset && fn.mockReset());
-  mockFlow.twoFaChannels.mockReturnValue([]);
   mockFlow.authenticate.mockResolvedValue({ needsOtp: false });
   mockFlow.loadProcess.mockResolvedValue({});
+  window.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ attestation: {}, signature: "00" }) });
 
   // Re-import to get a fresh adapter instance.
   jest.isolateModules(() => {
@@ -59,8 +58,7 @@ const makeCtx = () => ({
     apiUrl: "https://api.test",
     chainId: "vocdoni/test/1",
     explorerUrl: "https://explorer.test",
-    credentials: { memberNumber: "1" },
-    contact: { email: "alice@example.org" },
+    attestationUrl: "/attestation",
     questions: [
       {
         questionId: "1",
@@ -242,5 +240,54 @@ describe("recheck()", () => {
     const result = await adapter.recheck(ctx);
 
     expect(result.receipts).toHaveLength(0);
+  });
+});
+
+describe("prepare() — attestation", () => {
+  const attestation = { attestation: { voterId: "ab" }, signature: "ef", contact: "alice@example.org", salt: "01" };
+
+  beforeEach(() => {
+    const meta = document.createElement("meta");
+    meta.name = "csrf-token";
+    meta.content = "csrf-1";
+    document.head.replaceChildren(meta);
+    mockFlow.check.mockResolvedValue(checkResponse());
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(window, "fetch");
+  });
+
+  it("authenticates with the attestation Decidim signs", async () => {
+    window.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(attestation) });
+    const ctx = makeCtx();
+    ctx.config.attestationUrl = "/processes/p/f/1/elections/7/vocdoni_attestation";
+
+    await expect(adapter.prepare(ctx)).resolves.toEqual({ canVote: true, alreadyVoted: false });
+    expect(window.fetch).toHaveBeenCalledWith("/processes/p/f/1/elections/7/vocdoni_attestation", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json", "X-CSRF-Token": "csrf-1" }
+    });
+    expect(mockFlow.authenticate).toHaveBeenCalledWith(attestation);
+  });
+
+  it("stops before the CSP when Decidim refuses to sign", async () => {
+    window.fetch = jest.fn().mockResolvedValue({ ok: false, status: 401 });
+    const ctx = makeCtx();
+    ctx.config.attestationUrl = "/attestation";
+    ctx.config.i18n.errors.auth_rejected = "Rejected"; // eslint-disable-line camelcase
+
+    await expect(adapter.prepare(ctx)).rejects.toThrow("Rejected");
+    expect(mockFlow.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("tells the voter when Decidim has no contact to send the code to", async () => {
+    window.fetch = jest.fn().mockResolvedValue({ ok: false, status: 422 });
+    const ctx = makeCtx();
+    ctx.config.i18n.errors.no_contact = "No phone"; // eslint-disable-line camelcase
+
+    await expect(adapter.prepare(ctx)).rejects.toThrow("No phone");
+    expect(mockFlow.authenticate).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@
  *    and the card title still do.
  * 2. The one-time code block is shown, and its fieldset usable, only while
  *    the secret vote is selected.
+ * 3. Checking one code channel unchecks the other; the form refuses both.
  *
  * The section header is a native `<details>`, so it needs nothing here. The
  * resulting configuration is summarised on the Dashboard, from saved data.
@@ -66,6 +67,15 @@ const setupSecurity = () => {
   });
 
   radios.forEach((radio) => radio.addEventListener("change", sync));
+
+  const codes = Array.from(twoFactor.querySelectorAll("input[type='checkbox'][data-security-code]"));
+  codes.forEach((box) => box.addEventListener("change", () => {
+    if (box.checked) {
+      codes.filter((other) => other !== box).forEach((other) => {
+        other.checked = false;
+      });
+    }
+  }));
 
   // Form state survives a back-navigation, so start in step with it.
   sync();

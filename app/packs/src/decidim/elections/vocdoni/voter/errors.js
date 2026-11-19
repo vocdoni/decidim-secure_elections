@@ -1,7 +1,7 @@
 /**
- * Error vocabulary for the voting page.
+ * Error vocabulary for the booth.
  *
- * The voting page never shows a raw API error to the voter: an error is classified
+ * The booth never shows a raw API error to the voter: an error is classified
  * into one of a handful of *states*, each of which has an honest, actionable
  * message. In particular `RELAY_UNCONFIRMED` exists because a vote that fails
  * mid-relay may still have landed on chain — telling the voter it failed would
@@ -9,6 +9,7 @@
  *
  * NETWORK            the browser could not reach the API (offline, DNS, CORS)
  * AUTH_REJECTED      the census rejected the supplied credentials
+ * NO_CONTACT         Decidim has no email or phone of the voter's to send the code to
  * AUTH_COOLDOWN      too many code requests too fast; the CSP says to wait
  * OTP_REJECTED       the 2FA code did not match — retryable, the token survives
  * OTP_EXPIRED        the 2FA session is over; the voter must identify again
@@ -25,6 +26,7 @@
 export const ErrorCode = {
   NETWORK: "network",
   AUTH_REJECTED: "auth_rejected",
+  NO_CONTACT: "no_contact",
   AUTH_COOLDOWN: "auth_cooldown",
   OTP_REJECTED: "otp_rejected",
   OTP_EXPIRED: "otp_expired",
@@ -38,11 +40,11 @@ export const ErrorCode = {
   UNKNOWN: "unknown"
 };
 
-/** An error the voting page knows how to present to a voter. */
+/** An error the booth knows how to present to a voter. */
 export class VoteError extends Error {
 
   /**
-   * Builds a classified voting page error.
+   * Builds a classified booth error.
    *
    * @param {string} code - one of {@link ErrorCode}.
    * @param {Object} [options] - extra context.
@@ -61,7 +63,7 @@ export class VoteError extends Error {
 }
 
 /**
- * Backend error codes the voting page has to tell apart. They are the `code` field of
+ * Backend error codes the booth has to tell apart. They are the `code` field of
  * the API's error body, not the HTTP status: the CSP answers 401 for a wrong
  * one-time code, for a cooldown and for an unverified token alike, so the HTTP
  * status on its own cannot drive an honest message.
@@ -167,7 +169,7 @@ export const toVoteError = (error, fallback = ErrorCode.UNKNOWN) => {
 };
 
 /**
- * The cooldown a rate-limited auth call ran into, as a voting page error carrying the
+ * The cooldown a rate-limited auth call ran into, as a booth error carrying the
  * seconds to show the voter.
  *
  * @param {*} error - the throwable from an auth call.

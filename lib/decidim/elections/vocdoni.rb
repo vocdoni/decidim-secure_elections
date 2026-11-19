@@ -2,6 +2,7 @@
 
 require "decidim/elections/vocdoni/version"
 require "decidim/elections/vocdoni/engine"
+require "decidim/elections/vocdoni/attestation"
 
 module Decidim
   # Decidim component that delegates the ballot to the Vocdoni protocol through
@@ -18,8 +19,7 @@ module Decidim
   # signing. No API key is ever sent to the browser, and no ballot ever reaches
   # Decidim. See `app/packs/src/decidim/elections/vocdoni/voter/`.
   #
-  # Unlike the previous generation of this module there is **no Node.js runtime
-  # on the server** — the SaaS API is reachable from Ruby directly.
+  # There is **no Node.js runtime on the server** — the SaaS API is reachable from Ruby directly.
   module Elections
     module Vocdoni
       # The tables stay `decidim_vocdoni_*` even though the module is
@@ -32,9 +32,8 @@ module Decidim
       # settles it.
       #
       # They stay because `vocdoni` in a column or a table is not this module's
-      # name, it is the network the data belongs to: `vocdoni_process_id`,
-      # `vocdoni_upstream_id` and `vocdoni_member_id` are identifiers minted by
-      # Vocdoni, and renaming the tables around them would buy consistency with
+      # name, it is the network the data belongs to: `vocdoni_process_id` and
+      # `vocdoni_upstream_id` are identifiers minted by Vocdoni, and renaming the tables around them would buy consistency with
       # the gem's name at the cost of a migration that reads as if the data had
       # changed meaning. The same reasoning keeps the `VOCDONI_*` environment
       # variables and the `:vocdoni` component manifest.
@@ -87,8 +86,7 @@ module Decidim
         end
 
         # The Vocdoni SaaS bases this module knows, and the explorer that goes
-        # with each. The static voting page under `public/vocdoni/` carries the
-        # same three bases in its own `API_HOSTS`; this table adds the explorer.
+        # with each.
         NETWORKS = {
           "https://saas-api.vocdoni.net" => "https://explorer.vote",
           "https://saas-api-stg.vocdoni.net" => "https://stg.explorer.vote",
@@ -177,8 +175,7 @@ module Decidim
         # HTTP status codes worth another attempt on their own: a rate limit or a
         # server-side hiccup that may clear up in a few seconds. Everything else
         # (400, 401, 403, 404, 409, …) is an *answer* — retrying it is guaranteed
-        # to fail identically and, when the failing call is `POST /members`, will
-        # create fresh orphaned members upstream on every attempt.
+        # to fail identically.
         TRANSIENT_STATUSES = [429, 500, 502, 503, 504].freeze
 
         attr_reader :status, :code, :body

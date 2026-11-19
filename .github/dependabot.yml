@@ -6,8 +6,8 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
 
-  # The voting page bundles these into a committed artefact, so an update here
-  # is not complete until `npm run build:vote` has been run and the result
+  # The booth adapter bundles these into a committed artefact, so an update here
+  # is not complete until `npm run build:booth` has been run and the result
   # committed. CI fails the pull request until it has been.
   - package-ecosystem: npm
     directory: "/"

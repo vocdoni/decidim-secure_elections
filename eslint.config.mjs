@@ -57,31 +57,11 @@ export default defineConfig([
     }
   },
   {
-    // `no-bitwise` is a rule against people reaching for `&` where they meant
-    // `&&`. This one module is a byte packer — it reads and writes a header of
-    // flags — so the operators are the subject rather than a mistake, and
-    // rewriting them as arithmetic would only make the layout harder to check
-    // against the Ruby encoder it has to agree with.
-    files: ["app/packs/src/decidim/elections/vocdoni/voter/link_code.js"],
-    rules: { "no-bitwise": "off" }
-  },
-  {
-    // The build script is a Node program, not browser code. It is linted — it
-    // is the thing that produces the voting page, so it is worth holding to the
-    // same standard — but three of Decidim's browser-facing rules do not apply
-    // to it, and one of them would be actively wrong.
+    // The build script is a Node program, not browser code: it produces the
+    // booth adapter bundle, so it is linted too, with Node's globals.
     files: ["build/**/*.mjs"],
     languageOptions: {
       globals: { process: "readonly", console: "readonly" }
-    },
-    rules: {
-      // The locale keys this script reads out of `config/locales` are
-      // snake_case, because that is what Rails i18n keys are.
-      camelcase: "off",
-      // Both of these read better than the alternatives in a linear script
-      // that skips locales it has no strings for.
-      "no-continue": "off",
-      "no-undefined": "off"
     }
   }
 ]);

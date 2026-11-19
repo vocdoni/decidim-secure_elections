@@ -33,19 +33,19 @@ Gem::Specification.new do |s|
   # a generated dummy app or somebody's `.env`. This is how every Decidim gem
   # builds its manifest.
   #
-  # `public/` is in the list because it carries the built voting page
-  # (`public/vocdoni/vote.html` and friends). That is a build artefact which is
-  # committed on purpose: the page has to be there the moment the gem is
-  # installed, with no npm and no `assets:precompile` in between.
+  # `public/` is in the list because it carries the built booth adapter
+  # (`public/vocdoni/booth-adapter.js`). That is a build artefact which is
+  # committed on purpose: it has to be there the moment the gem is installed,
+  # with no npm and no `assets:precompile` in between.
   #
   # `lib/decidim/elections/vocdoni/test/` ships too — a downstream module needs the
-  # factories to write its own specs. The voting page's *own* tests do not: they
+  # factories to write its own specs. The booth adapter's *own* tests do not: they
   # are a development concern and would only add weight.
   s.files = Dir.chdir(__dir__) do
     tracked = `git ls-files -z`.split("\x0")
 
     tracked.select do |f|
-      next false if f.end_with?(".test.js", "voting_page_fixture.js")
+      next false if f.end_with?(".test.js")
 
       f.start_with?(*%w(app/ config/ db/ lib/ public/)) ||
         f.start_with?("docs/") ||

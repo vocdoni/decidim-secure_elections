@@ -13,38 +13,12 @@ module Decidim
           end
         end
 
-        describe ".enabled?" do
-          context "when VOCDONI_INTEGRATED_BOOTH is not set" do
-            it "returns true" do
-              with_env("VOCDONI_INTEGRATED_BOOTH" => nil) do
-                expect(described_class.enabled?).to be(true)
-              end
-            end
-          end
-
-          context "when VOCDONI_INTEGRATED_BOOTH=true" do
-            it "returns true" do
-              with_env("VOCDONI_INTEGRATED_BOOTH" => "true") do
-                expect(described_class.enabled?).to be(true)
-              end
-            end
-          end
-
-          context "when VOCDONI_INTEGRATED_BOOTH=false" do
-            it "returns false (rollback switch)" do
-              with_env("VOCDONI_INTEGRATED_BOOTH" => "false") do
-                expect(described_class.enabled?).to be(false)
-              end
-            end
-          end
-        end
-
         describe ".active_for?" do
           let(:election) { build(:election) }
 
-          context "when the integrated booth is enabled and the election uses the :vocdoni backend" do
+          context "when the registry is available and the election uses the :vocdoni backend" do
             before do
-              allow(described_class).to receive(:enabled?).and_return(true)
+              allow(described_class).to receive(:available?).and_return(true)
               vocdoni_manifest = instance_double(
                 Decidim::Elections::VotingBackendManifest,
                 name: :vocdoni
@@ -57,8 +31,8 @@ module Decidim
             end
           end
 
-          context "when the integrated booth is disabled" do
-            before { allow(described_class).to receive(:enabled?).and_return(false) }
+          context "when this Decidim has no voting backend registry" do
+            before { allow(described_class).to receive(:available?).and_return(false) }
 
             it "returns false regardless of backend" do
               expect(described_class.active_for?(election)).to be(false)
@@ -67,7 +41,7 @@ module Decidim
 
           context "when the election uses a different backend" do
             before do
-              allow(described_class).to receive(:enabled?).and_return(true)
+              allow(described_class).to receive(:available?).and_return(true)
               other_manifest = instance_double(
                 Decidim::Elections::VotingBackendManifest,
                 name: :decidim
@@ -146,18 +120,18 @@ module Decidim
             expect(config[:castNotificationUrl]).to end_with("/elections/#{election.id}/vocdoni_cast_notification")
           end
 
-          it "sets credentials.memberNumber to the voter credential, never the user id" do
-            expect(config[:credentials]).to eq(memberNumber: VoterCredential.for(election, user))
-            expect(config[:credentials][:memberNumber]).not_to eq(user.id.to_s)
+          it "points the booth at the attestation URL and hands it no credential" do
+            expect(config[:attestationUrl]).to end_with("/elections/#{election.id}/vocdoni_attestation")
+            expect(config).not_to have_key(:credentials)
           end
 
-          it "sets contact.email to the user's email" do
-            expect(config[:contact][:email]).to eq(user.email)
+          it "never hands the browser the contact itself" do
+            expect(config.to_json).not_to include(user.email)
           end
 
-          it "includes a masked contact email" do
-            expect(config[:contact][:masked]).to be_a(String)
-            expect(config[:contact][:masked]).to include("•••@")
+          it "shows no contact without a one-time code" do
+            expect(config[:contact]).to eq({})
+            expect(config[:i18n][:errors]).not_to have_key(:no_contact)
           end
 
           it "has no per-question settings" do
@@ -205,12 +179,11 @@ module Decidim
           end
         end
 
-        describe ".booth_config credentials" do
+        describe ".booth_config contact" do
           let(:election) { create(:election, census_manifest:) }
           let(:census_manifest) { "internal_users" }
-          let(:two_fa_fields) { ["email"] }
           let!(:vocdoni_process) do
-            create(:vocdoni_process, :published, election:, metadata: { "settings" => { "twofa_fields" => two_fa_fields } })
+            create(:vocdoni_process, :published, election:, metadata: { "settings" => { "twofa_fields" => ["email"] } })
           end
           let(:user) { create(:user, :confirmed, organization: election.organization, email: "ada@example.org") }
 
@@ -218,58 +191,50 @@ module Decidim
             described_class.booth_config(election, voter_uid:)
           end
 
-          it "hands the voter the credential the publish job pushed" do
-            config = config_for(user.to_global_id.to_s)
-
-            expect(config[:credentials]).to eq(memberNumber: VoterCredential.for(election, user))
-            expect(config[:credentials][:memberNumber]).not_to eq(user.id.to_s)
-            expect(config[:contact]).to eq(email: "ada@example.org", masked: "a•••@example.org")
+          it "masks the email of the voter's census entry" do
+            expect(config_for(user.to_global_id.to_s)[:contact]).to eq(channel: "email", masked: "a•••@example.org")
           end
 
-          it "matches the member the publish job builds for the same voter" do
-            member = CensusMember.payload(election, user, two_fa_fields:)
-
-            expect(config_for(user.to_global_id.to_s)[:credentials][:memberNumber]).to eq(member["memberNumber"])
+          it "explains a missing email" do
+            expect(config_for(user.to_global_id.to_s)[:i18n][:errors][:no_contact]).to include("email")
           end
 
-          it "gives no credential without a census voter" do
-            expect(config_for(nil)[:credentials]).to eq(memberNumber: nil)
-            expect(config_for(create(:user, :confirmed).to_global_id.to_s)[:credentials]).to eq(memberNumber: nil)
+          it "has no contact without a census voter" do
+            expect(config_for(nil)[:contact]).to eq(channel: "email")
+            expect(config_for(create(:user, :confirmed).to_global_id.to_s)[:contact]).to eq(channel: "email")
+          end
+
+          context "with SMS codes" do
+            let!(:vocdoni_process) do
+              create(:vocdoni_process, :published, election:, metadata: { "settings" => { "twofa_fields" => ["phone"] } })
+            end
+            let(:census_manifest) { "token_csv" }
+
+            it "masks the E.164 phone of the voter's census entry" do
+              voter = create(:election_voter, election:, data: { "email" => "bob@example.org", "phone" => "+34 600 12 34 56" })
+              config = config_for(voter.to_global_id.to_s)
+
+              expect(config[:contact]).to eq(channel: "phone", masked: "+•••••••••56")
+              expect(config.to_json).not_to include("600123456")
+              expect(config[:i18n][:errors][:no_contact]).to include("phone")
+            end
           end
 
           context "with a token_csv census" do
             let(:census_manifest) { "token_csv" }
-            let(:two_fa_fields) { %w(email phone) }
             let(:voter) do
-              create(:election_voter, election:, data: { "email" => "bob@example.org", "token" => "S3CRET", "phone" => "600000002" })
+              create(:election_voter, election:, data: { "email" => "bob@example.org", "token" => "S3CRET" })
             end
 
-            it "derives the credential from the CSV row and never exposes its token" do
+            it "reads the CSV row and never exposes its token" do
               config = config_for(voter.to_global_id.to_s)
 
-              expect(config[:credentials]).to eq(memberNumber: VoterCredential.for(election, voter))
-              expect(config[:contact]).to eq(email: "bob@example.org", phone: "600000002", masked: "b•••@example.org")
+              expect(config[:contact]).to eq(channel: "email", masked: "b•••@example.org")
               expect(config.to_json).not_to include("S3CRET")
-            end
-
-            it "matches the member the publish job builds for the same row" do
-              member = CensusMember.payload(election, voter, two_fa_fields:)
-
-              expect(config_for(voter.to_global_id.to_s)[:credentials][:memberNumber]).to eq(member["memberNumber"])
-              expect(config_for(voter.to_global_id.to_s)[:contact][:phone]).to eq(member["phone"])
             end
           end
         end
       end
     end
   end
-end
-
-# Helper to set environment variables for the duration of a block.
-def with_env(vars)
-  old = vars.to_h { |k, _| [k, ENV.fetch(k, nil)] }
-  vars.each { |k, v| v.nil? ? ENV.delete(k) : (ENV[k] = v) }
-  yield
-ensure
-  old.each { |k, v| v.nil? ? ENV.delete(k) : (ENV[k] = v) }
 end

@@ -9,7 +9,6 @@
 
 const mockFlow = {
   loadProcess: jest.fn(),
-  twoFaChannels: jest.fn(() => []),
   authenticate: jest.fn(),
   confirmOtp: jest.fn(),
   resendOtp: jest.fn(),
@@ -18,6 +17,10 @@ const mockFlow = {
   receipts: jest.fn(),
   verified: false
 };
+
+jest.mock("src/decidim/elections/vocdoni/voter/attestation", () => ({
+  fetchAttestation: jest.fn(() => Promise.resolve({ attestation: { voterId: "ab" }, signature: "ef" }))
+}));
 
 jest.mock("src/decidim/elections/vocdoni/voter/flow", () => ({
   createVoterFlow: jest.fn(() => mockFlow)
@@ -31,7 +34,6 @@ beforeEach(() => {
   jest.resetModules();
   Object.values(mockFlow).forEach((fn) => fn.mockReset && fn.mockReset());
   mockFlow.verified = false;
-  mockFlow.twoFaChannels.mockReturnValue([]);
   mockFlow.authenticate.mockResolvedValue({ needsOtp: false });
   mockFlow.loadProcess.mockResolvedValue({});
 
@@ -49,8 +51,7 @@ const makeCtx = () => ({
     apiUrl: "https://api.test",
     chainId: "vocdoni/test/1",
     explorerUrl: "https://explorer.test",
-    credentials: { memberNumber: "1" },
-    contact: { email: "alice@example.org" },
+    attestationUrl: "/attestation",
     questions: [
       {
         questionId: "1",

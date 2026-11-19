@@ -17,13 +17,37 @@ en:
               title: "Your security configuration"
             census_snapshot:
               title: "Census for the secret vote"
-              count:
-                one: "When voting starts, the participants in the census at that moment will be registered for the secret vote. Right now there is 1."
-                other: "When voting starts, the participants in the census at that moment will be registered for the secret vote. Right now there are %{count}."
               empty: "The census is empty right now: the secret vote cannot start until at least one participant is in it."
-              limitations: "Due to current limitations on how the secret vote is implemented:"
-              late_joiners: "Participants who join the census after voting starts (for example, by getting verified later) will not be able to vote in this election."
-              verify_before_start: "Participants need an account and the verifications this census requires (such as the organization's census) before voting starts."
+              count:
+                one: "Right now there is 1 participant in the census."
+                other: "Right now there are %{count} participants in the census."
+              late_joiners: "Decidim vouches for each participant when they open the voting booth, so participants who join the census after voting starts (for example, by getting verified later) can vote too, as long as the declared maximum of voters has not been reached."
+              declared:
+                one: "The declared maximum is 1 voter."
+                other: "The declared maximum is %{count} voters."
+              projected:
+                one: "When voting starts, the declared maximum is set to the census size at that moment plus 20%, rounded up: 1 voter with the current census."
+                other: "When voting starts, the declared maximum is set to the census size at that moment plus 20%, rounded up: %{count} voters with the current census."
+            attestations:
+              title: "Attestations"
+              issued:
+                one: "Issued: 1 attestation to %{voters}."
+                other: "Issued: %{count} attestations to %{voters}."
+              voters:
+                one: "1 voter"
+                other: "%{count} voters"
+              published:
+                one: "Published by Vocdoni: 1 signed voter, out of a declared maximum of %{max}."
+                other: "Published by Vocdoni: %{count} signed voters, out of a declared maximum of %{max}."
+              unknown:
+                one: "Signed voters Decidim never attested: 1."
+                other: "Signed voters Decidim never attested: %{count}."
+              per_question:
+                one: "%{question}: 1 signed voter."
+                other: "%{question}: %{count} signed voters."
+              unavailable:
+                pending: "Vocdoni publishes the signed voters once every question has ended."
+                error: "The signed voters cannot be read from Vocdoni right now."
           # The Security tab. Written for the person running the vote, not for
           # engineers: no "blockchain", "CSP", "OTP" or "manifest". The two
           # vote types are "Simple vote" (any standard Decidim census) and
@@ -66,8 +90,9 @@ en:
                   help: "The code goes to the email address each participant registered with."
                 sms:
                   label: "SMS code"
-                  help: "The code goes by text message, so every voter needs a phone number registered with the voting service."
-                both_note: "If both are on, each voter chooses how to receive the code."
+                  help: "The code goes by text message to the phone number in each participant's verification or census row, written with its country code (for example +34 600 123 456). Participants without one cannot vote."
+                one_channel_note: "Choose one: the code goes either by email or by SMS."
+                one_channel: "Choose either the email code or the SMS code, not both."
               # One sentence per level (`SecurityForm::LEVELS`), shown on the
               # Dashboard card ("Your security configuration").
               summary:
@@ -78,8 +103,3 @@ en:
             update:
               success: "Security settings updated."
               invalid: "Security settings could not be saved. Please review the errors below."
-        booth:
-          launcher:
-            help_html: "Your vote is cast using Vocdoni’s secure technology, guaranteeing anonymity and verifiability."
-            enter: "Open the voting booth"
-            not_ready: "This election is not yet ready to accept votes on the blockchain. Please try again in a few moments."
