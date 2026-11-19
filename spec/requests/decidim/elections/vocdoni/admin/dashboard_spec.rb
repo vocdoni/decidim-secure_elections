@@ -291,9 +291,10 @@ module Decidim
 
           context "when the viewer administers only the space" do
             let(:platform_url) { "https://platform.vocdoni.io" }
-            let(:admin) { create(:process_admin, participatory_process: component.participatory_space) }
+            let(:admin) { create(:process_admin, :confirmed, participatory_process: component.participatory_space) }
 
             it "sends them to their organization admin, without the platform link" do
+              expect(response).to have_http_status(:ok)
               expect(action.text.squish).to eq(I18n.t("#{scope}.billing_ask_admin"))
               expect(action.at_css("a")).to be_nil
             end
