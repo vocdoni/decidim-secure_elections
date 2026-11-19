@@ -1,0 +1,20 @@
+<%#
+  Alert on upstream's Dashboard tab when the last publish attempt failed
+  (Process#failed?). The SaaS error is shown so the admin knows whether the
+  problem is a census configuration issue or a transient SaaS failure, rather
+  than seeing a silent not-ready-yet state.
+
+  Rendered from the security card partial, before that card. Disappears once
+  the admin opts out and back in (which resets the sidecar to pending), or
+  once a retry succeeds and the state moves to published.
+%>
+<% process = election.vocdoni_process %>
+<% if process&.failed? %>
+  <div class="callout alert vocdoni-publish-failure" role="alert">
+    <p class="font-bold"><%= t("decidim.elections.vocdoni.admin.dashboard.publish_failure.title") %></p>
+    <% if process.last_error.present? %>
+      <p><%= t("decidim.elections.vocdoni.admin.dashboard.publish_failure.error", message: process.last_error) %></p>
+    <% end %>
+    <p><%= t("decidim.elections.vocdoni.admin.dashboard.publish_failure.hint") %></p>
+  </div>
+<% end %>

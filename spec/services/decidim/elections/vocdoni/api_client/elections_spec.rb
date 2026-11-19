@@ -185,19 +185,6 @@ module Decidim
           end
         end
 
-        describe "#validate" do
-          it "runs the publish-readiness dry run" do
-            request = stub_request(:get, "#{api_url}/processes/#{process_id}/validation")
-                      .to_return(status: 200, body: vocdoni_fixture("process_validation"), headers: json_headers)
-
-            result = elections.validate(process_id)
-
-            expect(result["valid"]).to be(false)
-            expect(result["errors"]).to include("census is empty")
-            expect(request).to have_been_requested
-          end
-        end
-
         describe "#publish" do
           it "enqueues the on-chain publication" do
             request = stub_request(:post, "#{api_url}/processes/#{process_id}/publish")

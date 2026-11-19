@@ -22,6 +22,11 @@ unless FactoryBot::Internal.factories.registered?(:vocdoni_process)
       state { "pending" }
       metadata { {} }
 
+      trait :failed do
+        state { "failed" }
+        last_error { "census size exceeds email allowance" }
+      end
+
       trait :publishing do
         state { "publishing" }
       end
