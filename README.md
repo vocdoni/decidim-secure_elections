@@ -143,7 +143,7 @@ falling back to a test chain.
 | Repository | `vocdoni/decidim-secure_elections` |
 | Sidecar table | `decidim_vocdoni_processes` |
 | Booth adapter | `public/vocdoni/booth-adapter.js` (served by middleware) |
-| Background jobs | `PublishElectionJob`, `SyncProcessJob` (queue `:vocdoni`) |
+| Background jobs | queue `:vocdoni` — `PublishElectionJob` (lands the election on chain at start); `SyncProcessJob` (polls on-chain state while voting is open); `SyncElectionResultsJob` (writes tally into Decidim after publish-results); `SyncResultsAfterVoteJob` (live-tally chain for `real_time` elections); `EndProcessOnChainJob` (moves every question to ENDED when the admin ends the election); `UpdateQuestionOnChainJob` (opens or closes a single `per_question` question) |
 
 The booth adapter is a committed build artefact under `public/vocdoni/`.
 Rebuild it with `npm run build:booth` and commit the result whenever anything

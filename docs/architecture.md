@@ -187,6 +187,9 @@ an election attested with its `issued_count` (see the migrations for the full co
 | `voter_id_secret`       | text      | HMAC key of the voterIds, encrypted; never leaves Decidim                          |
 | `census_size`           | integer   | turnout denominator                                                                |
 | `metadata`              | jsonb     | per-question upstream ids + statuses; `settings.twofa_fields`; `last_error` bag    |
+| `live_sync_requests`    | integer, default 0 | count of outstanding live-sync request slots (capped by `LiveResultsSync`) |
+| `live_sync_until`       | datetime  | stop live-syncing after this time (set by `SyncResultsAfterVoteJob`)               |
+| `synced_vote_count`     | integer   | last reported vote total; drives live-sync restart logic                           |
 
 `Process#published?` ⇒ `state == "published"`.
 `Process#upstream_draft?` ⇒ `vocdoni_process_id.present? && !published?`.
@@ -267,12 +270,13 @@ These override any assumption drawn from the SDK documentation.
    Vochain election and the booth encodes a ballot per question, so the type
    belongs to the question.
 3. **A vote is never linked to a voter.** The census authenticates against the CSP,
-   which returns a blind signature; the ballot is then cast with an ephemeral key
+   which issues an EIP-712 attestation; the ballot is then cast with an ephemeral key
    generated in the browser and discarded. Decidim stores the census, never a vote.
-4. **The tally is read from the chain, never from Decidim.** The sidecar caches
-   `census_size` and per-question chain-side status; result numbers come from the SaaS
-   directly. Anything that disagrees with the chain is a stale cache, not a different
-   result.
+4. **The tally is authoritative on chain.** `SyncElectionResultsJob` and
+   `SyncResultsAfterVoteJob` pull `GET /processes/{id}/results` from the SaaS and
+   write the counts into `Decidim::Elections::ResponseOption#votes_count` so upstream's
+   results view renders them. The sidecar also caches `census_size` and per-question
+   chain-side status. Anything that disagrees with the chain is a stale cache.
 
 ## 5. Decidim conventions that apply
 
