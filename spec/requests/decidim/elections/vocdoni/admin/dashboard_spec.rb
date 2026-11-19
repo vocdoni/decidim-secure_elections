@@ -216,5 +216,36 @@ module Decidim
         end
       end
     end
+
+    describe "publish failure alert" do
+      let(:failure_alert) { html.at_css(".vocdoni-publish-failure") }
+
+      context "when the vocdoni process failed" do
+        let!(:election) do
+          create(:election, :with_token_csv_census, component:).tap do |record|
+            create(:vocdoni_process, :failed, election: record)
+          end
+        end
+
+        it "renders a failure alert with the error message" do
+          expect(response).to have_http_status(:ok)
+          expect(failure_alert).to be_present
+          expect(failure_alert.text).to include("census size exceeds email allowance")
+        end
+      end
+
+      context "when the vocdoni process is pending" do
+        let!(:election) do
+          create(:election, :with_token_csv_census, component:).tap do |record|
+            create(:vocdoni_process, election: record)
+          end
+        end
+
+        it "does not render a failure alert" do
+          expect(response).to have_http_status(:ok)
+          expect(failure_alert).to be_nil
+        end
+      end
+    end
   end
 end

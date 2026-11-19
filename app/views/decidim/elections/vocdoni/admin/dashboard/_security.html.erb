@@ -12,6 +12,7 @@
   The question failure alert renders first, so a chain status change that
   failed shows above the module's cards.
 %>
+<%= render partial: "decidim/elections/vocdoni/admin/dashboard/publish_failure" %>
 <%= render partial: "decidim/elections/vocdoni/admin/dashboard/question_failures" %>
 <% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 <% level = Decidim::Elections::Vocdoni::AdminForms::SecurityForm.level_for(election) %>
