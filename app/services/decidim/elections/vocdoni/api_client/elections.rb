@@ -96,17 +96,6 @@ module Decidim
             client.get("/processes/#{process_id}", auth: read_auth(authenticated))
           end
 
-          # Publish-readiness dry-run — `GET /processes/{id}/validation`.
-          #
-          # Does not touch the process. Not to be confused with
-          # `POST /processes/{id}/check`, the public voter-eligibility route.
-          #
-          # @param process_id [String] SaaS process id.
-          # @return [Hash] `{"valid" => true|false, "errors" => [...]}`.
-          # @raise [Decidim::Elections::Vocdoni::ApiError]
-          def validate(process_id)
-            client.get("/processes/#{process_id}/validation")
-          end
 
           # Deletes a draft — `DELETE /processes/{id}`.
           #

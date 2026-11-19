@@ -1,4 +1,0 @@
-{
-  "valid": false,
-  "errors": ["endDate must be in the future", "census is empty"]
-}
