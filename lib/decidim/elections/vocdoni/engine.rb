@@ -41,20 +41,6 @@ module Decidim
           Decidim::Elections::Vocdoni::VotingBackend.register!
         end
 
-        # Upstream routes the client-side booth only for the all-at-once flow
-        # (`votes/booth`); a `per_question` election needs it under its own
-        # controller too (see {PerQuestionClientBooth}). Prepended so it is
-        # matched before upstream's `per_question_votes/:id`.
-        initializer "decidim_elections_vocdoni.per_question_booth_route" do
-          Decidim::Elections::Engine.routes.prepend do
-            resources :elections, only: [] do
-              resources :per_question_votes, only: [] do
-                collection { get :booth }
-              end
-            end
-          end
-        end
-
         # The booth of a Vocdoni election fetches its voter's attestation from
         #   POST <component>/elections/:election_id/vocdoni_attestation
         # and, after the end, the voter reads what the SaaS signed for them at
@@ -110,12 +96,6 @@ module Decidim
               Decidim::Elections::Vocdoni::CensusRedirectsToSecurity
             )
 
-            # Wire the `per_question` booth: upstream sends those voters to its
-            # own controller; prepend the concern so the integrated booth serves
-            # the open questions.
-            per_question_votes = Decidim::Elections::PerQuestionVotesController
-            booth = Decidim::Elections::Vocdoni::PerQuestionClientBooth
-            per_question_votes.prepend(booth) unless per_question_votes <= booth
 
             # The "Your security configuration" card on upstream's Dashboard
             # tab. Upstream's dashboard has no view hook, so this gem ships a

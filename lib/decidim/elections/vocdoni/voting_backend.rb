@@ -41,8 +41,8 @@ module Decidim
             manifest.pre_ballot_partial = "decidim/elections/vocdoni/booth/otp_panel"
             manifest.receipt_partial = "decidim/elections/vocdoni/booth/receipt_note"
             manifest.vote_overwrite = false
-            # Opt out of live tally; the fork adds this attribute conditionally.
-            manifest.live_tally = false if manifest.respond_to?(:live_tally=)
+            # Results stay hidden until the admin publishes them.
+            manifest.live_tally = false
 
             manifest.applies_to { |election| election.vocdoni_process.present? }
             manifest.booth_config { |election, voter_uid:, **| booth_config(election, voter_uid:) }

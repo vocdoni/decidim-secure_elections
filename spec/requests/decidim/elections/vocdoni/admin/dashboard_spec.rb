@@ -241,34 +241,33 @@ module Decidim
           get dashboard_path, headers:
         end
 
+        context "when the vocdoni process failed" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, :failed, election: record)
+            end
+          end
 
-      context "when the vocdoni process failed" do
-        let!(:election) do
-          create(:election, :with_token_csv_census, component:).tap do |record|
-            create(:vocdoni_process, :failed, election: record)
+          it "renders a failure alert with the error message" do
+            expect(response).to have_http_status(:ok)
+            expect(failure_alert).to be_present
+            expect(failure_alert.text).to include("census size exceeds email allowance")
           end
         end
 
-        it "renders a failure alert with the error message" do
-          expect(response).to have_http_status(:ok)
-          expect(failure_alert).to be_present
-          expect(failure_alert.text).to include("census size exceeds email allowance")
-        end
-      end
-
-      context "when the vocdoni process is pending" do
-        let!(:election) do
-          create(:election, :with_token_csv_census, component:).tap do |record|
-            create(:vocdoni_process, election: record)
+        context "when the vocdoni process is pending" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, election: record)
+            end
           end
-        end
 
-        it "does not render a failure alert" do
-          expect(response).to have_http_status(:ok)
-          expect(failure_alert).to be_nil
+          it "does not render a failure alert" do
+            expect(response).to have_http_status(:ok)
+            expect(failure_alert).to be_nil
+          end
         end
       end
     end
   end
-end
 end
