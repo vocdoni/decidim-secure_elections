@@ -96,7 +96,6 @@ module Decidim
               Decidim::Elections::Vocdoni::CensusRedirectsToSecurity
             )
 
-
             # The "Your security configuration" card on upstream's Dashboard
             # tab. Upstream's dashboard has no view hook, so this gem ships a
             # copy of it with the card's render line added, and puts the
