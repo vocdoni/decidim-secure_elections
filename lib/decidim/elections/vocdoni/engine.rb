@@ -209,13 +209,6 @@ module Decidim
         #      menu is rendered. The item is always visible so the admin can
         #      discover the Vocdoni option without extra ceremony.
         initializer "decidim_elections_vocdoni.security_tab" do
-          # Decidim raises unless every icon referenced by name is
-          # pre-registered (`Decidim::IconRegistry#find`).
-          Decidim.icons.register(name: "shield-keyhole-line",
-                                 icon: "shield-keyhole-line",
-                                 category: "system",
-                                 description: "Security tab",
-                                 engine: :core)
 
           Decidim::Elections::AdminEngine.routes.append do
             resources :elections, only: [] do
