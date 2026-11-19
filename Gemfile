@@ -36,8 +36,7 @@ else
     gem "decidim"
     gem "decidim-dev"
     # `decidim-elections` is not a dependency of the `decidim` meta-gem, so it
-    # must be listed explicitly. The fork adds `results_availability` and
-    # `census_manifest` columns to its Election model.
+    # must be listed explicitly.
     gem "decidim-elections"
     # `rake test_app` (from decidim-dev) generates a dummy_signature_handler
     # that inherits from Decidim::Initiatives::SignatureHandler, so the
