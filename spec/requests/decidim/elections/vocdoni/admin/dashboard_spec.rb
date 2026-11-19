@@ -215,10 +215,21 @@ module Decidim
           end
         end
       end
-    end
 
-    describe "publish failure alert" do
-      let(:failure_alert) { html.at_css(".vocdoni-publish-failure") }
+      describe "publish failure alert" do
+        let(:organization) { component.organization }
+        let(:component) { create(:elections_component) }
+        let(:admin) { create(:user, :admin, :confirmed, organization:) }
+        let(:headers) { { "HOST" => organization.host } }
+        let(:dashboard_path) { Decidim::EngineRouter.admin_proxy(component).dashboard_election_path(election) }
+        let(:html) { response.parsed_body }
+        let(:failure_alert) { html.at_css(".vocdoni-publish-failure") }
+
+        before do
+          login_as admin, scope: :user
+          get dashboard_path, headers:
+        end
+
 
       context "when the vocdoni process failed" do
         let!(:election) do
@@ -248,4 +259,5 @@ module Decidim
       end
     end
   end
+end
 end
