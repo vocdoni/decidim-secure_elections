@@ -105,7 +105,7 @@ module Decidim
         end
 
         def self.booth_i18n(kind)
-          i18n = I18n.t("decidim.elections.vocdoni.votes.page").slice(:status, :errors, :otp, :blocked, :receipt)
+          i18n = I18n.t("decidim.elections.vocdoni.booth").slice(:status, :errors, :otp, :blocked, :receipt)
           i18n[:errors] = i18n[:errors].merge(no_contact: I18n.t("decidim.elections.vocdoni.booth.no_contact.#{kind}")) if kind
           i18n.merge(not_ready: I18n.t("decidim.elections.vocdoni.booth.not_ready"))
         end

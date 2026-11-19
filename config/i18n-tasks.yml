@@ -4,11 +4,11 @@ base_locale: en
 locales: [en, ca, es]
 
 # `data.read` names the English source files `i18n-tasks` checks: the Security
-# tab strings and the booth strings under `votes.page`, among others.
+# tab strings and the booth strings, among others.
 data:
   read:
     - config/locales/security.%{locale}.yml
-    - config/locales/%{locale}.vote.yml
+    - config/locales/booth.%{locale}.yml
     - config/locales/explorer.%{locale}.yml
     - config/locales/question_status.%{locale}.yml
   write:
@@ -26,7 +26,11 @@ search:
 ignore_unused:
   # Handed to the booth adapter whole by `VotingBackend.booth_i18n` and read by
   # JavaScript, so most keys have no Ruby reference.
-  - decidim.elections.vocdoni.votes.page.*
+  - decidim.elections.vocdoni.booth.blocked.*
+  - decidim.elections.vocdoni.booth.errors.*
+  - decidim.elections.vocdoni.booth.otp.*
+  - decidim.elections.vocdoni.booth.receipt.body
+  - decidim.elections.vocdoni.booth.status.*
 
 ignore_missing:
   - decidim.participatory_processes.scopes.global

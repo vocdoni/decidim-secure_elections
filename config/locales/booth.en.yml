@@ -17,6 +17,47 @@ en:
             final: This vote cannot be changed.
             check_attestation: After the election ends you can check on which questions a ballot was signed in your name.
             check_attestation_link: Check my signatures
+            body: Each receipt below proves a vote was recorded on the voting network. It does not reveal what you voted.
+          blocked:
+            not_in_census:
+              body: The details you entered are not on the census for this election. Check them and try again, or contact the organisers if you believe you should be able to vote.
+            not_open:
+              body: There is no question open for you to vote on right now. Voting may not have started yet, or it may already have closed.
+          errors:
+            auth_cooldown: "Too many attempts. Please wait %{seconds} seconds and try again."
+            auth_rejected: We could not verify those details. Check them and try again.
+            ballot_unsupported: This question uses a ballot format this page does not understand. Please contact the organisers.
+            keys_unavailable: This question is encrypted until the end and its encryption keys are not published yet. Your vote was not cast — please try again in a few minutes.
+            network: We could not reach the voting network. Check your connection and try again.
+            otp_expired: That code is no longer usable. Please identify yourself again to get a new one.
+            otp_rejected: That code does not match. Check it and enter it again, or ask for a new one.
+            otp_resend_failed: We could not send you a new code. Please wait a moment and try again.
+            process_unavailable: This election could not be loaded from the voting network right now.
+            relay_rejected: The voting network rejected this vote. It has not been counted.
+            relay_unconfirmed: We lost contact while your vote was being sent. It may still have been counted — do not vote again until you have checked.
+            sign_rejected: The census would not authorise this vote. It may already have been cast from another device.
+            unknown: Something unexpected went wrong. Your vote was not cast.
+          otp:
+            body_email: We have emailed you a one-time code. Enter it below to confirm it is you.
+            body_phone: We have sent you a one-time code by text message. Enter it below to confirm it is you.
+            hint: You can paste the code straight from the message.
+            label: One-time code
+            required: Enter the code we sent you.
+            resend: Send me a new code
+            resend_wait: "You can ask for a new code in %{seconds} seconds."
+            resent: A new code is on its way.
+            submit: Confirm
+            title: Confirm the code we sent you
+          status:
+            authenticating: Checking your details…
+            checking: Checking what you can vote on…
+            confirming: Waiting for the voting network to confirm…
+            loading: Loading the election…
+            preparing: Preparing the ballot…
+            relaying: Sending your vote…
+            sending_code: Sending you a new code…
+            signing: Signing your vote…
+            waiting_keys: Waiting for the encryption keys to be published…
         attestations:
           show:
             title: Signatures issued in your name
