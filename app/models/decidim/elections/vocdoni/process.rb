@@ -207,10 +207,8 @@ module Decidim
         # Records the last non-transient publish failure. Used by the dashboard
         # to surface something actionable instead of a stuck wizard.
         #
-        # `data` keeps the SaaS's structured error payload — the `duplicates`,
-        # `missingData` and `notFound` lists from a census validation 400 —
-        # so the admin sees *which* voters are the problem, not just "invalid
-        # data provided".
+        # `data` keeps the SaaS structured error payload so the admin
+        # sees the raw error context, not just the message.
         #
         # `keep_state` records the error without marking the process failed,
         # for a step whose failure leaves the rest of the election usable.

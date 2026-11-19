@@ -19,8 +19,7 @@ module Decidim
   # signing. No API key is ever sent to the browser, and no ballot ever reaches
   # Decidim. See `app/packs/src/decidim/elections/vocdoni/voter/`.
   #
-  # Unlike the previous generation of this module there is **no Node.js runtime
-  # on the server** — the SaaS API is reachable from Ruby directly.
+  # There is **no Node.js runtime on the server** — the SaaS API is reachable from Ruby directly.
   module Elections
     module Vocdoni
       # The tables stay `decidim_vocdoni_*` even though the module is
@@ -176,8 +175,7 @@ module Decidim
         # HTTP status codes worth another attempt on their own: a rate limit or a
         # server-side hiccup that may clear up in a few seconds. Everything else
         # (400, 401, 403, 404, 409, …) is an *answer* — retrying it is guaranteed
-        # to fail identically and, when the failing call is `POST /members`, will
-        # create fresh orphaned members upstream on every attempt.
+        # to fail identically.
         TRANSIENT_STATUSES = [429, 500, 502, 503, 504].freeze
 
         attr_reader :status, :code, :body
