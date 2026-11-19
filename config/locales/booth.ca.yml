@@ -66,4 +66,5 @@ ca:
             voted: hi consta un vot
             not_voted: no hi consta cap vot
             explain: Si s'ha signat una papereta al teu nom en una pregunta on no has votat, avisa l'organització.
+            unavailable: Ara mateix no es poden comprovar les signatures. Torna-ho a provar més tard.
   

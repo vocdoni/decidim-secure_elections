@@ -66,4 +66,5 @@ es:
             voted: consta un voto
             not_voted: no consta ningún voto
             explain: Si se firmó una papeleta a tu nombre en una pregunta en la que no votaste, avisa a la organización.
+            unavailable: Ahora mismo no se pueden comprobar las firmas. Vuelve a intentarlo más tarde.
   
