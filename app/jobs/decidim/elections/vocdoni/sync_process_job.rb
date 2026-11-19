@@ -115,6 +115,11 @@ module Decidim
         def derive_state(remote)
           if remote["published"] == true
             "published"
+          elsif process.failed?
+            # A refused publish (a 402 from an empty wallet, say) leaves a
+            # chainId on the draft: keep `failed` so the dashboard alert and
+            # its retry button stay up, and stop polling.
+            "failed"
           elsif remote["chainId"].to_s.present?
             # We already reached the chain but SaaS has not confirmed the
             # publish — keep waiting rather than downgrading to `pending`.

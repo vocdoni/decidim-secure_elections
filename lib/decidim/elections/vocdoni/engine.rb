@@ -196,6 +196,8 @@ module Decidim
             resources :elections, only: [] do
               resource :security, only: [:show, :update],
                                   controller: "/decidim/elections/vocdoni/admin/security"
+              resource :publish_retry, only: [:create],
+                                       controller: "/decidim/elections/vocdoni/admin/publish_retries"
             end
           end
 

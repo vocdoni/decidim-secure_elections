@@ -7,4 +7,11 @@ en:
             publish_failure:
               title: "The election could not be published on the blockchain"
               error: "Error from Vocdoni: %{message}"
-              hint: "Check your security settings and try publishing again, or contact Vocdoni support."
+              hint: "Check your security settings and retry, or contact Vocdoni support."
+              billing: "The Vocdoni integration has no credit left to publish this election. Contact Vocdoni support, then retry."
+              billing_with_amount: "The Vocdoni integration has no credit left to publish this election (it costs %{amount}). Contact Vocdoni support, then retry."
+              retry: "Retry publication"
+          publish_retries:
+            create:
+              success: "Publication retried. The dashboard updates once Vocdoni confirms it."
+              not_failed: "This election has no failed publication to retry."

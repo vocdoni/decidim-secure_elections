@@ -88,6 +88,40 @@ module Decidim
               .not_to have_enqueued_job(Decidim::Elections::Vocdoni::SyncElectionResultsJob)
           end
         end
+
+        context "when the publish failed after the draft reached the SaaS" do
+          let!(:vocdoni_process) do
+            create(:vocdoni_process, :failed,
+                   vocdoni_process_id: process_id,
+                   election:)
+          end
+
+          before { stub_saas_get(status: nil, published: false) }
+
+          it "keeps the failure and stops polling" do
+            expect(described_class).not_to receive(:set)
+
+            described_class.perform_now(election.id)
+
+            expect(vocdoni_process.reload).to be_failed
+          end
+        end
+
+        context "when a failed publish was completed upstream" do
+          let!(:vocdoni_process) do
+            create(:vocdoni_process, :failed,
+                   vocdoni_process_id: process_id,
+                   election:)
+          end
+
+          before { stub_saas_get(status: "READY", published: true) }
+
+          it "moves the sidecar to published" do
+            described_class.perform_now(election.id)
+
+            expect(vocdoni_process.reload).to be_published
+          end
+        end
       end
     end
   end

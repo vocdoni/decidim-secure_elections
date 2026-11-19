@@ -242,6 +242,27 @@ module Decidim
             expect(failure_alert).to be_present
             expect(failure_alert.text).to include("census size exceeds email allowance")
           end
+
+          it "offers to retry the publication" do
+            retry_path = Decidim::EngineRouter.admin_proxy(component).election_publish_retry_path(election)
+            expect(failure_alert.at_css("form[action='#{retry_path}'] button").text).to include("Retry publication")
+          end
+        end
+
+        context "when the publish was refused for lack of credit" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, component:).tap do |record|
+              create(:vocdoni_process, :failed,
+                     election: record,
+                     last_error: "insufficient integrator wallet balance",
+                     metadata: { "last_error" => { "code" => 40_175, "data" => { "requiredCents" => 10_341, "availableCents" => 0 } } })
+            end
+          end
+
+          it "explains the billing problem with the amount instead of the raw error" do
+            expect(failure_alert.at_css(".vocdoni-publish-failure__billing").text).to include("no credit left", "103.41")
+            expect(failure_alert.text).not_to include("insufficient integrator wallet balance")
+          end
         end
 
         context "when the vocdoni process is pending" do

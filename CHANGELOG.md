@@ -74,6 +74,11 @@ All notable changes to this module are documented here. The format follows
 - **Explorer links**: once an election is on chain, the public election page
   gets a "Vocdoni explorer" tab and the admin Dashboard a card, each with one
   link per question to `<explorer_url>/process/<electionId>`.
+- **Publish failure alert**: the admin Dashboard shows why the last Vocdoni
+  publish failed, with a plain message when the integrator has no credit to pay
+  for it (SaaS 402), and a "Retry publication" button that re-enqueues the
+  publish. The process sync no longer turns a failed publish back into
+  `publishing`.
 
 ### Changed
 
