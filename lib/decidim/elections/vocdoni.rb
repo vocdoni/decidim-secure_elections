@@ -53,7 +53,7 @@ module Decidim
       # the application is initialized, while still supporting the usual
       # `Decidim::Elections::Vocdoni.configure { |c| c.api_url = … }` block in an initializer.
       class << self
-        attr_writer :api_url, :api_key, :org_address, :explorer_url,
+        attr_writer :api_url, :api_key, :org_address, :explorer_url, :platform_url,
                     :open_timeout, :timeout, :job_timeout
 
         def configure
@@ -107,6 +107,21 @@ module Decidim
         def explorer_url
           @explorer_url ||= ENV.fetch("VOCDONI_EXPLORER_URL", nil).presence ||
                             NETWORKS.fetch(api_url.to_s.sub(%r{/+\z}, ""), "https://explorer.vote")
+        end
+
+        # The Vocdoni platform where the integrator behind `api_key` manages
+        # its wallet, for each SaaS base that has one.
+        PLATFORMS = {
+          "https://saas-api.vocdoni.net" => "https://platform.vocdoni.io",
+          "https://saas-api-stg.vocdoni.net" => "https://platform-stg.vocdoni.io"
+        }.freeze
+
+        # Where an organization admin tops up the integrator wallet. Derived
+        # from `api_url` like `explorer_url`; nil for a base with no known
+        # platform (dev, self-hosted) unless `VOCDONI_PLATFORM_URL` is set.
+        def platform_url
+          @platform_url ||= ENV.fetch("VOCDONI_PLATFORM_URL", nil).presence ||
+                            PLATFORMS[api_url.to_s.sub(%r{/+\z}, "")]
         end
 
         # Explorer page of one on-chain election. explorer.vote and its

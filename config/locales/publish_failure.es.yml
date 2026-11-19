@@ -8,8 +8,12 @@ es:
               title: "No se ha podido publicar la votación en la blockchain"
               error: "Error de Vocdoni: %{message}"
               hint: "Comprueba la configuración de seguridad y vuelve a intentarlo, o contacta con el soporte de Vocdoni."
-              billing: "La integración con Vocdoni no tiene crédito para publicar esta votación. Contacta con el soporte de Vocdoni y vuelve a intentarlo."
-              billing_with_amount: "La integración con Vocdoni no tiene crédito para publicar esta votación (cuesta %{amount}). Contacta con el soporte de Vocdoni y vuelve a intentarlo."
+              billing: "La integración con Vocdoni de esta plataforma no tiene crédito para publicar esta votación."
+              billing_with_amount: "La integración con Vocdoni de esta plataforma no tiene crédito para publicar esta votación (cuesta %{amount})."
+              billing_top_up_html: "Recarga el monedero del integrador en la %{link} y vuelve a intentarlo."
+              billing_platform: "plataforma de Vocdoni"
+              billing_top_up: "Recarga el monedero del integrador de Vocdoni que usa esta plataforma y vuelve a intentarlo."
+              billing_ask_admin: "Pide al administrador de tu organización que recargue el crédito de Vocdoni y vuelve a intentarlo."
               retry: "Reintentar la publicación"
           publish_retries:
             create:

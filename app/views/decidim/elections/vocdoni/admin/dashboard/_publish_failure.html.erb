@@ -1,8 +1,9 @@
 <%#
   Alert on upstream's Dashboard tab when the last publish attempt failed
-  (Process#failed?). A refused payment (Process#billing_failure?) gets its
-  own message, since the admin cannot fix it from Decidim; any other error
-  shows the SaaS text. The retry button re-enqueues PublishElectionJob,
+  (Process#failed?). A refused payment (Process#billing_failure?) is paid by
+  this instance's integrator wallet: an organization admin is sent to the
+  Vocdoni platform to top it up, any other admin to their organization admin.
+  Any other error shows the SaaS text. The retry button re-enqueues PublishElectionJob,
   which resumes from the first step not yet done upstream.
 
   Rendered from the security card partial, before that card. Disappears once
@@ -14,9 +15,19 @@
   <div class="callout alert vocdoni-publish-failure" role="alert">
     <p class="font-bold"><%= t("title", scope:) %></p>
     <% if process.billing_failure? %>
+      <% amount = process.billing_required_eur %>
       <p class="vocdoni-publish-failure__billing">
-        <% amount = process.billing_required_eur %>
         <%= amount ? t("billing_with_amount", scope:, amount: number_to_currency(amount, unit: "€", format: "%n %u")) : t("billing", scope:) %>
+      </p>
+      <% platform_url = Decidim::Elections::Vocdoni.platform_url %>
+      <p class="vocdoni-publish-failure__billing-action">
+        <% if current_user&.admin? && platform_url %>
+          <%= t("billing_top_up_html", scope:, link: link_to(t("billing_platform", scope:), platform_url, target: "_blank", rel: "noopener")) %>
+        <% elsif current_user&.admin? %>
+          <%= t("billing_top_up", scope:) %>
+        <% else %>
+          <%= t("billing_ask_admin", scope:) %>
+        <% end %>
       </p>
     <% else %>
       <% if process.last_error.present? %>
