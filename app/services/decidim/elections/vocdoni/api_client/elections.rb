@@ -96,7 +96,6 @@ module Decidim
             client.get("/processes/#{process_id}", auth: read_auth(authenticated))
           end
 
-
           # Deletes a draft — `DELETE /processes/{id}`.
           #
           # Only unpublished drafts can be deleted; a published process lives on

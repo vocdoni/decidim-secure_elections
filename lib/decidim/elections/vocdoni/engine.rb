@@ -117,7 +117,6 @@ module Decidim
                                                  dependent: :destroy,
                                                  inverse_of: :election
 
-
             # Wire the Security tab into the wizard: after "Save and
             # continue" on Census, upstream would drop the admin on the
             # Dashboard. The include rewires that redirect so the admin
@@ -209,7 +208,6 @@ module Decidim
         #      menu is rendered. The item is always visible so the admin can
         #      discover the Vocdoni option without extra ceremony.
         initializer "decidim_elections_vocdoni.security_tab" do
-
           Decidim::Elections::AdminEngine.routes.append do
             resources :elections, only: [] do
               resource :security, only: [:show, :update],
