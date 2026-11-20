@@ -24,13 +24,17 @@ module Decidim
       # the job self-schedules until `finalResults: true`, so the counter is
       # ready by the time the admin clicks "Publish results".
       class EndProcessOnChainJob < ApplicationJob
+        include BusyRetry
+
         queue_as :vocdoni
 
         retry_on Decidim::Elections::Vocdoni::ApiError, wait: :polynomially_longer, attempts: 3
 
         TERMINAL_STATUSES = %w(ENDED CANCELED RESULTS).freeze
 
-        def perform(election_id)
+        PENDING_KEY = "end"
+
+        def perform(election_id, busy_since: nil, busy_attempts: 0)
           @election = Decidim::Elections::Election.find_by(id: election_id)
           return if election.blank?
 
@@ -53,12 +57,20 @@ module Decidim
             await_job!(response["jobId"])
           end
 
+          process.clear_pending_action!(PENDING_KEY)
           Rails.logger.info "[vocdoni] moved every question to ENDED for election ##{election.id} (process #{process.vocdoni_process_id})"
 
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id)
           Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id)
         rescue Decidim::Elections::Vocdoni::ApiError => e
-          process&.record_failure!(redact(e.message), step: "end_on_chain", code: e.try(:code))
+          busy = wait_out_busy(e, PENDING_KEY, busy_since:, busy_attempts:) do |delay, args|
+            self.class.set(wait: delay.seconds).perform_later(election.id, **args)
+          end
+          return if busy
+
+          end_busy_wait(PENDING_KEY)
+          # The election is over in Decidim whatever the chain says: keep it published.
+          process.record_failure!(redact(e.message), step: "end_on_chain", code: e.try(:code), keep_state: true)
           raise if e.transient?
         end
 

@@ -33,7 +33,7 @@ module Decidim
 
           continue_or_stop!(requests:, seen:, attempt:, progressed:)
         rescue Decidim::Elections::Vocdoni::ApiError => e
-          process&.record_failure!(redact(e.message), step: "sync_results", code: e.try(:code))
+          process&.record_failure!(redact(e.message), step: "sync_results", code: e.try(:code), keep_state: true)
           raise if e.transient?
         end
 

@@ -25,6 +25,8 @@ module Decidim
       # on any SaaS error for about an hour and every failure stays on the
       # admin dashboard (`Process#question_failures`) until the move succeeds.
       class UpdateQuestionOnChainJob < ApplicationJob
+        include BusyRetry
+
         queue_as :vocdoni
 
         # Only `enable_voting` re-raises, and only a transient error.
@@ -61,7 +63,12 @@ module Decidim
         PUBLISH_WAIT_ATTEMPTS = 40
         PUBLISH_WAIT_S = 15
 
-        def perform(question_id, action, attempt: 1, publish_wait: 0)
+        # The {Process#pending_actions} key of a question action.
+        def self.pending_key(question_id, action)
+          "question_#{question_id}_#{action}"
+        end
+
+        def perform(question_id, action, attempt: 1, publish_wait: 0, busy_since: nil, busy_attempts: 0)
           @action = action.to_s
           @attempt = attempt
           @publish_wait = publish_wait
@@ -73,10 +80,15 @@ module Decidim
 
           vocdoni_question_id = on_chain_id
           return wait_for_publish if vocdoni_question_id.blank?
-          return if stale?
+
+          if stale?
+            process.clear_pending_action!(pending_key)
+            return
+          end
 
           reached = reach!(vocdoni_question_id, status)
           process.clear_question_failure!(question.id)
+          process.clear_pending_action!(pending_key)
 
           # No SyncProcessJob here: one is already looping while voting is
           # open, and each enqueue would start another loop.
@@ -84,6 +96,12 @@ module Decidim
 
           Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id, question_ids: [question.id])
         rescue Decidim::Elections::Vocdoni::ApiError => e
+          busy = wait_out_busy(e, pending_key, busy_since:, busy_attempts:) do |delay, args|
+            self.class.set(wait: delay.seconds).perform_later(question.id, action, attempt:, **args)
+          end
+          return if busy
+
+          end_busy_wait(pending_key)
           closing? ? retry_close(e) : record_enable_failure(e)
         end
 
@@ -93,6 +111,10 @@ module Decidim
 
         def closing?
           action == "publish_results"
+        end
+
+        def pending_key
+          self.class.pending_key(question.id, action)
         end
 
         # The action the question's current Decidim state calls for, or nil

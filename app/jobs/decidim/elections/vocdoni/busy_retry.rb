@@ -55,6 +55,12 @@ module Decidim
           yield delay, { busy_since: since, busy_attempts: attempts }
           :waiting
         end
+
+        # Any other answer ends the wait and the job's own error handling takes
+        # over; a given-up entry stays for {SyncProcessJob} to retry.
+        def end_busy_wait(key)
+          process.clear_pending_action!(key) unless process.pending_actions.dig(key, "gave_up")
+        end
       end
     end
   end

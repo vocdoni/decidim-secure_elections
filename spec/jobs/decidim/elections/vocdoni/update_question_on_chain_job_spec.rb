@@ -302,6 +302,90 @@ module Decidim
             expect(vocdoni_process.question_failures[question.id.to_s]).to include("step" => "question_enable_voting")
           end
         end
+
+        describe "a busy organization" do
+          let(:key) { "question_#{question.id}_#{action}" }
+          let(:pending) { vocdoni_process.reload.pending_actions[key] }
+
+          def stub_busy
+            stub_request(:put, "#{api_url}/processes/#{process_id}/questions/status")
+              .to_return(status: 503, body: { error: "another transaction for this organization is in progress", code: 50_303 }.to_json,
+                         headers: json_headers)
+          end
+
+          def within_jitter(base)
+            a_value_between((base * 0.8).seconds.from_now - 1.second, (base * 1.2).seconds.from_now + 1.second)
+          end
+
+          context "when closing a question" do
+            let(:question_traits) { [:voting_enabled, :published_results] }
+            let(:action) { "publish_results" }
+
+            before do
+              stub_live_status("READY")
+              stub_busy
+            end
+
+            it "waits without recording a failure or using a close attempt" do
+              expect { described_class.perform_now(question.id, action, attempt: 3) }
+                .to have_enqueued_job(described_class)
+                .with(question.id, action, attempt: 3, busy_since: kind_of(String), busy_attempts: 1)
+                .at(within_jitter(2))
+
+              vocdoni_process.reload
+              expect(vocdoni_process).to be_published
+              expect(vocdoni_process.question_failures).to be_empty
+              expect(vocdoni_process.metadata).not_to have_key("last_error")
+              expect(pending).to include("attempts" => 1)
+            end
+
+            it "gives up after 15 minutes without a close retry of its own" do
+              expect { described_class.perform_now(question.id, action, busy_since: 16.minutes.ago.iso8601, busy_attempts: 60) }
+                .not_to have_enqueued_job(described_class)
+
+              expect(pending).to include("gave_up" => true)
+              expect(vocdoni_process.question_failures).to be_empty
+            end
+          end
+
+          context "when enabling voting" do
+            let(:action) { "enable_voting" }
+
+            before { stub_live_status("PAUSED") }
+
+            it "waits without raising" do
+              stub_busy
+
+              expect { described_class.perform_now(question.id, action) }
+                .to have_enqueued_job(described_class)
+                .with(question.id, action, attempt: 1, busy_since: kind_of(String), busy_attempts: 1)
+
+              expect(vocdoni_process.reload.question_failures).to be_empty
+            end
+
+            it "clears the pending entry once the question opens" do
+              vocdoni_process.record_pending_action!(key, since: 1.minute.ago.iso8601, attempts: 2)
+              stub_status_change("READY")
+
+              described_class.perform_now(question.id, action, busy_since: 1.minute.ago.iso8601, busy_attempts: 2)
+
+              expect(vocdoni_process.reload.pending_actions).to be_empty
+            end
+          end
+
+          context "when Decidim moved past the action" do
+            let(:question_traits) { [:voting_enabled, :published_results] }
+            let(:action) { "enable_voting" }
+
+            it "drops the pending entry with the action" do
+              vocdoni_process.record_pending_action!(key, since: 20.minutes.ago.iso8601, attempts: 61, gave_up: true)
+
+              described_class.perform_now(question.id, action)
+
+              expect(vocdoni_process.reload.pending_actions).to be_empty
+            end
+          end
+        end
       end
     end
   end
