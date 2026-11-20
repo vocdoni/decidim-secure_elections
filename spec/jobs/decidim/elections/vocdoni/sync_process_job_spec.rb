@@ -194,8 +194,8 @@ module Decidim
           context "with a per_question election" do
             let(:election) { create(:election, :per_question, :published, :ongoing) }
             let!(:idle) { create(:election_question, election:) }
-            let!(:enabled) { create(:election_question, :voting_enabled, election:) }
-            let!(:closed) { create(:election_question, :voting_enabled, :published_results, election:) }
+            let!(:enabled) { create(:election_question, election:, voting_enabled_at: 1.hour.ago) }
+            let!(:closed) { create(:election_question, election:, voting_enabled_at: 2.hours.ago, published_results_at: 1.hour.ago) }
 
             it "enqueues the moves the chain has not made" do
               stub_questions("PAUSED", "PAUSED", "READY")
@@ -218,6 +218,51 @@ module Decidim
               stub_questions("PAUSED", "READY", "READY")
 
               expect { described_class.perform_now(election.id) }.not_to have_enqueued_job(UpdateQuestionOnChainJob)
+            end
+
+            it "leaves a question whose own retry loop is running alone" do
+              vocdoni_process.record_question_failure!(closed.id, "boom", step: "question_publish_results", retries: { attempts: 2 })
+              stub_questions("PAUSED", "READY", "READY")
+
+              expect { described_class.perform_now(election.id) }.not_to have_enqueued_job(UpdateQuestionOnChainJob)
+            end
+
+            it "retries a question whose retry loop gave up" do
+              vocdoni_process.record_question_failure!(closed.id, "boom", step: "question_publish_results",
+                                                                          retries: { attempts: 35, gave_up: true })
+              stub_questions("PAUSED", "READY", "READY")
+
+              expect { described_class.perform_now(election.id) }
+                .to have_enqueued_job(UpdateQuestionOnChainJob).with(closed.id, "publish_results")
+            end
+
+            it "retries an enable_voting whose retries ended" do
+              vocdoni_process.update!(metadata: vocdoni_process.metadata.merge(
+                "question_failures" => { enabled.id.to_s => { "message" => "boom", "step" => "question_enable_voting",
+                                                              "gave_up" => false, "at" => 10.minutes.ago.iso8601 } }
+              ))
+              stub_questions("PAUSED", "PAUSED", "ONGOING")
+
+              expect { described_class.perform_now(election.id) }
+                .to have_enqueued_job(UpdateQuestionOnChainJob).with(enabled.id, "enable_voting")
+            end
+
+            it "gives the admin's own job two minutes first" do
+              enabled.update!(voting_enabled_at: 1.minute.ago)
+              closed.update!(published_results_at: 1.minute.ago)
+              stub_questions("PAUSED", "PAUSED", "READY")
+
+              expect { described_class.perform_now(election.id) }.not_to have_enqueued_job(UpdateQuestionOnChainJob)
+            end
+          end
+
+          context "when the election ended moments ago" do
+            let(:election) { create(:election, results_availability:, start_at: 1.day.ago, end_at: 1.minute.ago) }
+
+            it "gives the admin's own end job two minutes first" do
+              stub_questions("ONGOING")
+
+              expect { described_class.perform_now(election.id) }.not_to have_enqueued_job(EndProcessOnChainJob)
             end
           end
         end

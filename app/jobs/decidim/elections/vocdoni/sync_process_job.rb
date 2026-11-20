@@ -62,6 +62,12 @@ module Decidim
         # Chain statuses a question never leaves.
         TERMINAL_STATUSES = %w(ENDED RESULTS CANCELED).freeze
 
+        # Time the admin's own job gets to land a move before the reconciler steps in.
+        RECONCILE_GRACE = 2.minutes
+
+        # Longer than the slowest step of a question's own retry loop (120 s).
+        FAILURE_RETRY_WINDOW = 5.minutes
+
         def perform(election_id)
           @election = Decidim::Elections::Election.find_by(id: election_id)
           return if election.blank?
@@ -131,7 +137,7 @@ module Decidim
         # the end, which also closes every question.
         def divergences(remote)
           statuses = Array(remote["questions"]).map { |q| q["status"].to_s.upcase }.compact_blank
-          if election.end_at.present? && election.end_at <= Time.current
+          if settled?(election.end_at)
             return {} if statuses.all? { |status| TERMINAL_STATUSES.include?(status) }
 
             return { EndProcessOnChainJob::PENDING_KEY => -> { EndProcessOnChainJob.perform_later(election.id) } }
@@ -141,6 +147,8 @@ module Decidim
           question_divergences
         end
 
+        # A question whose failure is still retrying (`retry_close`, `retry_on`)
+        # is left to that loop, so loops do not multiply; see #retrying?.
         def question_divergences
           chain = process.questions_metadata.to_h { |row| [row["decidim_question_id"].to_i, row["vocdoni_status"].to_s.upcase] }
 
@@ -148,14 +156,29 @@ module Decidim
             status = chain[question.id]
             next if status.blank? || TERMINAL_STATUSES.include?(status)
 
-            action = if question.published_results? then "publish_results"
-                     elsif question.voting_enabled_at.present? && UpdateQuestionOnChainJob::REACHED_STATUSES["READY"].exclude?(status)
+            next if retrying?(process.question_failures[question.id.to_s])
+
+            action = if question.published_results? then ("publish_results" if settled?(question.published_results_at))
+                     elsif settled?(question.voting_enabled_at) && UpdateQuestionOnChainJob::REACHED_STATUSES["READY"].exclude?(status)
                        "enable_voting"
                      end
             next if action.nil?
 
             list[UpdateQuestionOnChainJob.pending_key(question.id, action)] = -> { UpdateQuestionOnChainJob.perform_later(question.id, action) }
           end
+        end
+
+        # Not given up and written recently: an enable_voting failure never sets
+        # `gave_up`, and its `retry_on` is over within a minute or two.
+        def retrying?(failure)
+          return false if failure.blank? || failure["gave_up"]
+
+          at = Time.zone.parse(failure["at"].to_s)
+          at.present? && at > FAILURE_RETRY_WINDOW.ago
+        end
+
+        def settled?(time)
+          time.present? && time <= RECONCILE_GRACE.ago
         end
 
         # `Process#state` reflects how far this election has gotten in the
