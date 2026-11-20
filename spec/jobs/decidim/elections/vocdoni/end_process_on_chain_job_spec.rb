@@ -22,9 +22,33 @@ module Decidim
         # success — anything else keeps it polling until the timeout, and the
         # timeout is what surfaces as an ApiError back into `retry_on`. Reuse
         # the same shape the fixture already ships with.
+        def stub_live_statuses(*statuses)
+          remote = JSON.parse(vocdoni_fixture("process"))
+          first = remote["questions"].first
+          remote["questions"] = statuses.each_with_index.map { |status, i| first.merge("id" => "q-#{i}", "status" => status) }
+          stub_request(:get, "#{api_url}/processes/#{process_id}")
+            .to_return(status: 200, body: remote.to_json, headers: json_headers)
+        end
+
         before do
           stub_request(:get, "#{api_url}/jobs/6885f1a3c1a4e2f0b1d33a20")
             .to_return(status: 200, body: vocdoni_fixture("job_completed"), headers: json_headers)
+          stub_live_statuses("ONGOING")
+        end
+
+        context "when the chain already ended every question" do
+          before { stub_live_statuses("ENDED", "RESULTS") }
+
+          it "sends no move and finishes as on success" do
+            vocdoni_process.record_pending_action!("end", since: 20.minutes.ago.iso8601, attempts: 61, gave_up: true)
+
+            expect { described_class.perform_now(election.id) }
+              .to have_enqueued_job(Decidim::Elections::Vocdoni::SyncProcessJob).with(election.id)
+              .and have_enqueued_job(Decidim::Elections::Vocdoni::SyncElectionResultsJob).with(election.id)
+
+            expect(a_request(:put, "#{api_url}/processes/#{process_id}/questions/status")).not_to have_been_made
+            expect(vocdoni_process.reload.pending_actions).to be_empty
+          end
         end
 
         it "moves every question on chain to ENDED and chains the two syncs" do

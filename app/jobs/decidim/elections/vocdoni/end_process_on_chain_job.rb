@@ -78,17 +78,19 @@ module Decidim
 
         attr_reader :process
 
-        # nil (every question) unless the election is `per_question`, whose
-        # questions may already be ENDED one by one: the SaaS rejects the
-        # whole batch if it names an ended question, so only the rest are sent.
+        # [] when the chain already ended every question, so a duplicate run is a
+        # no-op. Otherwise nil (every question), or for `per_question` only the
+        # open ones: the SaaS rejects a batch that names an ended question.
         def open_question_ids
-          return nil unless election.per_question?
-
-          Array(client.elections.get(process.vocdoni_process_id).to_h["questions"]).filter_map do |question|
+          rows = Array(client.elections.get(process.vocdoni_process_id).to_h["questions"]).grep(Hash)
+          open_ids = rows.filter_map do |question|
             next if TERMINAL_STATUSES.include?(question["status"].to_s.upcase)
 
             (question["id"] || question["questionId"]).to_s.presence
           end
+          return open_ids if election.per_question? || (rows.any? && open_ids.empty?)
+
+          nil
         end
       end
     end
