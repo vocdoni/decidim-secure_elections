@@ -68,7 +68,7 @@ module Decidim
           "question_#{question_id}_#{action}"
         end
 
-        def perform(question_id, action, attempt: 1, publish_wait: 0, busy_since: nil, busy_attempts: 0)
+        def perform(question_id, action, attempt: 1, publish_wait: 0, busy: {})
           @action = action.to_s
           @attempt = attempt
           @publish_wait = publish_wait
@@ -81,6 +81,28 @@ module Decidim
           vocdoni_question_id = on_chain_id
           return wait_for_publish if vocdoni_question_id.blank?
 
+          land!(vocdoni_question_id, status)
+        rescue Decidim::Elections::Vocdoni::ApiError => e
+          outcome = wait_out_busy(e, pending_key, busy) do |delay, args|
+            self.class.set(wait: delay.seconds).perform_later(question.id, action, attempt:, **args)
+          end
+          return if outcome
+
+          end_busy_wait(pending_key)
+          closing? ? retry_close(e) : record_enable_failure(e)
+        end
+
+        private
+
+        attr_reader :process, :question, :action, :attempt, :publish_wait
+
+        def closing?
+          action == "publish_results"
+        end
+
+        # Moves the question unless Decidim moved past the action, and clears
+        # its failure and pending entries; a close also syncs the tally.
+        def land!(vocdoni_question_id, status)
           if stale?
             process.clear_pending_action!(pending_key)
             return
@@ -95,22 +117,6 @@ module Decidim
           return unless reached && status == "ENDED"
 
           Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id, question_ids: [question.id])
-        rescue Decidim::Elections::Vocdoni::ApiError => e
-          busy = wait_out_busy(e, pending_key, busy_since:, busy_attempts:) do |delay, args|
-            self.class.set(wait: delay.seconds).perform_later(question.id, action, attempt:, **args)
-          end
-          return if busy
-
-          end_busy_wait(pending_key)
-          closing? ? retry_close(e) : record_enable_failure(e)
-        end
-
-        private
-
-        attr_reader :process, :question, :action, :attempt, :publish_wait
-
-        def closing?
-          action == "publish_results"
         end
 
         def pending_key

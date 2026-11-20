@@ -313,7 +313,7 @@ module Decidim
           return nil if value.empty?
           return value.to_i if value.match?(/\A\d+\z/)
 
-          [(Time.httpdate(value) - Time.now).ceil, 0].max
+          [(Time.httpdate(value) - Time.current).ceil, 0].max
         rescue ArgumentError
           nil
         end

@@ -26,21 +26,24 @@ module Decidim
         protected
 
         # Records a busy answer for the action under `key` and, inside the window
-        # (from `busy_since`, the first busy answer), yields the delay and next
-        # run's arguments to reschedule. Returns nil (not busy), :waiting or :gave_up.
-        def wait_out_busy(error, key, busy_since:, busy_attempts:, sticky_give_up: true)
+        # (`busy`: `since`, the first busy answer, and `attempts`, carried as one
+        # job argument), yields the delay and next run's arguments to reschedule.
+        # Returns nil (not busy), :waiting or :gave_up.
+        def wait_out_busy(error, key, busy, sticky_give_up: true)
           return nil unless error.respond_to?(:busy?) && error.busy?
 
+          # ActiveJob hands the hash back with symbol or string keys.
+          busy = busy.to_h.stringify_keys
           entry = process.pending_actions[key]
           # A fresh run of a given-up action stays given up: {SyncProcessJob} retries it.
-          if busy_since.blank? && sticky_give_up && entry.to_h["gave_up"]
+          if busy["since"].blank? && sticky_give_up && entry.to_h["gave_up"]
             process.record_pending_action!(key, since: entry["since"], attempts: entry["attempts"].to_i + 1, gave_up: true)
             Rails.logger.warn "[vocdoni] #{key} of election ##{election.id}: the organization is still busy; left to the sync"
             return :gave_up
           end
 
-          since = busy_since.presence || Time.current.iso8601
-          attempts = busy_attempts.to_i + 1
+          since = busy["since"].presence || Time.current.iso8601
+          attempts = busy["attempts"].to_i + 1
           if Time.current - (Decidim::Elections::Vocdoni::Process.parse_time(since) || Time.current) >= BUSY_WINDOW_S
             process.record_pending_action!(key, since:, attempts:, gave_up: true)
             Rails.logger.error "[vocdoni] #{key} of election ##{election.id}: the organization stayed busy " \
@@ -53,7 +56,7 @@ module Decidim
           process.record_pending_action!(key, since:, attempts:, next_in: delay)
           Rails.logger.warn "[vocdoni] #{key} of election ##{election.id}: the organization is busy " \
                             "(attempt #{attempts}); retrying in #{delay.round(1)}s"
-          yield delay, { busy_since: since, busy_attempts: attempts }
+          yield delay, { busy: { "since" => since, "attempts" => attempts } }
           :waiting
         end
 

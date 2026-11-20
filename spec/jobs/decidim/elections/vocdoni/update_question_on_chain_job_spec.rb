@@ -329,7 +329,7 @@ module Decidim
             it "waits without recording a failure or using a close attempt" do
               expect { described_class.perform_now(question.id, action, attempt: 3) }
                 .to have_enqueued_job(described_class)
-                .with(question.id, action, attempt: 3, busy_since: kind_of(String), busy_attempts: 1)
+                .with(question.id, action, attempt: 3, busy: { "since" => kind_of(String), "attempts" => 1 })
                 .at(within_jitter(2))
 
               vocdoni_process.reload
@@ -340,7 +340,7 @@ module Decidim
             end
 
             it "gives up after 15 minutes without a close retry of its own" do
-              expect { described_class.perform_now(question.id, action, busy_since: 16.minutes.ago.iso8601, busy_attempts: 60) }
+              expect { described_class.perform_now(question.id, action, busy: { "since" => 16.minutes.ago.iso8601, "attempts" => 60 }) }
                 .not_to have_enqueued_job(described_class)
 
               expect(pending).to include("gave_up" => true)
@@ -358,7 +358,7 @@ module Decidim
 
               expect { described_class.perform_now(question.id, action) }
                 .to have_enqueued_job(described_class)
-                .with(question.id, action, attempt: 1, busy_since: kind_of(String), busy_attempts: 1)
+                .with(question.id, action, attempt: 1, busy: { "since" => kind_of(String), "attempts" => 1 })
 
               expect(vocdoni_process.reload.question_failures).to be_empty
             end
@@ -367,7 +367,7 @@ module Decidim
               vocdoni_process.record_pending_action!(key, since: 1.minute.ago.iso8601, attempts: 2)
               stub_status_change("READY")
 
-              described_class.perform_now(question.id, action, busy_since: 1.minute.ago.iso8601, busy_attempts: 2)
+              described_class.perform_now(question.id, action, busy: { "since" => 1.minute.ago.iso8601, "attempts" => 2 })
 
               expect(vocdoni_process.reload.pending_actions).to be_empty
             end

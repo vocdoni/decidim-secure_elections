@@ -33,7 +33,7 @@ module Decidim
         it "waits for the organization while the process stays publishing" do
           expect { run }
             .to have_enqueued_job(described_class)
-            .with(election.id, nil, busy_since: kind_of(String), busy_attempts: 1)
+            .with(election.id, nil, busy: { "since" => kind_of(String), "attempts" => 1 })
             .at(within_jitter(2))
 
           vocdoni_process.reload
@@ -56,9 +56,9 @@ module Decidim
             since = 1.minute.ago.iso8601
             job = nil
 
-            expect { job = run(nil, busy_since: since, busy_attempts: 3) }
+            expect { job = run(nil, busy: { "since" => since, "attempts" => 3 }) }
               .to have_enqueued_job(described_class)
-              .with(election.id, nil, busy_since: since, busy_attempts: 4)
+              .with(election.id, nil, busy: { "since" => since, "attempts" => 4 })
               .at(within_jitter(15))
             expect(job).to have_received(:prepare_census!)
           end
@@ -70,7 +70,7 @@ module Decidim
           end
 
           it "fails the process once the window runs out" do
-            expect { run(nil, busy_since: 16.minutes.ago.iso8601, busy_attempts: 60) }
+            expect { run(nil, busy: { "since" => 16.minutes.ago.iso8601, "attempts" => 60 }) }
               .not_to have_enqueued_job(described_class)
 
             expect(pending).to include("attempts" => 61, "gave_up" => true)
@@ -87,7 +87,7 @@ module Decidim
 
             expect { run }
               .to have_enqueued_job(described_class)
-              .with(election.id, nil, busy_since: kind_of(String), busy_attempts: 1)
+              .with(election.id, nil, busy: { "since" => kind_of(String), "attempts" => 1 })
 
             expect(pending).to include("attempts" => 1)
             expect(pending).not_to have_key("gave_up")

@@ -131,7 +131,7 @@ module Decidim
 
             expect { described_class.perform_now(election.id) }
               .to have_enqueued_job(described_class)
-              .with(election.id, busy_since: kind_of(String), busy_attempts: 1)
+              .with(election.id, busy: { "since" => kind_of(String), "attempts" => 1 })
               .at(within_jitter(2))
 
             vocdoni_process.reload
@@ -147,9 +147,9 @@ module Decidim
             stub_busy(status: 504, body: "<html>Gateway Timeout</html>")
             since = 1.minute.ago.iso8601
 
-            expect { described_class.perform_now(election.id, busy_since: since, busy_attempts: 3) }
+            expect { described_class.perform_now(election.id, busy: { since:, attempts: 3 }) }
               .to have_enqueued_job(described_class)
-              .with(election.id, busy_since: since, busy_attempts: 4)
+              .with(election.id, busy: { "since" => since, "attempts" => 4 })
               .at(within_jitter(15))
 
             expect(pending).to include("since" => since, "attempts" => 4)
@@ -158,7 +158,7 @@ module Decidim
           it "gives up after 15 minutes and leaves the rest to the sync" do
             stub_busy
 
-            expect { described_class.perform_now(election.id, busy_since: 16.minutes.ago.iso8601, busy_attempts: 60) }
+            expect { described_class.perform_now(election.id, busy: { "since" => 16.minutes.ago.iso8601, "attempts" => 60 }) }
               .not_to have_enqueued_job(described_class)
 
             expect(pending).to include("attempts" => 61, "gave_up" => true)
@@ -180,7 +180,7 @@ module Decidim
             stub_request(:put, "#{api_url}/processes/#{process_id}/questions/status")
               .to_return(status: 200, body: vocdoni_fixture("status_change_enqueued"), headers: json_headers)
 
-            described_class.perform_now(election.id, busy_since: 1.minute.ago.iso8601, busy_attempts: 2)
+            described_class.perform_now(election.id, busy: { "since" => 1.minute.ago.iso8601, "attempts" => 2 })
 
             expect(vocdoni_process.reload.pending_actions).to be_empty
           end

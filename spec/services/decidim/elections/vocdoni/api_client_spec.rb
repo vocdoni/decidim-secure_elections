@@ -348,7 +348,7 @@ module Decidim
 
           it "reads Retry-After as an HTTP date" do
             stub_request(:post, publish_url)
-              .to_return(status: 503, body: busy_body, headers: json_headers.merge("Retry-After" => (Time.now + 30).httpdate))
+              .to_return(status: 503, body: busy_body, headers: json_headers.merge("Retry-After" => 30.seconds.from_now.httpdate))
 
             expect(captured_api_error { client.post("/processes/#{process_id}/publish") }.retry_after).to be_between(29, 31)
           end

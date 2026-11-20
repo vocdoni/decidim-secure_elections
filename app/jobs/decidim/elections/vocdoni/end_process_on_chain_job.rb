@@ -34,7 +34,7 @@ module Decidim
 
         PENDING_KEY = "end"
 
-        def perform(election_id, busy_since: nil, busy_attempts: 0)
+        def perform(election_id, busy: {})
           @election = Decidim::Elections::Election.find_by(id: election_id)
           return if election.blank?
 
@@ -63,10 +63,10 @@ module Decidim
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id)
           Decidim::Elections::Vocdoni::SyncElectionResultsJob.perform_later(election.id)
         rescue Decidim::Elections::Vocdoni::ApiError => e
-          busy = wait_out_busy(e, PENDING_KEY, busy_since:, busy_attempts:) do |delay, args|
+          outcome = wait_out_busy(e, PENDING_KEY, busy) do |delay, args|
             self.class.set(wait: delay.seconds).perform_later(election.id, **args)
           end
-          return if busy
+          return if outcome
 
           end_busy_wait(PENDING_KEY)
           # The election is over in Decidim whatever the chain says: keep it published.

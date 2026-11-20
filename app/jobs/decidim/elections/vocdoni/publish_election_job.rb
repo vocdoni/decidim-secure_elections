@@ -56,13 +56,13 @@ module Decidim
           [ENV.fetch("VOCDONI_MEMBER_BATCH_SIZE", "200").to_i, 1].max
         end
 
-        def perform(election_id, scheduled_start_at = nil, busy_since: nil, busy_attempts: 0) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+        def perform(election_id, scheduled_start_at = nil, busy: {}) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
           return unless bootstrap!(election_id)
           return if published_upstream?
           # Someone else — the manual-start subscriber or a previous run —
           # is already pushing this election. Skipping avoids duplicate SaaS
           # resources on manual+scheduled overlap. A busy wait is that push.
-          return if process.publishing? && busy_since.blank?
+          return if process.publishing? && busy.blank?
 
           # Self-invalidation for scheduled pushes: if the admin rescheduled
           # start_at after this job was enqueued, the model's
@@ -96,17 +96,17 @@ module Decidim
         rescue Decidim::Elections::Vocdoni::ApiError => e
           # The push already started, so the next run carries no scheduled start
           # to check. A fresh run (the Retry button) opens a new window.
-          busy = wait_out_busy(e, PENDING_KEY, busy_since:, busy_attempts:, sticky_give_up: false) do |delay, args|
+          outcome = wait_out_busy(e, PENDING_KEY, busy, sticky_give_up: false) do |delay, args|
             self.class.set(wait: delay.seconds).perform_later(election.id, nil, **args)
           end
-          return if busy == :waiting
+          return if outcome == :waiting
 
-          process.clear_pending_action!(PENDING_KEY) if busy.nil?
+          process.clear_pending_action!(PENDING_KEY) if outcome.nil?
           record_step_failure!(e)
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?
           # A window that ran out already retried for 15 minutes: the process
           # is left `failed` with its Retry button.
-          raise if e.transient? && busy.nil?
+          raise if e.transient? && outcome.nil?
         rescue StandardError => e
           record_step_failure!(e)
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?

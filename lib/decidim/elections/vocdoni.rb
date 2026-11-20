@@ -214,7 +214,8 @@ module Decidim
         #   `false` when the call succeeded at the HTTP level but the *body* is
         #   a permanent rejection (a 2xx that reports `errors` in the payload).
         # @param retry_after [Integer, nil] seconds from the `Retry-After` header
-        def initialize(message, status: nil, code: nil, body: nil, transient: nil, retry_after: nil)
+        # One optional keyword per field the client reads off a response.
+        def initialize(message, status: nil, code: nil, body: nil, transient: nil, retry_after: nil) # rubocop:disable Metrics/ParameterLists
           @status = status
           @code = code
           @body = body
