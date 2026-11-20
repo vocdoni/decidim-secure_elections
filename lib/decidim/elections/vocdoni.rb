@@ -197,7 +197,14 @@ module Decidim
         # create fresh orphaned members upstream on every attempt.
         TRANSIENT_STATUSES = [429, 500, 502, 503, 504].freeze
 
-        attr_reader :status, :code, :body
+        # The SaaS runs one organization transaction at a time and answers 50303
+        # when the org lock stays taken for 10 s, before creating any job.
+        BUSY_CODE = 50_303
+
+        # A 503 or 504 with no JSON code: a proxy in front of the SaaS rewrote it.
+        BUSY_STATUSES = [503, 504].freeze
+
+        attr_reader :status, :code, :body, :retry_after
 
         # @param message [String] error message
         # @param status [Integer, nil] HTTP status code
@@ -206,12 +213,20 @@ module Decidim
         # @param transient [Boolean, nil] override the inferred verdict. Pass
         #   `false` when the call succeeded at the HTTP level but the *body* is
         #   a permanent rejection (a 2xx that reports `errors` in the payload).
-        def initialize(message, status: nil, code: nil, body: nil, transient: nil)
+        # @param retry_after [Integer, nil] seconds from the `Retry-After` header
+        def initialize(message, status: nil, code: nil, body: nil, transient: nil, retry_after: nil)
           @status = status
           @code = code
           @body = body
           @transient = transient
+          @retry_after = retry_after
           super(message)
+        end
+
+        # Whether the organization was busy with another transaction: a wait,
+        # not a failure of this request.
+        def busy?
+          code == BUSY_CODE || (code.nil? && BUSY_STATUSES.include?(status))
         end
 
         # Whether the caller should try again. A missing status means the request
