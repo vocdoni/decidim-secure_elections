@@ -172,6 +172,42 @@ module Decidim
             save!
           end
         end
+
+        # Admin writes waiting for the SaaS organization to be free, keyed by
+        # action (`publish`, `end`, `question_<id>_<action>`): `since` (first busy
+        # answer), `attempts`, `at` (last one) and `gave_up` after the window.
+        def pending_actions
+          metadata["pending_actions"].to_h
+        end
+
+        # Under the row lock: the jobs of one election write metadata concurrently.
+        def record_pending_action!(key, since:, attempts:, gave_up: false)
+          with_lock do
+            entry = { "since" => since.to_s, "attempts" => attempts, "at" => Time.current.iso8601 }
+            entry["gave_up"] = true if gave_up
+            self.metadata = metadata.merge("pending_actions" => pending_actions.merge(key.to_s => entry))
+            save!
+          end
+        end
+
+        def clear_pending_action!(key)
+          return unless pending_actions.has_key?(key.to_s)
+
+          with_lock do
+            self.metadata = metadata.merge("pending_actions" => pending_actions.except(key.to_s))
+            save!
+          end
+        end
+
+        # A pending action whose job is still rescheduling itself: not given up
+        # and busy within the last `within` seconds.
+        def pending_action_live?(key, within: 2.minutes)
+          entry = pending_actions[key.to_s]
+          return false if entry.blank? || entry["gave_up"]
+
+          at = Time.zone.parse(entry["at"].to_s)
+          at.present? && at > within.ago
+        end
       end
     end
   end
