@@ -52,10 +52,12 @@ gets both receipts, and the tallies add up to exactly 2 votes per question.
 - **Publish failure**: with a spend cap below the census cost (or an integrator with an empty
   wallet), the dashboard shows the billing alert: the org admin gets the platform link, a space
   admin the "ask an admin" text. Lifting the cap and clicking Retry publishes.
+- **Concurrent admin actions**: from two admin sessions, within the same few seconds, end two
+  `after_end` elections, enable a question in a `per_question` one and publish a new election. All
+  elections share one SaaS organization, which takes one transaction at a time: every action must
+  land on chain with no manual retry, and the dashboards show pending, never failed, meanwhile
+  (#89).
 - **Browser console**: no errors other than the SaaS 401 for a wrong one-time code.
-
-Leave about 20 seconds between admin actions that write to the chain (ending elections, opening
-questions): all elections share one SaaS organization, which takes one transaction at a time.
 
 ## Cleanup
 
