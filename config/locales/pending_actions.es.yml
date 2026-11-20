@@ -1,0 +1,18 @@
+es:
+  decidim:
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            pending_actions:
+              actions:
+                enable_voting: "Abrir la pregunta %{question} en la blockchain"
+                end: "Finalizar la votación en la blockchain"
+                publish: "Publicar la votación en la blockchain"
+                publish_results: "Cerrar la pregunta %{question} en la blockchain"
+              gave_up: "No se ha aplicado tras 15 minutos; Decidim sigue reintentándolo cada pocos minutos."
+              gave_up_publish: "No se ha aplicado tras 15 minutos; reintenta la publicación para volver a probarlo."
+              title: "Algunos cambios esperan a la red de votación"
+              waiting:
+                one: "Esperando otra operación de la organización en la red de votación; se reintenta automáticamente (desde las %{since}, %{count} intento)."
+                other: "Esperando otra operación de la organización en la red de votación; se reintenta automáticamente (desde las %{since}, %{count} intentos)."

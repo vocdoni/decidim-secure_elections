@@ -14,6 +14,7 @@
 %>
 <%= render partial: "decidim/elections/vocdoni/admin/dashboard/publish_failure" %>
 <%= render partial: "decidim/elections/vocdoni/admin/dashboard/question_failures" %>
+<%= render partial: "decidim/elections/vocdoni/admin/dashboard/pending_actions" %>
 <% append_stylesheet_pack_tag "decidim_elections_vocdoni_admin", media: "all" %>
 <% level = Decidim::Elections::Vocdoni::AdminForms::SecurityForm.level_for(election) %>
 <div class="card vocdoni-security-summary">
