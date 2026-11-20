@@ -19,7 +19,9 @@ module Decidim
         RATE_LIMIT = 10
         RATE_LIMIT_WINDOW = 10.minutes
 
-        def create
+        # `allowed_to?` is the permission check: a fetch from the booth gets a
+        # 403, not the redirect `enforce_permission_to` would answer with.
+        def create # rubocop:disable Decidim/EnforcePermissionTo
           return head(:forbidden) unless allowed_to?(:create, :vote, election:) && session_authenticated?
           return head(:too_many_requests) unless within_rate_limit?
 
