@@ -14,7 +14,8 @@ module Decidim
         def tab_panel_items
           @vocdoni_tab_panel_items ||= super + [
             {
-              enabled: ExplorerLinks.for(election).any?,
+              # ExplorerLinks is a plain object, not an ActiveRecord finder.
+              enabled: ExplorerLinks.for(election).any?, # rubocop:disable Decidim/OrganizationScopedFinder
               id: "vocdoni-explorer",
               text: I18n.t("decidim.elections.vocdoni.explorer.tab"),
               icon: "external-link-line",
