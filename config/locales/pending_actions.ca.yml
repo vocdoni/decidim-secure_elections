@@ -1,0 +1,18 @@
+ca:
+  decidim:
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            pending_actions:
+              actions:
+                enable_voting: "Obrir la pregunta %{question} a la blockchain"
+                end: "Finalitzar la votació a la blockchain"
+                publish: "Publicar la votació a la blockchain"
+                publish_results: "Tancar la pregunta %{question} a la blockchain"
+              gave_up: "No s'ha aplicat després de 15 minuts; Decidim continua reintentant-ho cada pocs minuts."
+              gave_up_publish: "No s'ha aplicat després de 15 minuts; torna a publicar per tornar-ho a provar."
+              title: "Alguns canvis esperen la xarxa de votació"
+              waiting:
+                one: "S'està esperant una altra operació de l'organització a la xarxa de votació; es reintenta automàticament (des de les %{since}, %{count} intent)."
+                other: "S'està esperant una altra operació de l'organització a la xarxa de votació; es reintenta automàticament (des de les %{since}, %{count} intents)."

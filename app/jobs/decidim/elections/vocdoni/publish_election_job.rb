@@ -29,6 +29,8 @@ module Decidim
       # filters on the same predicate, but the job double-checks so a manually
       # enqueued run cannot publish a non-Vocdoni election.
       class PublishElectionJob < ApplicationJob
+        include BusyRetry
+
         queue_as :vocdoni
 
         # Only transient failures (network flap, 5xx, 429) are retried — a
@@ -44,6 +46,8 @@ module Decidim
         # read a full memberbase (the SaaS caps one at 50,000 members).
         MAX_MEMBER_PAGES = 600
 
+        PENDING_KEY = "publish"
+
         # Members per `POST /organizations/{addr}/members`. The SaaS sets no
         # per-call cap, but it hashes every phone with Argon2 one after
         # another, so a batch has to finish within `Vocdoni.job_timeout`.
@@ -52,13 +56,13 @@ module Decidim
           [ENV.fetch("VOCDONI_MEMBER_BATCH_SIZE", "200").to_i, 1].max
         end
 
-        def perform(election_id, scheduled_start_at = nil) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+        def perform(election_id, scheduled_start_at = nil, busy: {}) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
           return unless bootstrap!(election_id)
           return if published_upstream?
           # Someone else — the manual-start subscriber or a previous run —
           # is already pushing this election. Skipping avoids duplicate SaaS
-          # resources on manual+scheduled overlap.
-          return if process.publishing?
+          # resources on manual+scheduled overlap. A busy wait is that push.
+          return if process.publishing? && busy.blank?
 
           # Self-invalidation for scheduled pushes: if the admin rescheduled
           # start_at after this job was enqueued, the model's
@@ -83,15 +87,26 @@ module Decidim
           persist_process_metadata!
 
           process.update!(state: "published")
+          process.clear_pending_action!(PENDING_KEY)
 
           # Kick off the on-chain state monitor so the sidecar keeps mirroring
           # the SaaS while voting is open.
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id)
           catch_up_questions!
         rescue Decidim::Elections::Vocdoni::ApiError => e
+          # The push already started, so the next run carries no scheduled start
+          # to check. A fresh run (the Retry button) opens a new window.
+          outcome = wait_out_busy(e, PENDING_KEY, busy, sticky_give_up: false) do |delay, args|
+            self.class.set(wait: delay.seconds).perform_later(election.id, nil, **args)
+          end
+          return if outcome == :waiting
+
+          process.clear_pending_action!(PENDING_KEY) if outcome.nil?
           record_step_failure!(e)
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?
-          raise if e.transient?
+          # A window that ran out already retried for 15 minutes: the process
+          # is left `failed` with its Retry button.
+          raise if e.transient? && outcome.nil?
         rescue StandardError => e
           record_step_failure!(e)
           Decidim::Elections::Vocdoni::SyncProcessJob.perform_later(election.id) if process.vocdoni_process_id.present?

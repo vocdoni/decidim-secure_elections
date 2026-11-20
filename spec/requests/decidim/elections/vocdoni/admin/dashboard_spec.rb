@@ -103,6 +103,55 @@ module Decidim
 
           it "shows no alert" do
             expect(html.at_css(".vocdoni-question-failures")).to be_nil
+            expect(html.at_css(".vocdoni-pending-actions")).to be_nil
+          end
+        end
+
+        context "when admin changes wait for a busy organization" do
+          let(:notice) { html.at_css(".item__edit-form > .vocdoni-pending-actions") }
+          let(:scope) { "decidim.elections.vocdoni.admin.dashboard.pending_actions" }
+          let(:since) { Time.zone.parse("2026-11-20T10:05:00Z") }
+          let(:question) { election.questions.first }
+          let!(:election) do
+            create(:election, :with_token_csv_census, :per_question, :published, :ongoing, component:).tap do |record|
+              question = create(:election_question, :with_response_options, :voting_enabled, election: record)
+              create(:vocdoni_process, :published, election: record, metadata: {
+                       "pending_actions" => {
+                         "end" => { "since" => since.iso8601, "attempts" => 3, "at" => since.iso8601 },
+                         "question_#{question.id}_enable_voting" => { "since" => since.iso8601, "attempts" => 61,
+                                                                      "at" => since.iso8601, "gave_up" => true }
+                       }
+                     })
+            end
+          end
+
+          it "shows each waiting change with its progress" do
+            expect(response).to have_http_status(:ok)
+            expect(notice).to be_present
+            expect(notice.text.squish).to include(I18n.t("#{scope}.title"))
+
+            waiting = notice.at_css("[data-pending-action='end']").text.squish
+            expect(waiting).to include(I18n.t("#{scope}.actions.end"))
+            expect(waiting).to include(I18n.t("#{scope}.waiting", since: I18n.l(since, format: "%H:%M"), count: 3))
+
+            gave_up = notice.at_css("[data-pending-action='question_#{question.id}_enable_voting']").text.squish
+            expect(gave_up).to include(I18n.t("#{scope}.gave_up"))
+            expect(gave_up).not_to include(I18n.t("#{scope}.gave_up_publish"))
+          end
+        end
+
+        context "when a pending entry has no usable start time" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, :published, :ongoing, component:).tap do |record|
+              create(:vocdoni_process, :published, election: record, metadata: {
+                       "pending_actions" => { "end" => { "since" => "garbage", "attempts" => 2, "at" => "" } }
+                     })
+            end
+          end
+
+          it "still renders the dashboard" do
+            expect(response).to have_http_status(:ok)
+            expect(html.at_css("[data-pending-action='end']").text).to include("--:--")
           end
         end
 

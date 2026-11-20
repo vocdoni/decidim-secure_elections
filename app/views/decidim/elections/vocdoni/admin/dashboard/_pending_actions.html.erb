@@ -1,0 +1,31 @@
+<%#
+  Notice on upstream's Dashboard tab for admin changes waiting for the
+  Vocdoni organization to finish another operation (`Process#pending_actions`).
+  Rendered from the security card partial; each entry goes once its change lands.
+%>
+<% pending = election.vocdoni_process&.pending_actions.to_h %>
+<% if pending.any? %>
+  <% scope = "decidim.elections.vocdoni.admin.dashboard.pending_actions" %>
+  <% questions = election.questions.index_by(&:id) %>
+  <div class="callout warning vocdoni-pending-actions" role="status">
+    <p class="font-bold"><%= t("title", scope:) %></p>
+    <ul>
+      <% pending.each do |key, entry| %>
+        <% question_id, action = key.match(/\Aquestion_(\d+)_(enable_voting|publish_results)\z/)&.captures %>
+        <% question = questions[question_id.to_i] if question_id %>
+        <% next unless question || %w(publish end).include?(key) %>
+        <li class="py-2" data-pending-action="<%= key %>">
+          <strong><%= question ? t("actions.#{action}", scope:, question: translated_attribute(question.body)) : t("actions.#{key}", scope:) %></strong>
+          <p>
+            <% if entry["gave_up"] %>
+              <%= t(key == "publish" ? "gave_up_publish" : "gave_up", scope:) %>
+            <% else %>
+              <% since = Decidim::Elections::Vocdoni::Process.parse_time(entry["since"]) %>
+              <%= t("waiting", scope:, since: since ? l(since, format: "%H:%M") : "--:--", count: entry["attempts"].to_i) %>
+            <% end %>
+          </p>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

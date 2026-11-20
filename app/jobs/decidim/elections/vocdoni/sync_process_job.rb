@@ -59,6 +59,15 @@ module Decidim
         # as active while ANY question is still in one of these states.
         ACTIVE_STATUSES = %w(READY ONGOING PAUSED).freeze
 
+        # Chain statuses a question never leaves.
+        TERMINAL_STATUSES = %w(ENDED RESULTS CANCELED).freeze
+
+        # Time the admin's own job gets to land a move before the reconciler steps in.
+        RECONCILE_GRACE = 2.minutes
+
+        # Longer than the slowest step of a question's own retry loop (120 s).
+        FAILURE_RETRY_WINDOW = 5.minutes
+
         def perform(election_id)
           @election = Decidim::Elections::Election.find_by(id: election_id)
           return if election.blank?
@@ -70,12 +79,14 @@ module Decidim
 
           remote = client.elections.get(process.vocdoni_process_id).to_h
           persist!(remote)
+          reconcile!(remote)
           sync_live_results!(remote)
           reschedule_if_needed!(remote)
         rescue Decidim::Elections::Vocdoni::ApiError => e
           # Transient errors are retried by ActiveJob; a permanent 4xx is
           # recorded on the sidecar so the admin dashboard can surface it.
-          process&.record_failure!(redact(e.message), step: "sync") unless e.transient?
+          # A published election stays usable whatever this read says (#84).
+          process&.record_failure!(redact(e.message), step: "sync", keep_state: process.published?) unless e.transient?
           raise
         end
 
@@ -85,26 +96,95 @@ module Decidim
 
         # Merges the on-chain state into the sidecar. Any of these fields may
         # be missing on a given call — the SaaS fills them in as the on-chain
-        # confirmation lands.
+        # confirmation lands. Under the row lock, so metadata other jobs wrote
+        # since this run loaded the process (pending actions, failures) survives.
         def persist!(remote)
           size = remote.dig("census", "size") || remote["censusSize"]
 
-          attrs = {
-            chain_id: remote["chainId"].to_s.presence || process.chain_id,
-            vocdoni_upstream_id: remote["upstreamId"].to_s.presence || process.vocdoni_upstream_id,
-            census_size: size.to_i.positive? ? size.to_i : process.census_size
-          }
+          process.with_lock do
+            attrs = {
+              chain_id: remote["chainId"].to_s.presence || process.chain_id,
+              vocdoni_upstream_id: remote["upstreamId"].to_s.presence || process.vocdoni_upstream_id,
+              census_size: size.to_i.positive? ? size.to_i : process.census_size
+            }
 
-          questions_meta = extract_questions_meta(remote)
-          new_metadata = process.metadata.merge("last_synced_at" => Time.current.iso8601)
-          new_metadata["questions"] = questions_meta if questions_meta.any?
-          new_metadata["saas_status"] = aggregate_status(remote)
-          new_metadata["saas_published"] = remote["published"] == true
-          attrs[:metadata] = new_metadata
+            questions_meta = extract_questions_meta(remote)
+            new_metadata = process.metadata.merge("last_synced_at" => Time.current.iso8601)
+            new_metadata["questions"] = questions_meta if questions_meta.any?
+            new_metadata["saas_status"] = aggregate_status(remote)
+            new_metadata["saas_published"] = remote["published"] == true
+            attrs[:metadata] = new_metadata
 
-          attrs[:state] = derive_state(remote)
+            attrs[:state] = derive_state(remote)
 
-          process.update!(attrs)
+            process.update!(attrs)
+          end
+        end
+
+        # Enqueues the move Decidim asked for and the chain has not made (a lost
+        # job, or one that gave up on a busy organization), unless that action
+        # is still rescheduling itself.
+        def reconcile!(remote)
+          @divergences = process.published? ? divergences(remote) : {}
+          @divergences.each do |key, enqueue|
+            next if process.pending_action_live?(key)
+
+            Rails.logger.info "[vocdoni] election ##{election.id}: #{key} not on chain yet; enqueuing it"
+            enqueue.call
+          end
+        end
+
+        # Pending-action key => enqueue lambda. An ended election only needs
+        # the end, which also closes every question.
+        def divergences(remote)
+          statuses = Array(remote["questions"]).map { |q| q["status"].to_s.upcase }.compact_blank
+          if settled?(election.end_at)
+            return {} if statuses.all? { |status| TERMINAL_STATUSES.include?(status) }
+
+            return { EndProcessOnChainJob::PENDING_KEY => -> { EndProcessOnChainJob.perform_later(election.id) } }
+          end
+          return {} unless election.per_question?
+
+          question_divergences
+        end
+
+        # A question whose failure is still retrying (`retry_close`, `retry_on`)
+        # is left to that loop, so loops do not multiply; see #retrying?.
+        def question_divergences
+          chain = process.questions_metadata.to_h { |row| [row["decidim_question_id"].to_i, row["vocdoni_status"].to_s.upcase] }
+
+          election.questions.each_with_object({}) do |question, list|
+            status = chain[question.id]
+            next if status.blank? || TERMINAL_STATUSES.include?(status)
+            next if retrying?(process.question_failures[question.id.to_s])
+
+            action = question_action(question, status)
+            next if action.nil?
+
+            list[UpdateQuestionOnChainJob.pending_key(question.id, action)] = -> { UpdateQuestionOnChainJob.perform_later(question.id, action) }
+          end
+        end
+
+        # The move a question needs past the grace, or nil when the chain agrees.
+        def question_action(question, status)
+          if question.published_results?
+            "publish_results" if settled?(question.published_results_at)
+          elsif settled?(question.voting_enabled_at) && UpdateQuestionOnChainJob::REACHED_STATUSES["READY"].exclude?(status)
+            "enable_voting"
+          end
+        end
+
+        # Not given up and written recently: an enable_voting failure never sets
+        # `gave_up`, and its `retry_on` is over within a minute or two.
+        def retrying?(failure)
+          return false if failure.blank? || failure["gave_up"]
+
+          at = Decidim::Elections::Vocdoni::Process.parse_time(failure["at"])
+          at.present? && at > FAILURE_RETRY_WINDOW.ago
+        end
+
+        def settled?(time)
+          time.present? && time <= RECONCILE_GRACE.ago
         end
 
         # `Process#state` reflects how far this election has gotten in the
@@ -167,6 +247,8 @@ module Decidim
         def cadence_for(remote)
           state = process.reload.state
           return PUBLISHING_CADENCE_S if state == "publishing"
+          # Keep checking until the chain catches up with Decidim.
+          return IDLE_CADENCE_S if @divergences.present? && !remote_active?(remote)
           return nil unless remote_active?(remote)
 
           election.results_availability.to_s == "real_time" ? LIVE_CADENCE_S : IDLE_CADENCE_S

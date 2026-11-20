@@ -304,6 +304,62 @@ module Decidim
             expect(request).to have_been_requested.once
           end
         end
+
+        describe "a busy organization" do
+          let(:publish_url) { "#{api_url}/processes/#{process_id}/publish" }
+          let(:busy_body) { { error: "another transaction for this organization is in progress", code: 50_303 }.to_json }
+
+          it "is busy on a 503 with code 50303 and reads Retry-After in seconds" do
+            stub_request(:post, publish_url)
+              .to_return(status: 503, body: busy_body, headers: json_headers.merge("Retry-After" => "7"))
+
+            error = captured_api_error { client.post("/processes/#{process_id}/publish") }
+
+            expect(error).to be_busy
+            expect(error.code).to eq(50_303)
+            expect(error.retry_after).to eq(7)
+          end
+
+          it "is busy on an HTML 504 from the proxy" do
+            stub_request(:post, publish_url)
+              .to_return(status: 504, body: "<html><body>Gateway Timeout</body></html>", headers: { "Content-Type" => "text/html" })
+
+            error = captured_api_error { client.post("/processes/#{process_id}/publish") }
+
+            expect(error).to be_busy
+            expect(error.retry_after).to be_nil
+          end
+
+          it "is not busy on a 503 with another code" do
+            stub_request(:post, publish_url)
+              .to_return(status: 503, body: { error: "maintenance", code: 50_300 }.to_json, headers: json_headers)
+
+            error = captured_api_error { client.post("/processes/#{process_id}/publish") }
+
+            expect(error).not_to be_busy
+            expect(error).to be_transient
+          end
+
+          it "is not busy on a 500 without a code" do
+            stub_request(:post, publish_url).to_return(status: 500, body: "", headers: json_headers)
+
+            expect(captured_api_error { client.post("/processes/#{process_id}/publish") }).not_to be_busy
+          end
+
+          it "reads Retry-After as an HTTP date" do
+            stub_request(:post, publish_url)
+              .to_return(status: 503, body: busy_body, headers: json_headers.merge("Retry-After" => 30.seconds.from_now.httpdate))
+
+            expect(captured_api_error { client.post("/processes/#{process_id}/publish") }.retry_after).to be_between(29, 31)
+          end
+
+          it "ignores a Retry-After it cannot parse" do
+            stub_request(:post, publish_url)
+              .to_return(status: 503, body: busy_body, headers: json_headers.merge("Retry-After" => "soon"))
+
+            expect(captured_api_error { client.post("/processes/#{process_id}/publish") }.retry_after).to be_nil
+          end
+        end
       end
     end
   end

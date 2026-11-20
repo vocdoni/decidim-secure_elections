@@ -299,8 +299,23 @@ module Decidim
             error_message(response, body),
             status: response.status,
             code: error_code(body),
-            body:
+            body:,
+            retry_after: retry_after_seconds(response.headers["Retry-After"])
           )
+        end
+
+        # `Retry-After` carries either seconds or an HTTP date.
+        #
+        # @param value [String, nil]
+        # @return [Integer, nil]
+        def retry_after_seconds(value)
+          value = value.to_s.strip
+          return nil if value.empty?
+          return value.to_i if value.match?(/\A\d+\z/)
+
+          [(Time.httpdate(value) - Time.current).ceil, 0].max
+        rescue ArgumentError
+          nil
         end
 
         # JSON objects already come back with string keys; this only guards

@@ -1,0 +1,18 @@
+en:
+  decidim:
+    elections:
+      vocdoni:
+        admin:
+          dashboard:
+            pending_actions:
+              actions:
+                enable_voting: "Opening the question %{question} on the blockchain"
+                end: "Ending the election on the blockchain"
+                publish: "Publishing the election on the blockchain"
+                publish_results: "Closing the question %{question} on the blockchain"
+              gave_up: "Not applied after 15 minutes; Decidim keeps retrying every few minutes."
+              gave_up_publish: "Not applied after 15 minutes; retry the publication to try again."
+              title: "Some changes are waiting for the voting network"
+              waiting:
+                one: "Waiting for another operation of the organization on the voting network, retrying automatically (since %{since}, %{count} attempt)."
+                other: "Waiting for another operation of the organization on the voting network, retrying automatically (since %{since}, %{count} attempts)."

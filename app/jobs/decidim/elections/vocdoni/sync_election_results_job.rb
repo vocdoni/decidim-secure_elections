@@ -106,7 +106,7 @@ module Decidim
           @question_ids = question_ids&.map(&:to_i)
           sync_and_maybe_reschedule!(mode:, attempt:)
         rescue Decidim::Elections::Vocdoni::ApiError => e
-          process&.record_failure!(redact(e.message), step: "sync_results", code: e.try(:code))
+          process&.record_failure!(redact(e.message), step: "sync_results", code: e.try(:code), keep_state: true)
           raise if e.transient?
         end
 

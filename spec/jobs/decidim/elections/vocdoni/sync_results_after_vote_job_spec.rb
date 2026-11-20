@@ -79,6 +79,17 @@ module Decidim
               .to have_enqueued_job(described_class).with(election.id, seen: 1, attempt: 2)
           end
         end
+
+        it "records a failed read without failing the process" do
+          stub_request(:get, "#{api_url}/processes/#{process_id}/results")
+            .to_return(status: 404, body: { error: "not found", code: 40_400 }.to_json, headers: json_headers)
+
+          described_class.perform_now(election.id, seen: 1)
+
+          vocdoni_process.reload
+          expect(vocdoni_process).to be_published
+          expect(vocdoni_process.metadata.dig("last_error", "step")).to eq("sync_results")
+        end
       end
     end
   end
