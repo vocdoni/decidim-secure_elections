@@ -69,6 +69,62 @@ module Decidim
           it "is not live without an entry" do
             expect(process.pending_action_live?("end")).to be(false)
           end
+
+          it "stays live until a long Retry-After wait is due" do
+            process.update!(metadata: { "pending_actions" => { "end" => { "since" => 10.minutes.ago.iso8601, "attempts" => 4,
+                                                                          "at" => 4.minutes.ago.iso8601, "next_in" => 300 } } })
+
+            expect(process.pending_action_live?("end")).to be(true)
+          end
+
+          it "is not live with an unparseable timestamp" do
+            process.update!(metadata: { "pending_actions" => { "end" => { "since" => "", "attempts" => 4, "at" => "garbage" } } })
+
+            expect(process.pending_action_live?("end")).to be(false)
+          end
+        end
+
+        describe "writes from a stale copy" do
+          let(:stale) { Process.find(process.id) }
+
+          before { stale }
+
+          it "keeps the pending actions another job wrote when recording a failure" do
+            process.record_pending_action!("end", since: 1.minute.ago.iso8601, attempts: 1)
+
+            stale.record_failure!("boom", step: "sync_results", keep_state: true)
+
+            expect(process.reload.pending_actions).to have_key("end")
+            expect(process.metadata.dig("last_error", "message")).to eq("boom")
+          end
+
+          it "keeps them when recording a question failure" do
+            process.record_pending_action!("end", since: 1.minute.ago.iso8601, attempts: 1)
+
+            stale.record_question_failure!(7, "boom", step: "question_publish_results")
+
+            expect(process.reload.pending_actions).to have_key("end")
+            expect(process.question_failures).to have_key("7")
+          end
+
+          it "clears an entry written after the copy was loaded" do
+            process.record_pending_action!("end", since: 1.minute.ago.iso8601, attempts: 1)
+            process.record_question_failure!(7, "boom", step: "question_publish_results")
+
+            stale.clear_pending_action!("end")
+            stale.clear_question_failure!(7)
+
+            expect(process.reload.pending_actions).to be_empty
+            expect(process.question_failures).to be_empty
+          end
+        end
+
+        describe ".parse_time" do
+          it "returns nil for a blank or unparseable value" do
+            expect(Process.parse_time(nil)).to be_nil
+            expect(Process.parse_time("garbage")).to be_nil
+            expect(Process.parse_time("2026-11-20T10:00:00Z")).to eq(Time.zone.parse("2026-11-20T10:00:00Z"))
+          end
         end
       end
 

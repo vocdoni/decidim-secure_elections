@@ -139,6 +139,7 @@ module Decidim
             expect(vocdoni_process.last_error).to be_nil
             expect(vocdoni_process.metadata).not_to have_key("last_error")
             expect(pending).to include("attempts" => 1)
+            expect(pending["next_in"]).to be_between(2, 3)
             expect(SyncProcessJob).not_to have_been_enqueued
           end
 

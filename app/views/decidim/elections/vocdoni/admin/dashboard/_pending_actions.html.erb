@@ -20,7 +20,8 @@
             <% if entry["gave_up"] %>
               <%= t(key == "publish" ? "gave_up_publish" : "gave_up", scope:) %>
             <% else %>
-              <%= t("waiting", scope:, since: l(Time.zone.parse(entry["since"].to_s), format: "%H:%M"), count: entry["attempts"].to_i) %>
+              <% since = Decidim::Elections::Vocdoni::Process.parse_time(entry["since"]) %>
+              <%= t("waiting", scope:, since: since ? l(since, format: "%H:%M") : "--:--", count: entry["attempts"].to_i) %>
             <% end %>
           </p>
         </li>

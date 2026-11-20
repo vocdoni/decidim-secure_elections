@@ -85,7 +85,8 @@ module Decidim
         rescue Decidim::Elections::Vocdoni::ApiError => e
           # Transient errors are retried by ActiveJob; a permanent 4xx is
           # recorded on the sidecar so the admin dashboard can surface it.
-          process&.record_failure!(redact(e.message), step: "sync") unless e.transient?
+          # A published election stays usable whatever this read says (#84).
+          process&.record_failure!(redact(e.message), step: "sync", keep_state: process.published?) unless e.transient?
           raise
         end
 
@@ -155,16 +156,21 @@ module Decidim
           election.questions.each_with_object({}) do |question, list|
             status = chain[question.id]
             next if status.blank? || TERMINAL_STATUSES.include?(status)
-
             next if retrying?(process.question_failures[question.id.to_s])
 
-            action = if question.published_results? then ("publish_results" if settled?(question.published_results_at))
-                     elsif settled?(question.voting_enabled_at) && UpdateQuestionOnChainJob::REACHED_STATUSES["READY"].exclude?(status)
-                       "enable_voting"
-                     end
+            action = question_action(question, status)
             next if action.nil?
 
             list[UpdateQuestionOnChainJob.pending_key(question.id, action)] = -> { UpdateQuestionOnChainJob.perform_later(question.id, action) }
+          end
+        end
+
+        # The move a question needs past the grace, or nil when the chain agrees.
+        def question_action(question, status)
+          if question.published_results?
+            "publish_results" if settled?(question.published_results_at)
+          elsif settled?(question.voting_enabled_at) && UpdateQuestionOnChainJob::REACHED_STATUSES["READY"].exclude?(status)
+            "enable_voting"
           end
         end
 
@@ -173,7 +179,7 @@ module Decidim
         def retrying?(failure)
           return false if failure.blank? || failure["gave_up"]
 
-          at = Time.zone.parse(failure["at"].to_s)
+          at = Decidim::Elections::Vocdoni::Process.parse_time(failure["at"])
           at.present? && at > FAILURE_RETRY_WINDOW.ago
         end
 

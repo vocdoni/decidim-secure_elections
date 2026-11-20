@@ -41,15 +41,16 @@ module Decidim
 
           since = busy_since.presence || Time.current.iso8601
           attempts = busy_attempts.to_i + 1
-          if Time.current - Time.zone.parse(since.to_s) >= BUSY_WINDOW_S
+          if Time.current - (Decidim::Elections::Vocdoni::Process.parse_time(since) || Time.current) >= BUSY_WINDOW_S
             process.record_pending_action!(key, since:, attempts:, gave_up: true)
             Rails.logger.error "[vocdoni] #{key} of election ##{election.id}: the organization stayed busy " \
                                "for #{BUSY_WINDOW_S / 60} minutes (#{attempts} attempts); giving up"
             return :gave_up
           end
 
-          process.record_pending_action!(key, since:, attempts:)
           delay = self.class.busy_delay(attempts, retry_after: error.retry_after)
+          # `next_in` keeps the entry live through a long Retry-After for the reconciler.
+          process.record_pending_action!(key, since:, attempts:, next_in: delay)
           Rails.logger.warn "[vocdoni] #{key} of election ##{election.id}: the organization is busy " \
                             "(attempt #{attempts}); retrying in #{delay.round(1)}s"
           yield delay, { busy_since: since, busy_attempts: attempts }

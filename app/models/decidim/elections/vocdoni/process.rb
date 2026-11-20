@@ -126,7 +126,15 @@ module Decidim
         #
         # `keep_state` records the error without marking the process failed,
         # for a step whose failure leaves the rest of the election usable.
+        #
+        # Under the row lock, so metadata other jobs wrote since this record was
+        # loaded (pending actions, question failures) survives.
         def record_failure!(message, step: nil, code: nil, data: nil, keep_state: false)
+          with_lock { write_failure(message, step:, code:, data:, keep_state:) }
+        end
+
+        # {#record_failure!} for a caller that already holds the lock.
+        def write_failure(message, step:, code:, data: nil, keep_state: false)
           self.metadata = metadata.merge(
             "last_error" => {
               "message" => message.to_s,
@@ -160,14 +168,16 @@ module Decidim
                       "attempts" => retries[:attempts], "gave_up" => retries.fetch(:gave_up, false),
                       "at" => Time.current.iso8601 }.compact
             self.metadata = metadata.merge("question_failures" => question_failures.merge(question_id.to_s => entry))
-            record_failure!(message, step:, code:, keep_state: true)
+            write_failure(message, step:, code:, keep_state: true)
           end
         end
 
+        # The check runs after the lock's reload: another job may have written
+        # the entry since this record was loaded.
         def clear_question_failure!(question_id)
-          return unless question_failures.has_key?(question_id.to_s)
-
           with_lock do
+            next unless question_failures.has_key?(question_id.to_s)
+
             self.metadata = metadata.merge("question_failures" => question_failures.except(question_id.to_s))
             save!
           end
@@ -175,15 +185,17 @@ module Decidim
 
         # Admin writes waiting for the SaaS organization to be free, keyed by
         # action (`publish`, `end`, `question_<id>_<action>`): `since` (first busy
-        # answer), `attempts`, `at` (last one) and `gave_up` after the window.
+        # answer), `attempts`, `at` (last one), `next_in` (seconds to the next
+        # run) and `gave_up` after the window.
         def pending_actions
           metadata["pending_actions"].to_h
         end
 
         # Under the row lock: the jobs of one election write metadata concurrently.
-        def record_pending_action!(key, since:, attempts:, gave_up: false)
+        def record_pending_action!(key, since:, attempts:, gave_up: false, next_in: nil)
           with_lock do
             entry = { "since" => since.to_s, "attempts" => attempts, "at" => Time.current.iso8601 }
+            entry["next_in"] = next_in.ceil if next_in
             entry["gave_up"] = true if gave_up
             self.metadata = metadata.merge("pending_actions" => pending_actions.merge(key.to_s => entry))
             save!
@@ -191,22 +203,30 @@ module Decidim
         end
 
         def clear_pending_action!(key)
-          return unless pending_actions.has_key?(key.to_s)
-
           with_lock do
+            next unless pending_actions.has_key?(key.to_s)
+
             self.metadata = metadata.merge("pending_actions" => pending_actions.except(key.to_s))
             save!
           end
         end
 
-        # A pending action whose job is still rescheduling itself: not given up
-        # and busy within the last `within` seconds.
+        # A pending action whose job is still rescheduling itself: not given up,
+        # and its next run (`at` + `next_in`) due less than `within` ago.
         def pending_action_live?(key, within: 2.minutes)
           entry = pending_actions[key.to_s]
           return false if entry.blank? || entry["gave_up"]
 
-          at = Time.zone.parse(entry["at"].to_s)
-          at.present? && at > within.ago
+          at = self.class.parse_time(entry["at"])
+          at.present? && at > (entry["next_in"].to_i.seconds + within).ago
+        end
+
+        # A metadata timestamp, or nil when blank or unparseable: a corrupt entry
+        # must not break the dashboard or the sync loop.
+        def self.parse_time(value)
+          Time.zone.parse(value.to_s)
+        rescue ArgumentError
+          nil
         end
       end
     end

@@ -140,6 +140,21 @@ module Decidim
           end
         end
 
+        context "when a pending entry has no usable start time" do
+          let!(:election) do
+            create(:election, :with_token_csv_census, :published, :ongoing, component:).tap do |record|
+              create(:vocdoni_process, :published, election: record, metadata: {
+                       "pending_actions" => { "end" => { "since" => "garbage", "attempts" => 2, "at" => "" } }
+                     })
+            end
+          end
+
+          it "still renders the dashboard" do
+            expect(response).to have_http_status(:ok)
+            expect(html.at_css("[data-pending-action='end']").text).to include("--:--")
+          end
+        end
+
         context "when the election is opted in with a one-time code" do
           let!(:election) do
             create(:election, :with_token_csv_census, component:).tap do |record|

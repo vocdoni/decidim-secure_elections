@@ -123,6 +123,31 @@ module Decidim
           end
         end
 
+        describe "a rejected read" do
+          before do
+            stub_request(:get, "#{api_url}/processes/#{process_id}")
+              .to_return(status: 404, body: { error: "not found", code: 40_400 }.to_json, headers: json_headers)
+          end
+
+          it "records it without failing a published process" do
+            described_class.perform_now(election.id)
+
+            vocdoni_process.reload
+            expect(vocdoni_process).to be_published
+            expect(vocdoni_process.metadata.dig("last_error", "step")).to eq("sync")
+          end
+
+          context "when the process is still publishing" do
+            let!(:vocdoni_process) { create(:vocdoni_process, :publishing, vocdoni_process_id: process_id, election:) }
+
+            it "fails it as before" do
+              described_class.perform_now(election.id)
+
+              expect(vocdoni_process.reload).to be_failed
+            end
+          end
+        end
+
         describe "reconciling Decidim with the chain" do
           def stub_questions(*statuses)
             stub_request(:get, "#{api_url}/processes/#{process_id}")
@@ -240,6 +265,16 @@ module Decidim
               vocdoni_process.update!(metadata: vocdoni_process.metadata.merge(
                 "question_failures" => { enabled.id.to_s => { "message" => "boom", "step" => "question_enable_voting",
                                                               "gave_up" => false, "at" => 10.minutes.ago.iso8601 } }
+              ))
+              stub_questions("PAUSED", "PAUSED", "ONGOING")
+
+              expect { described_class.perform_now(election.id) }
+                .to have_enqueued_job(UpdateQuestionOnChainJob).with(enabled.id, "enable_voting")
+            end
+
+            it "does not trip on a failure with an unparseable timestamp" do
+              vocdoni_process.update!(metadata: vocdoni_process.metadata.merge(
+                "question_failures" => { enabled.id.to_s => { "message" => "boom", "gave_up" => false, "at" => "garbage" } }
               ))
               stub_questions("PAUSED", "PAUSED", "ONGOING")
 
