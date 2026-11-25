@@ -161,11 +161,18 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     try {
       response = await client.processes.authStep1(processId, { authToken: token, authData: [code] });
     } catch (error) {
-      if (toCooldownError(error)) throw toCooldownError(error);
+      const cooldown = toCooldownError(error);
+
+      if (cooldown) { throw cooldown; }
+
       if (apiErrorCode(error) === ApiErrorCode.AUTH_REQUIRED) {
         // 40001 covers three situations; only "do not match" is retryable in place.
-        if (isOtpLocked(error)) throw new VoteError(ErrorCode.OTP_LOCKED, { cause: error });
-        if (isOtpExpiredMessage(error)) throw new VoteError(ErrorCode.OTP_EXPIRED, { cause: error });
+        if (isOtpLocked(error)) {
+          throw new VoteError(ErrorCode.OTP_LOCKED, { cause: error });
+        }
+        if (isOtpExpiredMessage(error)) {
+          throw new VoteError(ErrorCode.OTP_EXPIRED, { cause: error });
+        }
         // "challenge code do not match" — the token is still live.
         throw new VoteError(ErrorCode.OTP_REJECTED, { cause: error });
       }
@@ -213,7 +220,10 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
       response = await client.processes.resend(processId, { authToken: token, ...body });
     } catch (error) {
       // 40103: cooldown between sends — the token is still live; honour the server's wait.
-      if (toCooldownError(error)) throw toCooldownError(error);
+      const resendCooldown = toCooldownError(error);
+
+      if (resendCooldown) { throw resendCooldown; }
+
       // 40017: resend cap or 401 (expired/locked token) — the session is dead; restart.
       if (toRateLimitedError(error) || apiErrorCode(error) === ApiErrorCode.AUTH_REQUIRED) {
         throw new VoteError(ErrorCode.OTP_EXPIRED, { cause: error });
