@@ -122,9 +122,9 @@ export const createOtpStep = (ctx, { onVerified, onRestart }) => {
    * Opens the step for one channel, naming it in the copy so the voter knows
    * which inbox to look in.
    *
-   * If the step-0 response carried a `coolDownTime` (saas-backend#894), the
-   * button is locked for that duration. Without it the button is enabled
-   * immediately: no hardcoded local wait.
+   * If the step-0 response carried a `coolDownTime` (ms), the button is locked
+   * for that duration. Without it the button is enabled immediately: no
+   * hardcoded local wait.
    *
    * @param {string} channel - `email` or `phone`.
    * @param {Object} [options] - optional server hints.

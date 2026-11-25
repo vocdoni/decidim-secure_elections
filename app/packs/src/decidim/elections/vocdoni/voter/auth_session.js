@@ -139,9 +139,9 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
       ? twoFa.contact
       : null;
 
-    // saas-backend#894 may add a `coolDownTime` (ms) to successful step-0
-    // responses. Forward it when present so the UI can show a proactive countdown
-    // without hardcoding any duration.
+    // The CSP returns coolDownTime (ms) on a successful step-0 response when a code
+    // is pending. Forward it so the UI can start a proactive countdown without
+    // hardcoding any duration.
     const coolDownMs = typeof response.coolDownTime === "number" ? response.coolDownTime : undefined;
 
     return { needsOtp, channel: chosen, ...(coolDownMs !== undefined ? { coolDownMs } : {}) };
@@ -244,7 +244,8 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
       authToken = response.authToken;
     }
 
-    // saas-backend#894 may add `coolDownTime` (ms) to successful resend responses.
+    // The CSP returns coolDownTime (ms) on a successful resend response. Forward
+    // it so the UI can start a proactive countdown without hardcoding any duration.
     const coolDownMs = response && typeof response.coolDownTime === "number"
       ? response.coolDownTime
       : undefined;

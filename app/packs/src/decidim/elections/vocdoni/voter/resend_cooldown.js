@@ -97,9 +97,9 @@ export const createResendCooldown = ({ button, hint, i18n, ui }) => {
   /**
    * Starts a wait for the duration the server has asked for.
    *
-   * Always driven by a server-provided duration: either `data.coolDownTime` from
-   * a 40103 response, or an optional `coolDownTime` on a successful step-0 /
-   * resend response (saas-backend#894).
+   * Always driven by a server-provided duration: either `coolDownTime` (ms)
+   * from a 40103 response, or `coolDownTime` (ms) on a successful step-0 /
+   * resend response.
    *
    * @param {number} ms - how long to wait, in milliseconds.
    * @returns {void} nothing.

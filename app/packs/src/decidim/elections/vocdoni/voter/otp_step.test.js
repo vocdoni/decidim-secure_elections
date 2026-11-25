@@ -106,7 +106,7 @@ describe("resending the code", () => {
     expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe("");
   });
 
-  // saas-backend#894 adds an optional coolDownTime to successful step-0 responses.
+  // The CSP returns coolDownTime (ms) on a successful step-0 response.
   it("starts a server-provided countdown when the step opens with coolDownMs", async () => {
     const { ui } = await openOtp({ fakeTimers: true, coolDownMs: 45000 });
 
