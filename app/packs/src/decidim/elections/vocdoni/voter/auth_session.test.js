@@ -202,12 +202,10 @@ describe("resending the code", () => {
   // A bogus coolDownTime must not lock the UI indefinitely; cap at 24 h (86400 s).
   it("caps an absurd coolDownTime at 24 h", async () => {
     const flow = await pending();
-    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-
     mockProcesses.resend.mockRejectedValue(
-      apiError({ status: 401, code: 40103, message: "attempt cooldown time not reached", data: { coolDownTime: twoDaysMs } })
+      apiError({ status: 401, code: 40103, message: "attempt cooldown time not reached",
+        data: { coolDownTime: 2 * 24 * 60 * 60 * 1000 } })
     );
-
     await expect(flow.resendOtp()).rejects.toMatchObject({
       code: ErrorCode.AUTH_COOLDOWN,
       details: { seconds: 86400 }
