@@ -75,7 +75,7 @@ es:
               otp_expired: Este código ya no es válido. Vuelve a identificarte.
               otp_locked: Demasiados intentos fallidos. Vuelve a identificarte.
               otp_rejected: El código no coincide. Compruébalo e introdúcelo de nuevo, o pide que te lo envíen de nuevo.
-              otp_resend_failed: No hemos podido enviarte el código. Espera un momento e inténtalo de nuevo.
+              otp_resend_failed: Ahora mismo no hemos podido enviar el código. Inténtalo de nuevo en un momento.
               process_unavailable: En este momento no se ha podido cargar esta elección desde la red de votación.
               relay_rejected: La red de votación ha rechazado este voto. No se ha contabilizado.
               relay_unconfirmed: Hemos perdido la conexión mientras se enviaba tu voto. Es posible que se haya contabilizado igualmente — no votes de nuevo hasta que lo hayas comprobado.
@@ -97,7 +97,7 @@ es:
               resend_wait: "Podrás volver a solicitar el código en %{seconds} segundos."
               resent: Tu código ha sido enviado de nuevo.
               restart: Volver a empezar
-              restart_body: ¿Has puesto la dirección o el número equivocados?
+              restart_body: "¿No te ha llegado? Revisa la carpeta de spam, o vuelve a empezar para revisar tus datos."
               submit: Confirmar
               title: Confirma el código que te hemos enviado
             page_title: Votar
@@ -139,7 +139,7 @@ es:
               loading: Cargando la elección…
               preparing: Preparando la papeleta…
               relaying: Enviando tu voto…
-              sending_code: Enviándote un código nuevo…
+              sending_code: Enviándote el código…
               signing: Firmando tu voto…
               waiting_keys: Esperando que se publiquen las claves de cifrado…
             submit:
