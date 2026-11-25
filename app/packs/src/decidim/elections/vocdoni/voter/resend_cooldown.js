@@ -26,8 +26,15 @@ import { interpolate, setDisabled, setText, toggle } from "src/decidim/elections
  * countdown and the click handler each owned half of the state.
  */
 
-/** How long the voting page refuses to ask for another code. */
-export const RESEND_COOLDOWN_MS = 30000;
+/**
+ * How long the voting page refuses to ask for another code.
+ *
+ * The backend enforces a 60 s cooldown between sends; a shorter local default
+ * guarantees the first resend attempt never immediately hits 40103.
+ * Follow-up saas-backend#893 may make this variable — always prefer the
+ * server's `coolDownTime` from a 40103 response over this constant.
+ */
+export const RESEND_COOLDOWN_MS = 60000;
 
 /**
  * Wires a cooldown to a button and the line that describes it.

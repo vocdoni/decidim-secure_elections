@@ -1,4 +1,7 @@
-import { ApiErrorCode, VoteError, ErrorCode, apiErrorCode, toVoteError, toCooldownError } from "src/decidim/elections/vocdoni/voter/errors";
+import {
+  ApiErrorCode, VoteError, ErrorCode, apiErrorCode,
+  toVoteError, toCooldownError, toRateLimitedError, isOtpLocked, isOtpExpiredMessage
+} from "src/decidim/elections/vocdoni/voter/errors";
 import { contactBody, defaultChannel, requiresOtp } from "src/decidim/elections/vocdoni/voter/two_fa";
 
 /**
@@ -112,7 +115,14 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     try {
       response = await client.processes.authStep0(processId, body);
     } catch (error) {
-      throw toCooldownError(error) || toVoteError(error, ErrorCode.AUTH_REJECTED);
+      // 40103: cooldown between code sends (honour the server's wait time).
+      // 40017: daily/hourly cap — show how long to wait.
+      // 40037: anonymous voting off service-wide.
+      throw toCooldownError(error) ||
+        toRateLimitedError(error) ||
+        (apiErrorCode(error) === ApiErrorCode.ANON_UNAVAILABLE
+          ? new VoteError(ErrorCode.ANON_UNAVAILABLE, { cause: error })
+          : toVoteError(error, ErrorCode.AUTH_REJECTED));
     }
 
     if (!response || !response.authToken) {
@@ -151,10 +161,15 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     try {
       response = await client.processes.authStep1(processId, { authToken: token, authData: [code] });
     } catch (error) {
-      throw toCooldownError(error) ||
-        toVoteError(error, apiErrorCode(error) === ApiErrorCode.AUTH_REQUIRED
-          ? ErrorCode.OTP_REJECTED
-          : ErrorCode.OTP_EXPIRED);
+      if (toCooldownError(error)) throw toCooldownError(error);
+      if (apiErrorCode(error) === ApiErrorCode.AUTH_REQUIRED) {
+        // 40001 covers three situations; only "do not match" is retryable in place.
+        if (isOtpLocked(error)) throw new VoteError(ErrorCode.OTP_LOCKED, { cause: error });
+        if (isOtpExpiredMessage(error)) throw new VoteError(ErrorCode.OTP_EXPIRED, { cause: error });
+        // "challenge code do not match" — the token is still live.
+        throw new VoteError(ErrorCode.OTP_REJECTED, { cause: error });
+      }
+      throw toVoteError(error, ErrorCode.OTP_EXPIRED);
     }
 
     // The CSP verifies the token in place and echoes it back; it does not
@@ -197,7 +212,13 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     try {
       response = await client.processes.resend(processId, { authToken: token, ...body });
     } catch (error) {
-      throw toCooldownError(error) || toVoteError(error, ErrorCode.OTP_RESEND_FAILED);
+      // 40103: cooldown between sends — the token is still live; honour the server's wait.
+      if (toCooldownError(error)) throw toCooldownError(error);
+      // 40017: resend cap or 401 (expired/locked token) — the session is dead; restart.
+      if (toRateLimitedError(error) || apiErrorCode(error) === ApiErrorCode.AUTH_REQUIRED) {
+        throw new VoteError(ErrorCode.OTP_EXPIRED, { cause: error });
+      }
+      throw toVoteError(error, ErrorCode.OTP_RESEND_FAILED);
     }
 
     if (response && response.authToken) {

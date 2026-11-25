@@ -65,14 +65,17 @@ ca:
               retry: Torna-ho a provar
               title: S'ha produït un error
             errors:
+              anon_unavailable: La votació no està disponible en aquest moment. Contacta els organitzadors.
               auth_cooldown: "Massa intents. Espera %{seconds} segons i torna-ho a provar."
+              auth_rate_limited: "Massa sol·licituds. Si us plau, torna-ho a provar en %{minutes} minuts."
               auth_rejected: No hem pogut verificar les teves dades. Comprova-les i torna a intentar-ho.
               ballot_unsupported: Aquesta pregunta utilitza un format de papereta que aquesta pàgina no entén. Contacta els organitzadors.
               keys_unavailable: Aquesta pregunta es manté xifrada fins al final i les claus de xifratge encara no s'han publicat. El teu vot no s'ha emès — torna-ho a provar d'aquí a uns minuts.
               network: No hem pogut connectar amb la xarxa de votació. Comprova la connexió i torna a intentar-ho.
-              otp_expired: Aquest codi ja no és vàlid. Torna a identificar-te per obtenir-ne un de nou.
-              otp_rejected: El codi no coincideix. Comprova'l i torna a introduir-lo, o demana'n un de nou.
-              otp_resend_failed: No hem pogut enviar-te un codi nou. Espera un moment i torna a intentar-ho.
+              otp_expired: Aquest codi ja no és vàlid. Torna a identificar-te.
+              otp_locked: Massa intents fallits. Torna a identificar-te.
+              otp_rejected: El codi no coincideix. Comprova'l i torna a introduir-lo, o demana que te'l tornin a enviar.
+              otp_resend_failed: No hem pogut enviar-te el codi. Espera un moment i torna a intentar-ho.
               process_unavailable: En aquest moment no s'ha pogut carregar aquesta elecció des de la xarxa de votació.
               relay_rejected: La xarxa de votació ha rebutjat aquest vot. No s'ha comptat.
               relay_unconfirmed: Hem perdut la connexió mentre s'enviava el teu vot. Pot ser que s'hagi comptat igualment — no votes de nou fins que ho hagis comprovat.
@@ -89,10 +92,10 @@ ca:
               hint: Pots enganxar el codi directament des del missatge.
               label: Codi d'un sol ús
               required: Introdueix el codi que t'hem enviat.
-              resend: Envia'm un codi nou
-              resend_ready: Ja pots demanar un codi nou.
-              resend_wait: "Podràs demanar un codi nou en %{seconds} segons."
-              resent: Un codi nou està en camí.
+              resend: Torna a enviar-me el codi
+              resend_ready: Ja pots tornar a demanar el codi.
+              resend_wait: "Podràs tornar a demanar el codi en %{seconds} segons."
+              resent: El teu codi ha estat enviat de nou.
               restart: Tornar a començar
               restart_body: Has posat l'adreça o el número equivocats?
               submit: Confirmar

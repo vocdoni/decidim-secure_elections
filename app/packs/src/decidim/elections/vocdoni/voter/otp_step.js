@@ -163,9 +163,9 @@ export const createOtpStep = (ctx, { onVerified, onRestart }) => {
     } catch (error) {
       const voteError = toVoteError(error, ErrorCode.OTP_REJECTED);
 
-      // A spent session cannot be retried here: identifying again is the only
-      // way to get a new code, so say so instead of looping on a dead token.
-      if (voteError.code === ErrorCode.OTP_EXPIRED) {
+      // A locked or expired session cannot be retried here: identifying again
+      // is the only way forward. Say so and route back to identification.
+      if (voteError.code === ErrorCode.OTP_EXPIRED || voteError.code === ErrorCode.OTP_LOCKED) {
         close();
         onRestart(voteError);
 
@@ -212,14 +212,26 @@ export const createOtpStep = (ctx, { onVerified, onRestart }) => {
     } catch (error) {
       const voteError = toVoteError(error, ErrorCode.OTP_RESEND_FAILED);
 
-      // The CSP tells us how long it wants us to wait; honour its number rather
-      // than our own, then let the voter try again.
+      // 40103: the CSP tells us how long it wants us to wait; honour it.
       if (voteError.code === ErrorCode.AUTH_COOLDOWN) {
         cooldown.start(Math.max(1, Number(voteError.details.seconds) || 0) * 1000);
-      } else {
-        cooldown.release();
+        const message = ui.messageForError(voteError);
+
+        ui.showInlineError(errorNode, message);
+        ui.announce(message);
+
+        return;
       }
 
+      // Session dead (40017 cap or expired/locked token): restart cleanly.
+      if (voteError.code === ErrorCode.OTP_EXPIRED || voteError.code === ErrorCode.OTP_LOCKED) {
+        close();
+        onRestart(voteError);
+
+        return;
+      }
+
+      cooldown.release();
       const message = ui.messageForError(voteError);
 
       ui.showInlineError(errorNode, message);
