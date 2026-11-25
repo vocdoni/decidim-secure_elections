@@ -163,7 +163,9 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     } catch (error) {
       const cooldown = toCooldownError(error);
 
-      if (cooldown) { throw cooldown; }
+      if (cooldown) {
+        throw cooldown;
+      }
 
       if (apiErrorCode(error) === ApiErrorCode.AUTH_REQUIRED) {
         // 40001 covers three situations; only "do not match" is retryable in place.
@@ -222,7 +224,9 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
       // 40103: cooldown between sends — the token is still live; honour the server's wait.
       const resendCooldown = toCooldownError(error);
 
-      if (resendCooldown) { throw resendCooldown; }
+      if (resendCooldown) {
+        throw resendCooldown;
+      }
 
       // 40017: resend cap or 401 (expired/locked token) — the session is dead; restart.
       if (toRateLimitedError(error) || apiErrorCode(error) === ApiErrorCode.AUTH_REQUIRED) {
