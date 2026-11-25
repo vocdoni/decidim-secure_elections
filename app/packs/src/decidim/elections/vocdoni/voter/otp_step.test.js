@@ -103,7 +103,8 @@ describe("resending the code", () => {
 
     expect(byId("js-vocdoni-otp-resend").disabled).toBe(true);
     expect(byId("js-vocdoni-otp-resend").getAttribute("aria-disabled")).toBe("true");
-    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(30));
+    // Default cooldown is 60 s to match the backend's minimum cooldown period.
+    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(60));
   });
 
   it("counts down without announcing every second", async () => {
@@ -112,7 +113,7 @@ describe("resending the code", () => {
     ui.announce.mockClear();
     jest.advanceTimersByTime(10000);
 
-    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(20));
+    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(50));
     expect(ui.announce).not.toHaveBeenCalled();
   });
 
@@ -120,7 +121,7 @@ describe("resending the code", () => {
     const { ui } = await openOtp({ fakeTimers: true });
 
     ui.announce.mockClear();
-    jest.advanceTimersByTime(31000);
+    jest.advanceTimersByTime(61000);
 
     expect(byId("js-vocdoni-otp-resend").disabled).toBe(false);
     expect(byId("js-vocdoni-otp-resend").getAttribute("aria-disabled")).toBe("false");
@@ -135,7 +136,7 @@ describe("resending the code", () => {
 
     expect(visible(byId("js-vocdoni-otp-resend-hint"))).toBe(true);
 
-    jest.advanceTimersByTime(31000);
+    jest.advanceTimersByTime(61000);
 
     expect(visible(byId("js-vocdoni-otp-resend-hint"))).toBe(false);
     expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe("");
@@ -160,13 +161,13 @@ describe("resending the code", () => {
     await Promise.resolve();
 
     expect(flow.resendOtp).not.toHaveBeenCalled();
-    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(25));
+    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(55));
   });
 
   it("asks for a new code once the cooldown is over, then locks again", async () => {
     const { flow, ui } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(31000);
+    jest.advanceTimersByTime(61000);
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
     await Promise.resolve();
@@ -181,7 +182,7 @@ describe("resending the code", () => {
   it("sends one code however fast the button is clicked twice", async () => {
     const { flow } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(31000);
+    jest.advanceTimersByTime(61000);
     byId("js-vocdoni-otp-resend").click();
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
@@ -193,7 +194,7 @@ describe("resending the code", () => {
   it("honours the CSP's own cooldown over ours", async () => {
     const { flow } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(31000);
+    jest.advanceTimersByTime(61000);
     flow.resendOtp.mockRejectedValue(new VoteError(ErrorCode.AUTH_COOLDOWN, { details: { seconds: 90 } }));
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
@@ -207,7 +208,7 @@ describe("resending the code", () => {
   it("lets the voter try again after a delivery failure", async () => {
     const { flow } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(31000);
+    jest.advanceTimersByTime(61000);
     flow.resendOtp.mockRejectedValue(new VoteError(ErrorCode.OTP_RESEND_FAILED));
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
@@ -215,5 +216,17 @@ describe("resending the code", () => {
 
     expect(byId("js-vocdoni-otp-resend").getAttribute("aria-disabled")).toBe("false");
     expect(byId("js-vocdoni-otp-error").textContent).toBe("message:otp_resend_failed");
+  });
+
+  it("routes back to identification when the resend cap (40017) is hit", async () => {
+    const { flow, ui } = await openOtp({ fakeTimers: true });
+
+    jest.advanceTimersByTime(61000);
+    flow.resendOtp.mockRejectedValue(new VoteError(ErrorCode.OTP_EXPIRED));
+    byId("js-vocdoni-otp-resend").click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ui.showStep).toHaveBeenCalledWith("auth");
   });
 });
