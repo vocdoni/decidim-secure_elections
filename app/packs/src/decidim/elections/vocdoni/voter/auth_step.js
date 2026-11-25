@@ -271,7 +271,7 @@ export const createAuthStep = (ctx) => {
       });
 
       if (result.needsOtp) {
-        otp.open(result.channel);
+        otp.open(result.channel, { coolDownMs: result.coolDownMs });
       } else {
         await afterAuth();
       }

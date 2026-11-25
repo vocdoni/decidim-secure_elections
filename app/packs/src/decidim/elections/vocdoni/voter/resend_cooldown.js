@@ -27,16 +27,6 @@ import { interpolate, setDisabled, setText, toggle } from "src/decidim/elections
  */
 
 /**
- * How long the voting page refuses to ask for another code.
- *
- * The backend enforces a 60 s cooldown between sends; a shorter local default
- * guarantees the first resend attempt never immediately hits 40103.
- * Follow-up saas-backend#893 may make this variable — always prefer the
- * server's `coolDownTime` from a 40103 response over this constant.
- */
-export const RESEND_COOLDOWN_MS = 60000;
-
-/**
  * Wires a cooldown to a button and the line that describes it.
  *
  * @param {Object} options - dependencies.
@@ -105,14 +95,16 @@ export const createResendCooldown = ({ button, hint, i18n, ui }) => {
   };
 
   /**
-   * Starts a wait. Called after every code the CSP sends, including the one
-   * `authStep0` sends on the way into the step, so the button cannot be hammered
-   * from the moment the screen appears.
+   * Starts a wait for the duration the server has asked for.
    *
-   * @param {number} [ms] - how long to wait.
+   * Always driven by a server-provided duration: either `data.coolDownTime` from
+   * a 40103 response, or an optional `coolDownTime` on a successful step-0 /
+   * resend response (saas-backend#894).
+   *
+   * @param {number} ms - how long to wait, in milliseconds.
    * @returns {void} nothing.
    */
-  const start = (ms = RESEND_COOLDOWN_MS) => {
+  const start = (ms) => {
     stop();
     until = Date.now() + ms;
     showCountdown(Math.ceil(ms / 1000));

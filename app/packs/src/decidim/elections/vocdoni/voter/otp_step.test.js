@@ -98,27 +98,30 @@ describe("the one-time-code screen", () => {
 });
 
 describe("resending the code", () => {
-  it("is locked from the moment the step opens, because a code just went out", async () => {
+  it("is enabled from the moment the step opens, with no local countdown", async () => {
     await openOtp({ fakeTimers: true });
 
-    expect(byId("js-vocdoni-otp-resend").disabled).toBe(true);
-    expect(byId("js-vocdoni-otp-resend").getAttribute("aria-disabled")).toBe("true");
-    // Default cooldown is 60 s to match the backend's minimum cooldown period.
-    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(60));
+    expect(byId("js-vocdoni-otp-resend").disabled).toBe(false);
+    expect(byId("js-vocdoni-otp-resend").getAttribute("aria-disabled")).toBe("false");
+    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe("");
   });
 
-  it("counts down without announcing every second", async () => {
-    const { ui } = await openOtp({ fakeTimers: true });
+  // saas-backend#894 adds an optional coolDownTime to successful step-0 responses.
+  it("starts a server-provided countdown when the step opens with coolDownMs", async () => {
+    const { ui } = await openOtp({ fakeTimers: true, coolDownMs: 45000 });
+
+    expect(byId("js-vocdoni-otp-resend").disabled).toBe(true);
+    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(45));
 
     ui.announce.mockClear();
     jest.advanceTimersByTime(10000);
 
-    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(50));
+    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(35));
     expect(ui.announce).not.toHaveBeenCalled();
   });
 
-  it("unlocks and announces exactly once when the wait is over", async () => {
-    const { ui } = await openOtp({ fakeTimers: true });
+  it("unlocks and announces exactly once when a server-driven wait is over", async () => {
+    const { ui } = await openOtp({ fakeTimers: true, coolDownMs: 60000 });
 
     ui.announce.mockClear();
     jest.advanceTimersByTime(61000);
@@ -132,7 +135,7 @@ describe("resending the code", () => {
   // A countdown that outlives the wait it was counting is just another line of
   // text contradicting the button beside it.
   it("takes the countdown line away once there is nothing left to wait for", async () => {
-    await openOtp({ fakeTimers: true });
+    await openOtp({ fakeTimers: true, coolDownMs: 60000 });
 
     expect(visible(byId("js-vocdoni-otp-resend-hint"))).toBe(true);
 
@@ -142,47 +145,45 @@ describe("resending the code", () => {
     expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe("");
   });
 
-  it("cannot be hammered: a click during the cooldown does nothing", async () => {
-    const { flow } = await openOtp({ fakeTimers: true });
-
-    byId("js-vocdoni-otp-resend").click();
-    await Promise.resolve();
-
-    expect(flow.resendOtp).not.toHaveBeenCalled();
-  });
-
-  // The click above is refused by the DOM, but the handler is reachable from
-  // elsewhere; it has to refuse an early call on its own account too.
-  it("refuses a resend asked for mid-countdown however it is asked for", async () => {
-    const { flow } = await openOtp({ fakeTimers: true });
-
-    jest.advanceTimersByTime(5000);
-    byId("js-vocdoni-otp-resend").dispatchEvent(new window.Event("click"));
-    await Promise.resolve();
-
-    expect(flow.resendOtp).not.toHaveBeenCalled();
-    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(55));
-  });
-
-  it("asks for a new code once the cooldown is over, then locks again", async () => {
+  it("can resend immediately after the step opens", async () => {
     const { flow, ui } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(61000);
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
     await Promise.resolve();
 
     expect(flow.resendOtp).toHaveBeenCalled();
     expect(ui.announce).toHaveBeenCalledWith(i18n.otp.resent);
-    expect(byId("js-vocdoni-otp-resend").getAttribute("aria-disabled")).toBe("true");
+    // No local cooldown: button is re-enabled immediately after a successful resend.
+    expect(byId("js-vocdoni-otp-resend").getAttribute("aria-disabled")).toBe("false");
+  });
+
+  // The click above is refused by the DOM during a countdown, but the handler
+  // is reachable via dispatchEvent; it has to refuse mid-countdown calls on its
+  // own account too.
+  it("refuses a resend asked for mid-countdown however it is asked for", async () => {
+    const { flow } = await openOtp({ fakeTimers: true });
+
+    // Trigger a server cooldown via a 40103 response.
+    flow.resendOtp.mockRejectedValueOnce(new VoteError(ErrorCode.AUTH_COOLDOWN, { details: { seconds: 90 } }));
+    byId("js-vocdoni-otp-resend").click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // During the countdown, a synthetic click does nothing.
+    flow.resendOtp.mockResolvedValue({ channel: "email" });
+    byId("js-vocdoni-otp-resend").dispatchEvent(new window.Event("click"));
+    await Promise.resolve();
+
+    expect(flow.resendOtp).toHaveBeenCalledTimes(1);
+    expect(byId("js-vocdoni-otp-resend-hint").textContent).toBe(waitHint(90));
   });
 
   // Between the click and the CSP's answer there is no countdown to refuse a
-  // second click, so the handler has to.
+  // second click, so the handler's `resending` flag has to.
   it("sends one code however fast the button is clicked twice", async () => {
     const { flow } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(61000);
     byId("js-vocdoni-otp-resend").click();
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
@@ -191,10 +192,9 @@ describe("resending the code", () => {
     expect(flow.resendOtp).toHaveBeenCalledTimes(1);
   });
 
-  it("honours the CSP's own cooldown over ours", async () => {
+  it("honours the CSP's cooldown (40103) and shows the server's wait time", async () => {
     const { flow } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(61000);
     flow.resendOtp.mockRejectedValue(new VoteError(ErrorCode.AUTH_COOLDOWN, { details: { seconds: 90 } }));
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
@@ -208,7 +208,6 @@ describe("resending the code", () => {
   it("lets the voter try again after a delivery failure", async () => {
     const { flow } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(61000);
     flow.resendOtp.mockRejectedValue(new VoteError(ErrorCode.OTP_RESEND_FAILED));
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
@@ -221,7 +220,6 @@ describe("resending the code", () => {
   it("routes back to identification when the resend cap (40017) is hit", async () => {
     const { flow, ui } = await openOtp({ fakeTimers: true });
 
-    jest.advanceTimersByTime(61000);
     flow.resendOtp.mockRejectedValue(new VoteError(ErrorCode.OTP_EXPIRED));
     byId("js-vocdoni-otp-resend").click();
     await Promise.resolve();
