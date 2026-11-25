@@ -69,7 +69,7 @@
     "otp_expired": "Aquest codi ja no és vàlid. Torna a identificar-te.",
     "otp_locked": "Massa intents fallits. Torna a identificar-te.",
     "otp_rejected": "El codi no coincideix. Comprova'l i torna a introduir-lo, o demana que te'l tornin a enviar.",
-    "otp_resend_failed": "No hem pogut enviar-te el codi. Espera un moment i torna a intentar-ho.",
+    "otp_resend_failed": "Ara mateix no hem pogut enviar el codi. Torna-ho a intentar d'aquí a un moment.",
     "process_unavailable": "En aquest moment no s'ha pogut carregar aquesta elecció des de la xarxa de votació.",
     "relay_rejected": "La xarxa de votació ha rebutjat aquest vot. No s'ha comptat.",
     "relay_unconfirmed": "Hem perdut la connexió mentre s'enviava el teu vot. Pot ser que s'hagi comptat igualment — no votes de nou fins que ho hagis comprovat.",
@@ -93,7 +93,7 @@
     "resend_wait": "Podràs tornar a demanar el codi en %{seconds} segons.",
     "resent": "El teu codi ha estat enviat de nou.",
     "restart": "Tornar a començar",
-    "restart_body": "Has posat l'adreça o el número equivocats?",
+    "restart_body": "No t'ha arribat? Comprova la carpeta de correu no desitjat, o torna a començar per revisar les teves dades.",
     "submit": "Confirmar",
     "title": "Confirma el codi que t'hem enviat"
   },
@@ -139,7 +139,7 @@
     "loading": "Carregant l'elecció…",
     "preparing": "Preparant la papereta…",
     "relaying": "Enviant el teu vot…",
-    "sending_code": "Enviant-te un codi nou…",
+    "sending_code": "Enviant-te el codi…",
     "signing": "Signant el teu vot…",
     "waiting_keys": "Esperant que es publiquin les claus de xifratge…"
   },
