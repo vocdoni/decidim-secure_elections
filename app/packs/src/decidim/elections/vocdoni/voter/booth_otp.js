@@ -36,17 +36,19 @@ export const runOtp = (ctx, flow) => new Promise((resolve) => {
   // to wait: either from a 40103 response's `coolDownTime` (via error.details.seconds)
   // or from a successful resend response's `coolDownTime` (ms, forwarded as coolDownMs).
   const cooldown = (seconds) => {
-    resend.disabled = true;
     let left = seconds;
     clearInterval(cooldownTimer);
+    resend.disabled = true;
+    // Show the initial count immediately so the voter sees it straight away.
+    resend.textContent = interpolate(i18n.otp.resend_wait, { seconds: left });
     cooldownTimer = setInterval(() => {
       left -= 1;
-      resend.textContent = left > 0
-        ? interpolate(i18n.otp.resend_wait, { seconds: left })
-        : i18n.otp.resend;
       if (left <= 0) {
         clearInterval(cooldownTimer);
         resend.disabled = false;
+        resend.textContent = i18n.otp.resend;
+      } else {
+        resend.textContent = interpolate(i18n.otp.resend_wait, { seconds: left });
       }
     }, 1000);
   };
