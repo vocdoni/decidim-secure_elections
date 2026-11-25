@@ -96,7 +96,8 @@ describe("the one-time-code screen", () => {
   // unavailable: styling that says "not now" over a control that still acts
   // teaches voters to ignore the styling everywhere else in the voting page.
   it("makes the resend button as disabled as it looks while it counts down", async () => {
-    await openOtp({ fakeTimers: true });
+    // A server-provided coolDownTime puts the step into countdown state.
+    await openOtp({ fakeTimers: true, coolDownMs: 60000 });
 
     const resend = byId("js-vocdoni-otp-resend");
 

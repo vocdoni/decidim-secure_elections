@@ -115,8 +115,12 @@ export const apiErrorCode = (error) => {
     : null;
 };
 
-/** Nothing sensible is longer than this; a bogus value must not lock the UI. */
-const MAX_COOLDOWN_MS = 10 * 60 * 1000;
+/**
+ * saas-backend#893 growing backoff can reach 1 h (operator-configurable to
+ * higher). 24 h allows any sane server value while guarding against a bogus
+ * one that would otherwise lock the UI indefinitely.
+ */
+const MAX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 /**
  * How long the CSP wants us to wait, from a cooldown error.

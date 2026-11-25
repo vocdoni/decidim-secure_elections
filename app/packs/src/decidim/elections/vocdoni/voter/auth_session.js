@@ -142,9 +142,13 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
     // The CSP returns coolDownTime (ms) on a successful step-0 response when a code
     // is pending. Forward it so the UI can start a proactive countdown without
     // hardcoding any duration.
-    const coolDownMs = typeof response.coolDownTime === "number" ? response.coolDownTime : undefined;
+    const result = { needsOtp, channel: chosen };
 
-    return { needsOtp, channel: chosen, ...(coolDownMs !== undefined ? { coolDownMs } : {}) };
+    if (typeof response.coolDownTime === "number") {
+      result.coolDownMs = response.coolDownTime;
+    }
+
+    return result;
   };
 
   /**
@@ -246,11 +250,13 @@ export const createAuthSession = ({ client, processId, twoFaFields }) => {
 
     // The CSP returns coolDownTime (ms) on a successful resend response. Forward
     // it so the UI can start a proactive countdown without hardcoding any duration.
-    const coolDownMs = response && typeof response.coolDownTime === "number"
-      ? response.coolDownTime
-      : undefined;
+    const result = { channel };
 
-    return { channel, ...(coolDownMs !== undefined ? { coolDownMs } : {}) };
+    if (response && typeof response.coolDownTime === "number") {
+      result.coolDownMs = response.coolDownTime;
+    }
+
+    return result;
   };
 
   return {
