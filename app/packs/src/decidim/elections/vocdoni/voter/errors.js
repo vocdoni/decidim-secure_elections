@@ -7,27 +7,33 @@
  * mid-relay may still have landed on chain — telling the voter it failed would
  * be a lie, and would push them into casting a second (rejected) ballot.
  *
- * NETWORK            the browser could not reach the API (offline, DNS, CORS)
- * AUTH_REJECTED      the census rejected the supplied credentials
- * AUTH_COOLDOWN      too many code requests too fast; the CSP says to wait
- * OTP_REJECTED       the 2FA code did not match — retryable, the token survives
- * OTP_EXPIRED        the 2FA session is over; the voter must identify again
- * OTP_RESEND_FAILED  the CSP would not send another code
- * SIGN_REJECTED      the CSP refused to sign, usually a consumed slot
- * KEYS_UNAVAILABLE   secret-until-the-end keys were never published
- * RELAY_UNCONFIRMED  we lost track of a relay: the vote MAY have landed
- * RELAY_REJECTED     the chain rejected the vote
- * BALLOT_UNSUPPORTED the ballot could not be encoded for this protocol
+ * NETWORK             the browser could not reach the API (offline, DNS, CORS)
+ * AUTH_REJECTED       the census rejected the supplied credentials
+ * AUTH_COOLDOWN       too many code requests too fast; the CSP says to wait (40103)
+ * AUTH_RATE_LIMITED   daily/hourly send cap hit (40017); `details.minutes` to wait
+ * ANON_UNAVAILABLE    anonymous voting is off on the service (40037)
+ * OTP_REJECTED        the 2FA code did not match — retryable, the token survives
+ * OTP_EXPIRED         the 2FA session is over (time); the voter must identify again
+ * OTP_LOCKED          the 2FA code is locked by too many wrong attempts; restart
+ * OTP_RESEND_FAILED   the CSP would not send another code
+ * SIGN_REJECTED       the CSP refused to sign, usually a consumed slot
+ * KEYS_UNAVAILABLE    secret-until-the-end keys were never published
+ * RELAY_UNCONFIRMED   we lost track of a relay: the vote MAY have landed
+ * RELAY_REJECTED      the chain rejected the vote
+ * BALLOT_UNSUPPORTED  the ballot could not be encoded for this protocol
  * PROCESS_UNAVAILABLE the process could not be read
- * UNKNOWN            anything we did not anticipate
+ * UNKNOWN             anything we did not anticipate
  */
 
 export const ErrorCode = {
   NETWORK: "network",
   AUTH_REJECTED: "auth_rejected",
   AUTH_COOLDOWN: "auth_cooldown",
+  AUTH_RATE_LIMITED: "auth_rate_limited",
+  ANON_UNAVAILABLE: "anon_unavailable",
   OTP_REJECTED: "otp_rejected",
   OTP_EXPIRED: "otp_expired",
+  OTP_LOCKED: "otp_locked",
   OTP_RESEND_FAILED: "otp_resend_failed",
   SIGN_REJECTED: "sign_rejected",
   KEYS_UNAVAILABLE: "keys_unavailable",
@@ -66,10 +72,11 @@ export class VoteError extends Error {
  * one-time code, for a cooldown and for an unverified token alike, so the HTTP
  * status on its own cannot drive an honest message.
  *
- * Observed against the live API.
+ * Observed against the live API and saas-backend/csp/errors.go.
  */
 export const ApiErrorCode = {
-  // 401 - "challenge code do not match", also "the token is not verified".
+  // 401 - "challenge code do not match", "too many verification attempts",
+  // "authentication token has expired", or "the token is not verified".
   AUTH_REQUIRED: 40001,
 
   // 400 - "no contact information provided (email or phone)".
@@ -78,7 +85,13 @@ export const ApiErrorCode = {
   // 404 - "census participant not found"; also raised for a wrong contact.
   PARTICIPANT_NOT_FOUND: 40029,
 
-  // 401 - "attempt cooldown time not reached", with `data.coolDownTime`.
+  // 400 or 401 - daily/hourly send cap; `data.retryAfter` seconds until reset.
+  RATE_LIMITED: 40017,
+
+  // 400 - "anonymous voting is temporarily unavailable".
+  ANON_UNAVAILABLE: 40037,
+
+  // 401 - "attempt cooldown time not reached", with `data.coolDownTime` ms.
   COOLDOWN: 40103
 };
 
@@ -102,8 +115,12 @@ export const apiErrorCode = (error) => {
     : null;
 };
 
-/** Nothing sensible is longer than this; a bogus value must not lock the UI. */
-const MAX_COOLDOWN_MS = 10 * 60 * 1000;
+/**
+ * saas-backend#893 growing backoff can reach 1 h (operator-configurable to
+ * higher). 24 h allows any sane server value while guarding against a bogus
+ * one that would otherwise lock the UI indefinitely.
+ */
+const MAX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 /**
  * How long the CSP wants us to wait, from a cooldown error.
@@ -168,7 +185,8 @@ export const toVoteError = (error, fallback = ErrorCode.UNKNOWN) => {
 
 /**
  * The cooldown a rate-limited auth call ran into, as a voting page error carrying the
- * seconds to show the voter.
+ * seconds to show the voter. Only for 40103 (per-code cooldown); 40017 is handled by
+ * {@link toRateLimitedError}.
  *
  * @param {*} error - the throwable from an auth call.
  * @returns {VoteError|null} the classified error, or null when it is not one.
@@ -184,4 +202,81 @@ export const toCooldownError = (error) => {
     cause: error,
     details: { seconds: Math.max(1, Math.ceil((waitMs || 0) / 1000)) }
   });
+};
+
+/** Nothing sensible is longer than this for a rate limit window. */
+const MAX_RETRY_AFTER_S = 2 * 60 * 60;
+
+/**
+ * How many seconds the daily/hourly cap wants us to wait, from a 40017 error.
+ *
+ * `data.retryAfter` is in **seconds** (unlike `coolDownTime` which is in ms).
+ *
+ * @param {*} error - the throwable from an auth or resend call.
+ * @returns {number|null} seconds to wait, or null when unknown.
+ */
+export const retryAfterSecondsFrom = (error) => {
+  const raw = error && error.body && error.body.data && error.body.data.retryAfter;
+
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+    return null;
+  }
+
+  return Math.min(Math.ceil(raw), MAX_RETRY_AFTER_S);
+};
+
+/**
+ * A daily/hourly rate-limit error (40017), as a voting page error carrying the minutes
+ * to wait. Returns null for any other error.
+ *
+ * @param {*} error - the throwable from an auth or resend call.
+ * @returns {VoteError|null} the classified error, or null when it is not one.
+ */
+export const toRateLimitedError = (error) => {
+  if (apiErrorCode(error) !== ApiErrorCode.RATE_LIMITED) {
+    return null;
+  }
+
+  const seconds = retryAfterSecondsFrom(error);
+  const minutes = seconds
+    ? Math.max(1, Math.ceil(seconds / 60))
+    : null;
+
+  return new VoteError(ErrorCode.AUTH_RATE_LIMITED, {
+    cause: error,
+    details: minutes
+      ? { minutes }
+      : {}
+  });
+};
+
+/**
+ * True when the step-1 (confirmOtp) 40001 means the code is locked — too many wrong
+ * attempts have exhausted the per-code budget.
+ *
+ * The backend uses `ErrTooManyAttempts = "too many verification attempts"` (csp/errors.go)
+ * wrapped into 40001 by the auth handler.
+ *
+ * @param {*} error - the throwable from an authStep1 call.
+ * @returns {boolean} true for the locked-code 40001 variant.
+ */
+export const isOtpLocked = (error) => {
+  const msg = (error && (error.message || (error.body && error.body.error))) || "";
+
+  return msg.includes("too many verification attempts");
+};
+
+/**
+ * True when the step-1 (confirmOtp) 40001 means the token has expired — the OTP window
+ * ran out without a successful verification.
+ *
+ * The backend uses `ErrTokenExpired = "authentication token has expired"` (csp/errors.go).
+ *
+ * @param {*} error - the throwable from an authStep1 call.
+ * @returns {boolean} true for the expired-token 40001 variant.
+ */
+export const isOtpExpiredMessage = (error) => {
+  const msg = (error && (error.message || (error.body && error.body.error))) || "";
+
+  return msg.includes("has expired");
 };

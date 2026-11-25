@@ -65,14 +65,17 @@ en:
               retry: Try again
               title: Something went wrong
             errors:
+              anon_unavailable: Voting is temporarily unavailable. Please contact the organisers.
               auth_cooldown: "Too many attempts. Please wait %{seconds} seconds and try again."
+              auth_rate_limited: "Too many requests. Please try again in %{minutes} minutes."
               auth_rejected: We could not verify those details. Check them and try again.
               ballot_unsupported: This question uses a ballot format this page does not understand. Please contact the organisers.
               keys_unavailable: This question is encrypted until the end and its encryption keys are not published yet. Your vote was not cast — please try again in a few minutes.
               network: We could not reach the voting network. Check your connection and try again.
-              otp_expired: That code is no longer usable. Please identify yourself again to get a new one.
-              otp_rejected: That code does not match. Check it and enter it again, or ask for a new one.
-              otp_resend_failed: We could not send you a new code. Please wait a moment and try again.
+              otp_expired: That code is no longer usable. Please identify yourself again.
+              otp_locked: Too many wrong attempts. Please identify yourself again.
+              otp_rejected: That code does not match. Check it and enter it again, or ask for the code again.
+              otp_resend_failed: We couldn't send the code right now. Please try again in a moment.
               process_unavailable: This election could not be loaded from the voting network right now.
               relay_rejected: The voting network rejected this vote. It has not been counted.
               relay_unconfirmed: We lost contact while your vote was being sent. It may still have been counted — do not vote again until you have checked.
@@ -89,12 +92,12 @@ en:
               hint: You can paste the code straight from the message.
               label: One-time code
               required: Enter the code we sent you.
-              resend: Send me a new code
-              resend_ready: You can now ask for a new code.
-              resend_wait: "You can ask for a new code in %{seconds} seconds."
-              resent: A new code is on its way.
+              resend: Send my code again
+              resend_ready: You can now ask for the code again.
+              resend_wait: "You can ask for the code again in %{seconds} seconds."
+              resent: Your code has been sent again.
               restart: Start again
-              restart_body: Used the wrong address or number?
+              restart_body: Didn't get it? Check your spam folder, or start again to check your details.
               submit: Confirm
               title: Confirm the code we sent you
             page_title: Vote
@@ -136,7 +139,7 @@ en:
               loading: Loading the election…
               preparing: Preparing the ballot…
               relaying: Sending your vote…
-              sending_code: Sending you a new code…
+              sending_code: Sending your code…
               signing: Signing your vote…
               waiting_keys: Waiting for the encryption keys to be published…
             submit:

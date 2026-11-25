@@ -65,14 +65,17 @@ es:
               retry: Intentar de nuevo
               title: Algo ha ido mal
             errors:
+              anon_unavailable: La votación no está disponible en este momento. Contacta con los organizadores.
               auth_cooldown: "Demasiados intentos. Espera %{seconds} segundos e inténtalo de nuevo."
+              auth_rate_limited: "Demasiadas solicitudes. Por favor, inténtalo de nuevo en %{minutes} minutos."
               auth_rejected: No hemos podido verificar tus datos. Compruébalos e inténtalo de nuevo.
               ballot_unsupported: Esta pregunta utiliza un formato de papeleta que esta página no entiende. Contacta con los organizadores.
               keys_unavailable: Esta pregunta permanece cifrada hasta el final y las claves de cifrado aún no se han publicado. Tu voto no se ha emitido — inténtalo de nuevo en unos minutos.
               network: No hemos podido conectar con la red de votación. Comprueba tu conexión e inténtalo de nuevo.
-              otp_expired: Este código ya no es válido. Vuelve a identificarte para obtener uno nuevo.
-              otp_rejected: El código no coincide. Compruébalo e introdúcelo de nuevo, o solicita uno nuevo.
-              otp_resend_failed: No hemos podido enviarte un código nuevo. Espera un momento e inténtalo de nuevo.
+              otp_expired: Este código ya no es válido. Vuelve a identificarte.
+              otp_locked: Demasiados intentos fallidos. Vuelve a identificarte.
+              otp_rejected: El código no coincide. Compruébalo e introdúcelo de nuevo, o pide que te lo envíen de nuevo.
+              otp_resend_failed: Ahora mismo no hemos podido enviar el código. Inténtalo de nuevo en un momento.
               process_unavailable: En este momento no se ha podido cargar esta elección desde la red de votación.
               relay_rejected: La red de votación ha rechazado este voto. No se ha contabilizado.
               relay_unconfirmed: Hemos perdido la conexión mientras se enviaba tu voto. Es posible que se haya contabilizado igualmente — no votes de nuevo hasta que lo hayas comprobado.
@@ -89,12 +92,12 @@ es:
               hint: Puedes pegar el código directamente desde el mensaje.
               label: Código de un solo uso
               required: Introduce el código que te hemos enviado.
-              resend: Envíame un código nuevo
-              resend_ready: Ya puedes solicitar un código nuevo.
-              resend_wait: "Podrás solicitar un código nuevo en %{seconds} segundos."
-              resent: Un código nuevo está en camino.
+              resend: Volver a enviarme el código
+              resend_ready: Ya puedes volver a solicitar el código.
+              resend_wait: "Podrás volver a solicitar el código en %{seconds} segundos."
+              resent: Tu código ha sido enviado de nuevo.
               restart: Volver a empezar
-              restart_body: ¿Has puesto la dirección o el número equivocados?
+              restart_body: "¿No te ha llegado? Revisa la carpeta de spam, o vuelve a empezar para revisar tus datos."
               submit: Confirmar
               title: Confirma el código que te hemos enviado
             page_title: Votar
@@ -136,7 +139,7 @@ es:
               loading: Cargando la elección…
               preparing: Preparando la papeleta…
               relaying: Enviando tu voto…
-              sending_code: Enviándote un código nuevo…
+              sending_code: Enviándote el código…
               signing: Firmando tu voto…
               waiting_keys: Esperando que se publiquen las claves de cifrado…
             submit:

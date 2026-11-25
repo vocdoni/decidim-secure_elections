@@ -102,6 +102,27 @@ describe("a wrong one-time code", () => {
     expect(flow.verified).toBe(true);
   });
 
+  // 40001 "too many verification attempts" means the per-code budget is gone; the
+  // voter must restart — OTP_LOCKED triggers that path in the UI.
+  it("locks the session when too many wrong attempts exhaust the code budget", async () => {
+    const flow = await failing(
+      apiError({ status: 401, code: 40001, message: "authentication required: too many verification attempts" })
+    );
+
+    await expect(flow.confirmOtp("000000")).rejects.toMatchObject({ code: ErrorCode.OTP_LOCKED });
+    expect(flow.authenticated).toBe(true);
+    expect(flow.verified).toBe(false);
+  });
+
+  // 40001 "authentication token has expired" — the 15-minute window is gone.
+  it("expires the session when the token's time window runs out", async () => {
+    const flow = await failing(
+      apiError({ status: 401, code: 40001, message: "authentication required: authentication token has expired" })
+    );
+
+    await expect(flow.confirmOtp("000000")).rejects.toMatchObject({ code: ErrorCode.OTP_EXPIRED });
+  });
+
   it("is told apart from a session that is simply over", async () => {
     const flow = await failing(apiError({ status: 404, code: 40029, message: "census participant not found" }));
 
@@ -178,6 +199,41 @@ describe("resending the code", () => {
     });
   });
 
+  // A bogus coolDownTime must not lock the UI indefinitely; cap at 24 h (86400 s).
+  it("caps an absurd coolDownTime at 24 h", async () => {
+    const flow = await pending();
+    mockProcesses.resend.mockRejectedValue(
+      apiError({ status: 401, code: 40103, message: "attempt cooldown time not reached", data: { coolDownTime: 172800000 } })
+    );
+    await expect(flow.resendOtp()).rejects.toMatchObject({
+      code: ErrorCode.AUTH_COOLDOWN,
+      details: { seconds: 86400 }
+    });
+  });
+
+  // The daily/hourly send cap (40017) means the session is effectively dead; signal
+  // OTP_EXPIRED so the UI can route the voter back to identification.
+  it("signals OTP_EXPIRED when the daily resend cap (40017) is hit", async () => {
+    const flow = await pending();
+
+    mockProcesses.resend.mockRejectedValue(
+      apiError({ status: 400, code: 40017, message: "too many failed authentication attempts, try again later" })
+    );
+
+    await expect(flow.resendOtp()).rejects.toMatchObject({ code: ErrorCode.OTP_EXPIRED });
+  });
+
+  // A 401 from resend means the token is expired or locked — session is dead.
+  it("signals OTP_EXPIRED when the token is expired or locked during resend (401/40001)", async () => {
+    const flow = await pending();
+
+    mockProcesses.resend.mockRejectedValue(
+      apiError({ status: 401, code: 40001, message: "authentication required: authentication token has expired" })
+    );
+
+    await expect(flow.resendOtp()).rejects.toMatchObject({ code: ErrorCode.OTP_EXPIRED });
+  });
+
   it("is refused once the session is verified, so no stray code goes out", async () => {
     const flow = await pending();
 
@@ -215,5 +271,29 @@ describe("authStep0 rate limiting", () => {
 
     await expect(flow.authenticate({ memberNumber: "2001" }, { contact: "" })).
       rejects.toMatchObject({ code: ErrorCode.AUTH_REJECTED });
+  });
+
+  // 40017: hourly/daily cap; voter must wait; `retryAfter` seconds until reset.
+  it("surfaces the hourly cap (40017) with the minutes to wait", async () => {
+    const flow = await startFlow(["email"]);
+
+    mockProcesses.authStep0.mockRejectedValue(
+      apiError({ status: 400, code: 40017, message: "too many failed authentication attempts, try again later", data: { retryAfter: 1800 } })
+    );
+
+    await expect(flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" })).
+      rejects.toMatchObject({ code: ErrorCode.AUTH_RATE_LIMITED, details: { minutes: 30 } });
+  });
+
+  // 40037: anonymous voting is off on the service; terminal error.
+  it("surfaces anonymous voting unavailable (40037) as its own state", async () => {
+    const flow = await startFlow(["email"]);
+
+    mockProcesses.authStep0.mockRejectedValue(
+      apiError({ status: 400, code: 40037, message: "anonymous voting is temporarily unavailable" })
+    );
+
+    await expect(flow.authenticate({ memberNumber: "2001" }, { contact: "carol@example.org" })).
+      rejects.toMatchObject({ code: ErrorCode.ANON_UNAVAILABLE });
   });
 });

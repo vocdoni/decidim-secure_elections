@@ -71,9 +71,9 @@ export const createOtpStep = (ctx, { onVerified, onRestart }) => {
     id: "js-vocdoni-otp-resend",
     class: "vocdoni-button vocdoni-button--quiet vocdoni-button--small",
     "aria-describedby": "js-vocdoni-otp-resend-hint",
-    // Locked from the outset: `open` starts a cooldown for the code
-    // `authStep0` has just sent, and the button must not be live for the tick
-    // between being built and that cooldown starting.
+    // Kept disabled until `open` decides: if the server provides a coolDownTime
+    // on the step-0 response, `open` starts a countdown; otherwise it releases
+    // the button immediately so the voter can resend straight away.
     disabled: true,
     "aria-disabled": "true",
     text: i18n.otp.resend
@@ -122,17 +122,26 @@ export const createOtpStep = (ctx, { onVerified, onRestart }) => {
    * Opens the step for one channel, naming it in the copy so the voter knows
    * which inbox to look in.
    *
+   * If the step-0 response carried a `coolDownTime` (ms), the button is locked
+   * for that duration. Without it the button is enabled immediately: no
+   * hardcoded local wait.
+   *
    * @param {string} channel - `email` or `phone`.
+   * @param {Object} [options] - optional server hints.
+   * @param {number} [options.coolDownMs] - server-provided wait in milliseconds.
    * @returns {void} nothing.
    */
-  const open = (channel) => {
+  const open = (channel, { coolDownMs } = {}) => {
     qsa("[data-otp-channel]", ui.stepNodes.otp).forEach((node) => {
       toggle(node, node.dataset.otpChannel === channel);
     });
 
     close();
-    // A code has just been sent by `authStep0`; the cooldown starts with it.
-    cooldown.start();
+    if (typeof coolDownMs === "number" && coolDownMs > 0) {
+      cooldown.start(coolDownMs);
+    } else {
+      cooldown.release();
+    }
     // "Checking your details…" described the step we are leaving, not this one.
     ui.clearStatus();
     ui.showStep("otp");
@@ -163,9 +172,9 @@ export const createOtpStep = (ctx, { onVerified, onRestart }) => {
     } catch (error) {
       const voteError = toVoteError(error, ErrorCode.OTP_REJECTED);
 
-      // A spent session cannot be retried here: identifying again is the only
-      // way to get a new code, so say so instead of looping on a dead token.
-      if (voteError.code === ErrorCode.OTP_EXPIRED) {
+      // A locked or expired session cannot be retried here: identifying again
+      // is the only way forward. Say so and route back to identification.
+      if (voteError.code === ErrorCode.OTP_EXPIRED || voteError.code === ErrorCode.OTP_LOCKED) {
         close();
         onRestart(voteError);
 
@@ -205,21 +214,38 @@ export const createOtpStep = (ctx, { onVerified, onRestart }) => {
     ui.announce(i18n.status.sending_code);
 
     try {
-      await flow.resendOtp();
-      cooldown.start();
+      const { coolDownMs } = await flow.resendOtp();
+
+      if (typeof coolDownMs === "number" && coolDownMs > 0) {
+        cooldown.start(coolDownMs);
+      } else {
+        cooldown.release();
+      }
       ui.announce(i18n.otp.resent);
       focusElement(input);
     } catch (error) {
       const voteError = toVoteError(error, ErrorCode.OTP_RESEND_FAILED);
 
-      // The CSP tells us how long it wants us to wait; honour its number rather
-      // than our own, then let the voter try again.
+      // 40103: the CSP tells us how long it wants us to wait; honour it.
       if (voteError.code === ErrorCode.AUTH_COOLDOWN) {
         cooldown.start(Math.max(1, Number(voteError.details.seconds) || 0) * 1000);
-      } else {
-        cooldown.release();
+        const message = ui.messageForError(voteError);
+
+        ui.showInlineError(errorNode, message);
+        ui.announce(message);
+
+        return;
       }
 
+      // Session dead (40017 cap or expired/locked token): restart cleanly.
+      if (voteError.code === ErrorCode.OTP_EXPIRED || voteError.code === ErrorCode.OTP_LOCKED) {
+        close();
+        onRestart(voteError);
+
+        return;
+      }
+
+      cooldown.release();
       const message = ui.messageForError(voteError);
 
       ui.showInlineError(errorNode, message);

@@ -1,8 +1,6 @@
 import { ErrorCode } from "src/decidim/elections/vocdoni/voter/errors";
 import { interpolate, message } from "src/decidim/elections/vocdoni/voter/booth_text";
 
-const RESEND_COOLDOWN_S = 30;
-
 /**
  * Shows the OTP panel (the backend's pre-ballot partial) and resolves once the
  * CSP accepts a code. The panel's listeners are removed on success, so a later
@@ -34,23 +32,29 @@ export const runOtp = (ctx, flow) => new Promise((resolve) => {
     }
   };
 
+  // Starts a server-driven countdown. Called only when the CSP says how long
+  // to wait: either from a 40103 response's `coolDownTime` (via error.details.seconds)
+  // or from a successful resend response's `coolDownTime` (ms, forwarded as coolDownMs).
   const cooldown = (seconds) => {
-    resend.disabled = true;
     let left = seconds;
     clearInterval(cooldownTimer);
+    resend.disabled = true;
+    // Show the initial count immediately so the voter sees it straight away.
+    resend.textContent = interpolate(i18n.otp.resend_wait, { seconds: left });
     cooldownTimer = setInterval(() => {
       left -= 1;
-      resend.textContent = left > 0
-        ? interpolate(i18n.otp.resend_wait, { seconds: left })
-        : i18n.otp.resend;
       if (left <= 0) {
         clearInterval(cooldownTimer);
         resend.disabled = false;
+        resend.textContent = i18n.otp.resend;
+      } else {
+        resend.textContent = interpolate(i18n.otp.resend_wait, { seconds: left });
       }
     }, 1000);
   };
 
-  cooldown(RESEND_COOLDOWN_S);
+  // No local cooldown on open: the CSP returns coolDownTime (ms) on a successful
+  // step-0 / resend; the button is enabled until the server tells us to wait.
   input.value = "";
   input.focus();
 
@@ -58,11 +62,18 @@ export const runOtp = (ctx, flow) => new Promise((resolve) => {
     showError("");
     ctx.progress(i18n.status.sending_code);
     try {
-      await flow.resendOtp();
+      const { coolDownMs } = await flow.resendOtp();
+
       ctx.progress(i18n.otp.resent);
-      cooldown(RESEND_COOLDOWN_S);
+      if (typeof coolDownMs === "number" && coolDownMs > 0) {
+        cooldown(Math.ceil(coolDownMs / 1000));
+      }
+      // No server cooldown: button stays enabled, voter can resend again.
     } catch (error) {
       ctx.progress("");
+      if (error.code === ErrorCode.AUTH_COOLDOWN) {
+        cooldown(Math.max(1, Number(error.details?.seconds) || 0));
+      }
       showError(message(i18n, error));
     }
   }, { signal: listeners.signal });

@@ -248,15 +248,25 @@ export const buildReceipt = ({ questions = [], consumed = [] } = {}) => {
  * @param {Object} [options] - fixture options.
  * @param {string[]} [options.twoFaFields] - the census `twoFaFields`.
  * @param {boolean} [options.fakeTimers] - freeze time, for the cooldown tests.
+ * @param {number|null} [options.coolDownMs] - server-provided cooldown (ms) in
+ *   the step-0 response, for testing the proactive-countdown path.
  * @returns {Promise<Object>} the voting page context.
  */
-export const openOtp = async ({ twoFaFields = ["email"], fakeTimers = false } = {}) => {
+export const openOtp = async ({ twoFaFields = ["email"], fakeTimers = false, coolDownMs = null } = {}) => {
   if (fakeTimers) {
     jest.useFakeTimers();
     jest.setSystemTime(new Date("2026-07-27T12:00:00Z"));
   }
 
   const ctx = build({ twoFaFields });
+
+  if (coolDownMs !== null) {
+    ctx.flow.authenticate.mockResolvedValue({
+      needsOtp: twoFaFields.length > 0,
+      channel: twoFaFields[0] || null,
+      coolDownMs
+    });
+  }
 
   fill("[data-auth-field='memberNumber']", "2001");
   fill(`[data-twofa-field='${twoFaFields[0]}']`, "carol@example.org");

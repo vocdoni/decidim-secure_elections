@@ -205,9 +205,12 @@ export const createAuthStep = (ctx) => {
    */
   const reportAuthError = (error) => {
     const voteError = toVoteError(error, ErrorCode.AUTH_REJECTED);
+    // AUTH_RATE_LIMITED (40017) is shown inline: the voter can wait on this page.
+    // ANON_UNAVAILABLE (40037) is a terminal error: nothing the voter can do.
     const retryable = voteError.code === ErrorCode.AUTH_REJECTED ||
       voteError.code === ErrorCode.NETWORK ||
-      voteError.code === ErrorCode.AUTH_COOLDOWN;
+      voteError.code === ErrorCode.AUTH_COOLDOWN ||
+      voteError.code === ErrorCode.AUTH_RATE_LIMITED;
 
     if (!retryable) {
       ui.showError(voteError);
@@ -268,7 +271,7 @@ export const createAuthStep = (ctx) => {
       });
 
       if (result.needsOtp) {
-        otp.open(result.channel);
+        otp.open(result.channel, { coolDownMs: result.coolDownMs });
       } else {
         await afterAuth();
       }

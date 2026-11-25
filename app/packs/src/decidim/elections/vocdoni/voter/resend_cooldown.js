@@ -26,9 +26,6 @@ import { interpolate, setDisabled, setText, toggle } from "src/decidim/elections
  * countdown and the click handler each owned half of the state.
  */
 
-/** How long the voting page refuses to ask for another code. */
-export const RESEND_COOLDOWN_MS = 30000;
-
 /**
  * Wires a cooldown to a button and the line that describes it.
  *
@@ -98,14 +95,16 @@ export const createResendCooldown = ({ button, hint, i18n, ui }) => {
   };
 
   /**
-   * Starts a wait. Called after every code the CSP sends, including the one
-   * `authStep0` sends on the way into the step, so the button cannot be hammered
-   * from the moment the screen appears.
+   * Starts a wait for the duration the server has asked for.
    *
-   * @param {number} [ms] - how long to wait.
+   * Always driven by a server-provided duration: either `coolDownTime` (ms)
+   * from a 40103 response, or `coolDownTime` (ms) on a successful step-0 /
+   * resend response.
+   *
+   * @param {number} ms - how long to wait, in milliseconds.
    * @returns {void} nothing.
    */
-  const start = (ms = RESEND_COOLDOWN_MS) => {
+  const start = (ms) => {
     stop();
     until = Date.now() + ms;
     showCountdown(Math.ceil(ms / 1000));
